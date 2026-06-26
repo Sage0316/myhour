@@ -140,7 +140,7 @@ function HomeDay({ dateDay, dateWeekday, recordCount, nextIn, onRecord, onWrapUp
         </div>
         {/* 19:00 - Waiting */}
         <TimelineRow
-          time="19:00" upcoming
+          time="19:00"
           icon={null}
           label="기록 대기"
           dimLabel
@@ -165,8 +165,8 @@ function HomeDay({ dateDay, dateWeekday, recordCount, nextIn, onRecord, onWrapUp
   );
 }
 
-function TimelineRow({ time, filled, missed, upcoming, icon, label, dimLabel }: {
-  time: string; filled?: boolean; missed?: boolean; upcoming?: boolean;
+function TimelineRow({ time, filled, missed, icon, label, dimLabel }: {
+  time: string; filled?: boolean; missed?: boolean;
   icon: React.ReactNode; label: string; dimLabel?: boolean;
 }) {
   const dotColor = filled ? '#1A1A1A' : 'transparent';
@@ -236,9 +236,9 @@ function MediaIcon({ type, bg }: { type: MediaType; bg: string }) {
 }
 
 // ---- Wrapped Home ----
-function HomeWrapped({ dateDay, dateWeekday, onTabChange, onWatchVideo }: {
+function HomeWrapped({ dateDay, dateWeekday, onWatchVideo }: {
   dateDay: string; dateWeekday: string;
-  onTabChange: (tab: Tab) => void; onWatchVideo: () => void;
+  onWatchVideo: () => void;
 }) {
   return (
     <div style={{ flex: 1, padding: '60px 22px 0', display: 'flex', flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
@@ -347,7 +347,7 @@ export default function HomeScreen({
       {isWrapped ? (
         <HomeWrapped
           dateDay={dateDay} dateWeekday={dateWeekday}
-          onTabChange={onTabChange} onWatchVideo={onWatchVideo}
+          onWatchVideo={onWatchVideo}
         />
       ) : (
         <HomeDay
