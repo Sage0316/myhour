@@ -14,31 +14,6 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-// Capture first available frame from a video data URL
-// Waits for loadeddata (first frame decoded) before drawing to canvas
-async function loadVideoFrame(src: string): Promise<HTMLImageElement | null> {
-  return new Promise(resolve => {
-    const vid = document.createElement('video');
-    vid.muted = true;
-    vid.playsInline = true;
-    const timer = setTimeout(() => resolve(null), 10_000);
-
-    const capture = () => {
-      clearTimeout(timer);
-      if (!vid.videoWidth || !vid.videoHeight) { resolve(null); return; }
-      const c = document.createElement('canvas');
-      c.width = vid.videoWidth;
-      c.height = vid.videoHeight;
-      c.getContext('2d')!.drawImage(vid, 0, 0);
-      loadImage(c.toDataURL('image/jpeg', 0.85)).then(resolve);
-    };
-
-    vid.onloadeddata = capture;
-    vid.onerror = () => { clearTimeout(timer); resolve(null); };
-    vid.src = src;
-    vid.load();
-  });
-}
 
 function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, scale = 1) {
   const ia = img.naturalWidth / img.naturalHeight;
@@ -97,12 +72,14 @@ export async function generateVideo(
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
 
-  // Preload: photos and video first-frames in parallel
+  // Preload: photos and videos in parallel
+  // Video records store a JPEG thumbnail (not actual video), so loadImage works for both
   const imgMap = new Map<string, HTMLImageElement | null>();
   await Promise.all(records.map(async r => {
     if (!r.content.startsWith('data:')) return;
-    if (r.type === 'photo') imgMap.set(r.id, await loadImage(r.content));
-    if (r.type === 'video') imgMap.set(r.id, await loadVideoFrame(r.content));
+    if (r.type === 'photo' || r.type === 'video') {
+      imgMap.set(r.id, await loadImage(r.content));
+    }
   }));
 
   const title = generateTitle(records);
