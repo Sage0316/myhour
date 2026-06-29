@@ -125,6 +125,17 @@ export function generateSlots(settings: AppSettings): string[] {
     slots.push(`${String(Math.floor(wallM / 60)).padStart(2, '0')}:${String(wallM % 60).padStart(2, '0')}`);
     cur += settings.interval;
   }
+
+  // Fixed mode: always include endTime as the last slot.
+  // If the interval grid skips it (e.g. 09:00 + 2h intervals → 22:00 is unreachable),
+  // append it explicitly so the user can always record at their chosen end time.
+  if (settings.endMode === 'fixed' && slots.length > 0) {
+    const lastM = slotToMinutes(slots[slots.length - 1]);
+    if (lastM !== endM && endM > lastM) {
+      slots.push(settings.endTime);
+    }
+  }
+
   return slots;
 }
 
