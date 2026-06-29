@@ -90,6 +90,100 @@ function SettingGroup({ header, children }: { header: string; children: React.Re
   );
 }
 
+function DataSection() {
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importOk, setImportOk] = useState(false);
+
+  function handleExport() {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: localStorage.getItem('myhour_v1') ?? '{}',
+      settings: localStorage.getItem('myhour_settings_v1') ?? '{}',
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    // Try native share (iOS), fallback to download link
+    if (navigator.share) {
+      const file = new File([blob], `myhour-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
+      navigator.share({ files: [file] }).catch(() => {
+        // Share cancelled or failed, fallback
+        triggerDownload(url);
+      });
+    } else {
+      triggerDownload(url);
+    }
+  }
+
+  function triggerDownload(url: string) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `myhour-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+    setImportOk(false);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const payload = JSON.parse(ev.target?.result as string);
+        if (payload.version !== 1 || !payload.data || !payload.settings) {
+          throw new Error('올바른 MYHOUR 백업 파일이 아니에요');
+        }
+        localStorage.setItem('myhour_v1', payload.data);
+        localStorage.setItem('myhour_settings_v1', payload.settings);
+        setImportOk(true);
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : '파일을 읽을 수 없어요');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  return (
+    <div>
+      <SectionHeader label="Data · 데이터" />
+      <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden' }}>
+        <button
+          onClick={handleExport}
+          style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', background: 'none', border: 'none', borderBottom: '1px solid rgba(26,26,26,0.07)', cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left' }}
+        >
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15 }}>데이터 내보내기</div>
+            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>기록과 설정을 JSON 파일로 저장</div>
+          </div>
+          <div style={{ fontSize: 18, color: 'rgba(26,26,26,0.35)' }}>↑</div>
+        </button>
+
+        <label style={{ display: 'flex', alignItems: 'center', minHeight: 50, padding: '0 16px', cursor: 'pointer', borderBottom: 'none' }}>
+          <input type="file" accept=".json,application/json" onChange={handleImport} style={{ display: 'none' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15 }}>데이터 가져오기</div>
+            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>JSON 백업 파일에서 복원 · 앱이 새로고침됩니다</div>
+          </div>
+          <div style={{ fontSize: 18, color: 'rgba(26,26,26,0.35)' }}>↓</div>
+        </label>
+      </div>
+
+      {importError && (
+        <div style={{ fontSize: 12, color: '#E5533C', padding: '8px 4px', lineHeight: 1.5 }}>{importError}</div>
+      )}
+      {importOk && (
+        <div style={{ fontSize: 12, color: '#3FA37B', padding: '8px 4px' }}>가져오기 완료! 앱을 새로고침하는 중...</div>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   const { settings, updateSettings } = useApp();
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -190,6 +284,8 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
             <Option label="자동 저장" selected={false} onSelect={() => setOpenRow(null)} />
           </SettingRow>
         </SettingGroup>
+
+        <DataSection />
 
         <div style={{ height: 20 }} />
       </div>
