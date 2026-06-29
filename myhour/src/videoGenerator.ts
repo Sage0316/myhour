@@ -14,14 +14,46 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-async function loadVideoEl(src: string): Promise<HTMLVideoElement | null> {
+// Extract multiple frames from a video by seeking through it
+async function extractVideoFrames(src: string, count = 6): Promise<HTMLImageElement[]> {
   return new Promise(resolve => {
+    const frames: HTMLImageElement[] = [];
     const vid = document.createElement('video');
     vid.muted = true;
     vid.playsInline = true;
-    const timer = setTimeout(() => resolve(null), 8000);
-    vid.oncanplay = () => { clearTimeout(timer); resolve(vid); };
-    vid.onerror = () => { clearTimeout(timer); resolve(null); };
+    const timeout = setTimeout(() => resolve(frames), 20000);
+
+    const captureFrame = (): Promise<HTMLImageElement | null> =>
+      new Promise(res => {
+        if (!vid.videoWidth || !vid.videoHeight) { res(null); return; }
+        const c = document.createElement('canvas');
+        c.width = vid.videoWidth;
+        c.height = vid.videoHeight;
+        c.getContext('2d')!.drawImage(vid, 0, 0);
+        loadImage(c.toDataURL('image/jpeg', 0.85)).then(res);
+      });
+
+    vid.onloadeddata = async () => {
+      const dur = isFinite(vid.duration) && vid.duration > 0 ? Math.min(vid.duration, 5) : 3;
+
+      for (let i = 0; i < count; i++) {
+        if (i > 0) {
+          const seekTo = (i / count) * dur;
+          await new Promise<void>(res => {
+            vid.onseeked = () => res();
+            vid.currentTime = seekTo;
+            setTimeout(res, 1500);
+          });
+        }
+        const img = await captureFrame();
+        if (img) frames.push(img);
+      }
+
+      clearTimeout(timeout);
+      resolve(frames);
+    };
+
+    vid.onerror = () => { clearTimeout(timeout); resolve(frames); };
     vid.src = src;
     vid.load();
   });
@@ -34,16 +66,6 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, scale =
   if (ia > ca) { sh = H * scale; sw = sh * ia; }
   else { sw = W * scale; sh = sw / ia; }
   ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
-}
-
-function drawVideoCover(ctx: CanvasRenderingContext2D, vid: HTMLVideoElement) {
-  if (!vid.videoWidth || !vid.videoHeight) return;
-  const ia = vid.videoWidth / vid.videoHeight;
-  const ca = W / H;
-  let sw: number, sh: number;
-  if (ia > ca) { sh = H; sw = sh * ia; }
-  else { sw = W; sh = sw / ia; }
-  ctx.drawImage(vid, (W - sw) / 2, (H - sh) / 2, sw, sh);
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lh: number): number {
@@ -100,11 +122,15 @@ export async function generateVideo(
 
   // Preload media
   const imgMap = new Map<string, HTMLImageElement | null>();
-  const vidMap = new Map<string, HTMLVideoElement | null>();
+  const vidFramesMap = new Map<string, HTMLImageElement[]>();
+
   for (const r of records) {
     if (!r.content.startsWith('data:')) continue;
-    if (r.type === 'photo') imgMap.set(r.id, await loadImage(r.content));
-    else if (r.type === 'video') vidMap.set(r.id, await loadVideoEl(r.content));
+    if (r.type === 'photo') {
+      imgMap.set(r.id, await loadImage(r.content));
+    } else if (r.type === 'video') {
+      vidFramesMap.set(r.id, await extractVideoFrames(r.content, 6));
+    }
   }
 
   const title = generateTitle(records);
@@ -145,19 +171,15 @@ export async function generateVideo(
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, '#D5EADC'); grad.addColorStop(0.52, '#E2DBF0'); grad.addColorStop(1, '#EFE2D5');
     ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-
     ctx.font = `bold 26px "Courier New", monospace`;
     ctx.fillStyle = 'rgba(26,26,26,0.45)';
     ctx.fillText('MYHOUR', 40, H * 0.32);
-
     ctx.font = `300 24px system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(26,26,26,0.5)';
     ctx.fillText(dateStr, 40, H * 0.32 + 46);
-
     ctx.font = `600 46px system-ui, sans-serif`;
     ctx.fillStyle = '#1A1A1A';
     wrapText(ctx, title, 40, H * 0.48, W - 80, 62);
-
     ctx.font = `400 24px system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(26,26,26,0.5)';
     ctx.fillText(`${records.length}개의 순간`, 40, H * 0.72);
@@ -167,18 +189,7 @@ export async function generateVideo(
   for (const record of records) {
     const bg = TYPE_COLORS[record.type];
     const img = imgMap.get(record.id) ?? null;
-    const vidEl = vidMap.get(record.id) ?? null;
-
-    // For video records: seek to start then play so canvas draws live frames
-    if (record.type === 'video' && vidEl) {
-      vidEl.currentTime = 0;
-      await new Promise<void>(res => {
-        const onSeeked = () => { vidEl.removeEventListener('seeked', onSeeked); res(); };
-        vidEl.addEventListener('seeked', onSeeked);
-        setTimeout(res, 2000);
-      });
-      await vidEl.play().catch(() => {});
-    }
+    const vidFrames = vidFramesMap.get(record.id) ?? [];
 
     await renderSegment(RECORD_DUR, (t) => {
       if (record.type === 'text') {
@@ -220,22 +231,33 @@ export async function generateVideo(
         }
 
       } else if (record.type === 'video') {
-        const hasFrame = vidEl && vidEl.readyState >= 2;
-        if (hasFrame) {
+        if (vidFrames.length > 0) {
+          // Cycle through extracted frames for a slideshow effect
+          const fi = Math.min(Math.floor(t * vidFrames.length), vidFrames.length - 1);
           ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-          drawVideoCover(ctx, vidEl!);
+          drawCover(ctx, vidFrames[fi]);
           const grd = ctx.createLinearGradient(0, H * 0.55, 0, H);
           grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.65)');
           ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
         } else {
           ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+          // fallback play icon
+          ctx.fillStyle = 'rgba(255,255,255,0.6)';
+          ctx.beginPath(); ctx.arc(W / 2, H / 2, 44, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#1A1A1A';
+          ctx.beginPath();
+          ctx.moveTo(W / 2 - 10, H / 2 - 18);
+          ctx.lineTo(W / 2 + 20, H / 2);
+          ctx.lineTo(W / 2 - 10, H / 2 + 18);
+          ctx.closePath(); ctx.fill();
         }
+        const darkVid = vidFrames.length > 0;
         ctx.font = `bold 22px "Courier New", monospace`;
-        ctx.fillStyle = hasFrame ? 'rgba(255,255,255,0.8)' : 'rgba(26,26,26,0.4)';
+        ctx.fillStyle = darkVid ? 'rgba(255,255,255,0.8)' : 'rgba(26,26,26,0.4)';
         ctx.fillText(record.slotTime, 30, H - (record.caption ? 74 : 46));
         if (record.caption) {
           ctx.font = `500 30px system-ui, sans-serif`;
-          ctx.fillStyle = hasFrame ? '#fff' : 'rgba(26,26,26,0.7)';
+          ctx.fillStyle = darkVid ? '#fff' : 'rgba(26,26,26,0.7)';
           ctx.fillText(record.caption, 30, H - 36);
         }
 
@@ -261,8 +283,6 @@ export async function generateVideo(
         }
       }
     }, frameProgress);
-
-    if (record.type === 'video' && vidEl) vidEl.pause();
   }
 
   // Closing card
