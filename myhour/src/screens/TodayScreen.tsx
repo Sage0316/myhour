@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useApp } from '../context';
 import { getDateStrings, TYPE_COLORS, TYPE_LABELS } from '../store';
-import type { MyRecord, RecordType } from '../store';
+import type { MyRecord } from '../store';
 import TabBar from '../components/TabBar';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -13,41 +13,29 @@ interface TodayScreenProps {
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
-function TypeIcon({ type, bg }: { type: RecordType; bg: string }) {
-  const base: React.CSSProperties = { width: 30, height: 30, borderRadius: 9, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
-  if (type === 'video') return <div style={base}><div style={{ width: 0, height: 0, borderLeft: '9px solid #1A1A1A', borderTop: '6px solid transparent', borderBottom: '6px solid transparent', marginLeft: 2 }} /></div>;
-  if (type === 'photo') return <div style={base}><div style={{ width: 12, height: 12, border: '2px solid #1A1A1A', borderRadius: '50%' }} /></div>;
-  if (type === 'audio') return (
-    <div style={{ ...base, alignItems: 'flex-end', gap: 2, paddingBottom: 8 }}>
-      <div style={{ width: 2, height: 8, background: '#1A1A1A' }} />
-      <div style={{ width: 2, height: 13, background: '#1A1A1A' }} />
-      <div style={{ width: 2, height: 6, background: '#1A1A1A' }} />
-    </div>
-  );
+function AudioBars() {
+  const heights = [10, 22, 14, 30, 18, 26, 12, 28, 16, 20];
   return (
-    <div style={{ ...base, flexDirection: 'column', gap: 3, padding: '0 6px' }}>
-      <div style={{ width: '100%', height: 2, background: '#1A1A1A' }} />
-      <div style={{ width: '100%', height: 2, background: '#1A1A1A' }} />
-      <div style={{ width: '65%', height: 2, background: '#1A1A1A' }} />
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 34 }}>
+      {heights.map((h, i) => (
+        <div key={i} style={{ width: 3, height: h, borderRadius: 2, background: 'rgba(26,26,26,0.4)' }} />
+      ))}
     </div>
   );
 }
 
-function RecordCard({ record, onLongPress }: { record: MyRecord; onLongPress: () => void }) {
+function RecordTile({ record, onLongPress }: { record: MyRecord; onLongPress: () => void }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasMedia = record.content.startsWith('data:');
 
   function handlePointerDown() {
-    timerRef.current = setTimeout(() => {
-      navigator.vibrate?.(30);
-      onLongPress();
-    }, 500);
+    timerRef.current = setTimeout(() => { navigator.vibrate?.(30); onLongPress(); }, 500);
   }
   function handlePointerUp() {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   }
 
-  const label = record.type === 'text' ? record.content : TYPE_LABELS[record.type] + ' 기록';
+  const bg = TYPE_COLORS[record.type];
 
   return (
     <div
@@ -55,37 +43,41 @@ function RecordCard({ record, onLongPress }: { record: MyRecord; onLongPress: ()
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden', userSelect: 'none', WebkitUserSelect: 'none' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 7, userSelect: 'none', WebkitUserSelect: 'none' }}
     >
-      {record.type === 'photo' && hasMedia && (
-        <img src={record.content} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} />
-      )}
-      {record.type === 'video' && hasMedia && (
-        <div style={{ position: 'relative' }}>
-          <img src={record.content} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} />
+      {/* Thumbnail */}
+      <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {(record.type === 'photo' || record.type === 'video') && hasMedia ? (
+          <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : record.type === 'text' ? (
+          <div style={{ padding: '14px 12px', fontSize: 12, lineHeight: 1.55, color: 'rgba(26,26,26,0.75)', overflow: 'hidden', maxHeight: '100%' }}>
+            {record.content}
+          </div>
+        ) : (
+          <AudioBars />
+        )}
+
+        {/* Video play overlay */}
+        {record.type === 'video' && hasMedia && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 0, height: 0, borderLeft: '15px solid #fff', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', marginLeft: 4 }} />
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 0, height: 0, borderLeft: '11px solid #fff', borderTop: '7px solid transparent', borderBottom: '7px solid transparent', marginLeft: 3 }} />
             </div>
           </div>
+        )}
+
+        {/* Time badge */}
+        <div style={{ position: 'absolute', top: 9, left: 9, ...MONO, fontSize: 10, color: record.type === 'text' ? 'rgba(26,26,26,0.5)' : 'rgba(255,255,255,0.9)', background: record.type === 'text' ? 'transparent' : 'rgba(0,0,0,0.28)', borderRadius: 6, padding: '2px 5px' }}>
+          {record.slotTime}
         </div>
-      )}
-      {record.type === 'audio' && hasMedia && (
-        <div style={{ padding: '14px 16px 6px' }}>
-          <audio src={record.content} controls style={{ width: '100%', height: 36 }} />
+      </div>
+
+      {/* Label */}
+      <div style={{ paddingLeft: 2 }}>
+        <div style={{ fontSize: 12, fontWeight: 500, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {record.type === 'text' ? (record.content.length > 16 ? record.content.slice(0, 14) + '…' : record.content) : TYPE_LABELS[record.type] + ' 기록'}
         </div>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-        <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)', flexShrink: 0 }}>{record.slotTime}</div>
-        <TypeIcon type={record.type} bg={TYPE_COLORS[record.type]} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: record.type === 'text' ? 'nowrap' : undefined, color: '#1A1A1A' }}>
-            {label}
-          </div>
-          {record.type === 'text' && (
-            <div style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.4)', marginTop: 2 }}>{record.content.length}자</div>
-          )}
-        </div>
+        <div style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>{TYPE_LABELS[record.type].toUpperCase()}</div>
       </div>
     </div>
   );
@@ -109,39 +101,42 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
         <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>
           Today · {dateShort} {weekdayEn}
         </div>
-        <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.7px', marginTop: 7 }}>오늘</div>
-        <div style={{ fontSize: 14, color: 'rgba(26,26,26,0.5)', marginTop: 4 }}>
-          {records.length > 0 ? `${records.length}개의 기록` : '아직 기록이 없어요'}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 7 }}>
+          <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.7px' }}>오늘</div>
+          {records.length > 0 && (
+            <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.45)', paddingBottom: 5 }}>{records.length}개</div>
+          )}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '0 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* 지금 기록할 시간 배너 */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '0 22px' }}>
+        {/* 현재 슬롯 배너 */}
         {!hasCurrentRecord && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', background: 'rgba(124,92,196,0.07)', border: '1.5px dashed rgba(124,92,196,0.35)', borderRadius: 16 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#7C5CC4', flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#7C5CC4' }}>지금 기록할 시간</div>
-              <div style={{ ...MONO, fontSize: 10, color: 'rgba(124,92,196,0.7)', marginTop: 2 }}>{currentSlot}</div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', marginBottom: 16, background: 'rgba(124,92,196,0.07)', border: '1.5px dashed rgba(124,92,196,0.35)', borderRadius: 14 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#7C5CC4', flexShrink: 0 }} />
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#7C5CC4' }}>지금 기록할 시간</div>
+            <div style={{ ...MONO, fontSize: 10, color: 'rgba(124,92,196,0.6)', marginLeft: 'auto' }}>{currentSlot}</div>
           </div>
         )}
 
-        {/* 기록 카드 목록 */}
+        {/* 빈 상태 */}
         {records.length === 0 ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, paddingBottom: 60, opacity: 0.5 }}>
-            <div style={{ fontSize: 32 }}>📷</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 10, opacity: 0.5 }}>
+            <div style={{ fontSize: 36 }}>📷</div>
             <div style={{ fontSize: 14, color: 'rgba(26,26,26,0.6)', textAlign: 'center', lineHeight: 1.6 }}>
               첫 기록을 남겨보세요<br />홈 탭에서 기록할 수 있어요
             </div>
           </div>
         ) : (
-          records.map(r => (
-            <RecordCard key={r.id} record={r} onLongPress={() => setPendingDelete(r.id)} />
-          ))
+          /* 2열 그리드 */
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 12px' }}>
+            {records.map(r => (
+              <RecordTile key={r.id} record={r} onLongPress={() => setPendingDelete(r.id)} />
+            ))}
+          </div>
         )}
 
-        <div style={{ height: 8 }} />
+        <div style={{ height: 16 }} />
       </div>
 
       {records.length > 0 && (
