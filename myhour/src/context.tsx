@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import {
   type MyRecord, type RecordType, type AppData, type AppSettings,
   loadAppData, saveAppData, loadSettings, saveSettings,
@@ -24,10 +24,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [appData, setAppData] = useState<AppData>(() => loadAppData(loadSettings().startTime));
 
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const slots = useMemo(() => generateSlots(settings), [settings]);
   const currentSlot = useMemo(
     () => getCurrentSlot(slots, settings.interval, settings.startTime),
-    [slots, settings.interval, settings.startTime],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slots, settings.interval, settings.startTime, tick],
   );
 
   const addRecord = useCallback((type: RecordType, content: string, caption?: string) => {
