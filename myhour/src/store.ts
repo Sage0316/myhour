@@ -192,12 +192,10 @@ export function getSessionDate(startTime: string): string {
   const now = new Date();
   const startM = slotToMinutes(startTime);
   const nowM = now.getHours() * 60 + now.getMinutes();
-  if (nowM < startM) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  }
-  return now.toISOString().slice(0, 10);
+  const d = nowM < startM
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+    : now;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function getDateStrings(sessionDate?: string) {
