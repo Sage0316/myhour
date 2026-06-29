@@ -100,8 +100,16 @@ export async function generateVideo(
   const title = generateTitle(records);
   const closing = generateClosing(records);
 
-  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-    ? 'video/webm;codecs=vp9' : 'video/webm';
+  if (typeof MediaRecorder === 'undefined') throw new Error('이 브라우저는 영상 생성을 지원하지 않아요');
+
+  const mimeType = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4',
+  ].find(t => MediaRecorder.isTypeSupported(t));
+
+  if (!mimeType) throw new Error('이 브라우저는 영상 생성을 지원하지 않아요\n(Chrome 또는 Android에서 시도해 보세요)');
 
   const stream = canvas.captureStream(FPS);
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_000_000 });

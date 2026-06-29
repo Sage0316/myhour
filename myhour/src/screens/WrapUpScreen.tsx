@@ -6,7 +6,7 @@ import { generateVideo } from '../videoGenerator';
 
 interface WrapUpScreenProps {
   onClose: () => void;
-  onSave: () => void;
+  onSave: (videoUrl?: string) => void;
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
@@ -26,6 +26,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [genState, setGenState] = useState<GenState>('idle');
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
 
   const title = generateTitle(records);
   const closing = generateClosing(records);
@@ -38,13 +39,15 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     if (records.length === 0 || genState === 'generating') return;
     setGenState('generating');
     setProgress(0);
+    setGenError(null);
     try {
       const blob = await generateVideo(records, `${dateDay} ${dateWeekday}`, p => setProgress(p));
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
       setGenState('done');
     } catch (e) {
-      console.error('영상 생성 실패:', e);
+      const msg = e instanceof Error ? e.message : '영상 생성에 실패했어요';
+      setGenError(msg);
       setGenState('idle');
     }
   }
@@ -58,7 +61,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   }
 
   function handleWrapUp() {
-    onSave(); // marks isWrapped = true
+    onSave(videoUrl ?? undefined);
   }
 
   return (
@@ -151,14 +154,19 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
         {/* Video preview area */}
         {genState === 'idle' && (
-          <div
-            onClick={handleGenerate}
-            style={{ minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}
-          >
-            <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 0, height: 0, borderLeft: '13px solid #1E2240', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
+              onClick={handleGenerate}
+              style={{ minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}
+            >
+              <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 0, height: 0, borderLeft: '13px solid #1E2240', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+              </div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>탭하여 영상 생성</div>
             </div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>탭하여 영상 생성</div>
+            {genError && (
+              <div style={{ fontSize: 12, color: '#E5533C', lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
+            )}
           </div>
         )}
 

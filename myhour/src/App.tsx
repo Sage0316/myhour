@@ -30,6 +30,7 @@ function FrameWrapper({ label, children, dark }: { label: string; children: Reac
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [modal, setModal] = useState<ModalScreen>(null);
+  const [wrappedVideoUrl, setWrappedVideoUrl] = useState<string | null>(null);
   const { isWrapped, setWrapped, addRecord } = useApp();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
 
@@ -39,9 +40,10 @@ function AppContent() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  function handleSave() {
+  function handleSave(videoUrl?: string) {
     setModal(null);
     setWrapped(true);
+    if (videoUrl) setWrappedVideoUrl(videoUrl);
     setActiveTab('home');
   }
 
@@ -52,6 +54,7 @@ function AppContent() {
           onTabChange={setActiveTab}
           onRecord={() => setModal('record')}
           onWrapUp={() => setModal('wrapup')}
+          videoUrl={wrappedVideoUrl}
         />
       );
       case 'today': return <TodayScreen onTabChange={setActiveTab} onWrapUp={() => setModal('wrapup')} />;

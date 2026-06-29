@@ -17,17 +17,6 @@ interface HomeScreenProps {
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
-function PlayIcon({ size = 10, color = '#1A1A1A' }: { size?: number; color?: string }) {
-  return (
-    <div style={{
-      width: 0, height: 0,
-      borderLeft: `${size}px solid ${color}`,
-      borderTop: `${size * 0.65}px solid transparent`,
-      borderBottom: `${size * 0.65}px solid transparent`,
-      marginLeft: 2,
-    }} />
-  );
-}
 
 type IconType = RecordType | 'locked' | 'waiting';
 
@@ -195,16 +184,23 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
   );
 }
 
-function HomeWrapped() {
+function HomeWrapped({ videoUrl }: { videoUrl?: string | null }) {
   const { records } = useApp();
-  const { dateDay, dateWeekday } = getDateStrings();
+  const { dateDay, dateWeekday, dateShort } = getDateStrings();
   const mood = guessMood(records);
   const title = generateTitle(records);
   const closing = generateClosing(records);
-  const duration = records.length * 8 + 12;
+
+  function handleDownload() {
+    if (!videoUrl) return;
+    const a = document.createElement('a');
+    a.href = videoUrl;
+    a.download = `myhour-${dateShort}.webm`;
+    a.click();
+  }
 
   return (
-    <div style={{ flex: 1, padding: '60px 22px 0', display: 'flex', flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
+    <div style={{ flex: 1, padding: '60px 22px 0', display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(124,92,196,0.8)' }}>Today · Wrapped</div>
@@ -218,30 +214,19 @@ function HomeWrapped() {
         </div>
       </div>
 
-      <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)' }}>오늘이 한 편의 영상이 됐어요</div>
+      <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
+      <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', lineHeight: 1.5, marginTop: -8 }}>"{closing}"</div>
 
-      <div style={{ flex: 1, position: 'relative', borderRadius: 22, overflow: 'hidden', minHeight: 0, background: 'linear-gradient(158deg, #D5EADC 0%, #E2DBF0 52%, #EFE2D5 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'absolute', left: 14, top: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: mood.dot, display: 'inline-block' }} />
-          <span style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', color: 'rgba(26,26,26,0.6)' }}>오늘의 영상 · 9:16</span>
-        </div>
-        <button style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 18px rgba(0,0,0,0.16)', border: 'none', cursor: 'pointer' }}>
-          <PlayIcon size={14} />
-        </button>
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '14px 16px 16px', background: 'linear-gradient(rgba(26,26,26,0) 0%, rgba(26,26,26,0.58) 100%)', color: '#fff' }}>
-          <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.2px' }}>{title}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.82)', marginTop: 5, lineHeight: 1.45 }}>"{closing}"</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-            <PlayIcon size={8} color="#fff" />
-            <div style={{ flex: 1, height: 3, borderRadius: 50, background: 'rgba(255,255,255,0.3)', overflow: 'hidden' }}>
-              <div style={{ width: '6%', height: '100%', background: '#fff' }} />
-            </div>
-            <div style={{ ...MONO, fontSize: 10, letterSpacing: '0.5px', color: 'rgba(255,255,255,0.85)' }}>
-              0:00 / 0:{String(duration).padStart(2, '0')}
-            </div>
+      {videoUrl ? (
+        <video src={videoUrl} controls playsInline style={{ width: '100%', borderRadius: 18, display: 'block' }} />
+      ) : (
+        <div style={{ borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(158deg, #D5EADC 0%, #E2DBF0 52%, #EFE2D5 100%)', padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.55)', textAlign: 'center', lineHeight: 1.6 }}>
+            영상을 아직 생성하지 않았어요<br />
+            <span style={{ color: '#7C5CC4' }}>하루 마감 → 영상 만들기</span>에서 생성할 수 있어요
           </div>
         </div>
-      </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16 }}>
         <div style={{ display: 'flex', gap: 5 }}>
@@ -250,22 +235,24 @@ function HomeWrapped() {
           ))}
         </div>
         <div style={{ flex: 1, fontSize: 13, color: 'rgba(26,26,26,0.7)' }}>오늘 {records.length}개 기록</div>
-        <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.5)' }}>0:{String(duration).padStart(2, '0')}</div>
       </div>
 
-      <div style={{ padding: '10px 0 12px', display: 'flex', gap: 9 }}>
-        <button style={{ flex: 1.5, height: 50, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>영상 저장하기</button>
-        <button style={{ flex: 1, height: 50, borderRadius: 50, background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>공유</button>
-      </div>
+      {videoUrl && (
+        <div style={{ padding: '4px 0 20px' }}>
+          <button onClick={handleDownload} style={{ width: '100%', height: 50, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+            영상 저장하기
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function HomeScreen({ onTabChange, onRecord, onWrapUp }: HomeScreenProps) {
+export default function HomeScreen({ onTabChange, onRecord, onWrapUp, videoUrl }: HomeScreenProps & { videoUrl?: string | null }) {
   const { isWrapped } = useApp();
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
-      {isWrapped ? <HomeWrapped /> : <HomeDay onRecord={onRecord} onWrapUp={onWrapUp} />}
+      {isWrapped ? <HomeWrapped videoUrl={videoUrl} /> : <HomeDay onRecord={onRecord} onWrapUp={onWrapUp} />}
       <TabBar active="home" onTabChange={onTabChange} />
     </div>
   );
