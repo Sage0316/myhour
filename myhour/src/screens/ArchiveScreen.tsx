@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
+import { generateVideo } from '../videoGenerator';
 import TabBar from '../components/TabBar';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -68,13 +69,54 @@ function RecordThumb({ record }: { record: MyRecord }) {
 function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
   const mood = guessMood(entry.records);
   const title = generateTitle(entry.records);
-  // Pick best record to show: photo first, then video, then text, then audio
+  const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
+  const [progress, setProgress] = useState(0);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
+
   const lead = entry.records.find(r => r.type === 'photo' && r.content.startsWith('data:'))
     ?? entry.records.find(r => r.type === 'video' && r.content.startsWith('data:'))
     ?? entry.records.find(r => r.type === 'text')
     ?? entry.records[0];
 
   const fallbackBg = lead ? TYPE_COLORS[lead.type] : '#E2DBF0';
+
+  async function handleGenerate() {
+    setGenState('generating');
+    setProgress(0);
+    setGenError(null);
+    try {
+      const [, m, d] = entry.date.split('-');
+      const dateStr = `${Number(m)}월 ${Number(d)}일`;
+      const blob = await generateVideo(entry.records, dateStr, (pct) => setProgress(pct));
+      const url = URL.createObjectURL(blob);
+      setVideoUrl(url);
+      setGenState('done');
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : '오류가 발생했어요');
+      setGenState('idle');
+    }
+  }
+
+  function handleDownload() {
+    if (!videoUrl) return;
+    if (navigator.share) {
+      fetch(videoUrl).then(r => r.blob()).then(blob => {
+        const file = new File([blob], `myhour-${entry.date}.webm`, { type: blob.type });
+        navigator.share({ files: [file] }).catch(() => triggerDownload());
+      });
+    } else {
+      triggerDownload();
+    }
+  }
+
+  function triggerDownload() {
+    if (!videoUrl) return;
+    const a = document.createElement('a');
+    a.href = videoUrl;
+    a.download = `myhour-${entry.date}.webm`;
+    a.click();
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -87,7 +129,6 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
           <div style={{ width: '100%', height: '100%', background: fallbackBg }} />
         )}
 
-        {/* Record count badge */}
         <div style={{
           position: 'absolute', bottom: 8, right: 8,
           background: 'rgba(0,0,0,0.45)', borderRadius: 8,
@@ -97,7 +138,6 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
           {entry.records.length}
         </div>
 
-        {/* Type dots strip at top if multiple types */}
         {entry.records.length > 1 && (
           <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 3 }}>
             {[...new Set(entry.records.map(r => r.type))].map(t => (
@@ -123,6 +163,37 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
         <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>
           {[...new Set(entry.records.map(r => TYPE_LABELS[r.type]))].join(' · ')}
         </div>
+
+        {genState === 'idle' && (
+          <button onClick={handleGenerate} style={{
+            marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
+            background: '#1A1A1A', color: '#fff', border: 'none',
+            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+          }}>영상 만들기</button>
+        )}
+
+        {genState === 'generating' && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.5)', marginBottom: 4, textAlign: 'center' }}>
+              생성 중... {Math.round(progress * 100)}%
+            </div>
+            <div style={{ height: 4, background: 'rgba(26,26,26,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.round(progress * 100)}%`, background: '#1A1A1A', borderRadius: 2, transition: 'width 0.1s' }} />
+            </div>
+          </div>
+        )}
+
+        {genState === 'done' && (
+          <button onClick={handleDownload} style={{
+            marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
+            background: '#3FA37B', color: '#fff', border: 'none',
+            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+          }}>영상 저장하기 ↓</button>
+        )}
+
+        {genError && (
+          <div style={{ marginTop: 6, fontSize: 10, color: '#E5533C', lineHeight: 1.4 }}>{genError}</div>
+        )}
       </div>
     </div>
   );
