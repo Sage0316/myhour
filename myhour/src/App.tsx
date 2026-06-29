@@ -7,7 +7,6 @@ import ArchiveScreen from './screens/ArchiveScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
 import { AppProvider, useApp } from './context';
-import { addToArchive, getSessionDate } from './store';
 import './App.css';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -31,7 +30,7 @@ function FrameWrapper({ label, children, dark }: { label: string; children: Reac
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [modal, setModal] = useState<ModalScreen>(null);
-  const { addRecord, settings, records, reset } = useApp();
+  const { addRecord, reset } = useApp();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
 
   useEffect(() => {
@@ -40,9 +39,7 @@ function AppContent() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  function handleSave(_videoUrl?: string) {
-    const sessionDate = getSessionDate(settings.startTime);
-    addToArchive({ date: sessionDate, records, isWrapped: true });
+  function handleSave() {
     reset();
     setModal(null);
     setActiveTab('archive');

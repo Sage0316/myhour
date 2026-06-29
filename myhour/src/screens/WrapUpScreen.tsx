@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context';
-import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, saveVideoToIDB } from '../store';
+import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, saveVideoToIDB, addToArchive } from '../store';
 import type { MoodItem } from '../store';
 import { generateVideo } from '../videoGenerator';
 
@@ -40,13 +40,22 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     setGenError(null);
     try {
       const blob = await generateVideo(records, `${dateDay} ${dateWeekday}`, p => setProgress(p));
-      saveVideoToIDB(`wrapped_${sessionDate}`, blob);
-      const url = URL.createObjectURL(blob);
-      onSave(url);
+      await saveVideoToIDB(`wrapped_${sessionDate}`, blob);
+      addToArchive({ date: sessionDate, records, isWrapped: true });
+      onSave(URL.createObjectURL(blob));
     } catch (e) {
       const msg = e instanceof Error ? e.message : '영상 생성에 실패했어요';
       setGenError(msg);
       setGenerating(false);
+    }
+  }
+
+  function handleSkipVideo() {
+    try {
+      addToArchive({ date: sessionDate, records, isWrapped: false });
+      onSave();
+    } catch {
+      setGenError('저장에 실패했어요. 저장 공간이 부족할 수 있어요.');
     }
   }
 
@@ -180,7 +189,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           {generating ? '생성 중...' : '영상 만들기'}
         </button>
         <button
-          onClick={() => onSave()}
+          onClick={handleSkipVideo}
           disabled={generating}
           style={{
             flex: 1, height: 52, borderRadius: 50,
