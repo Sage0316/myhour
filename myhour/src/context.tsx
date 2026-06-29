@@ -11,7 +11,7 @@ interface AppContextValue {
   settings: AppSettings;
   slots: string[];
   currentSlot: string;
-  addRecord: (type: RecordType, content: string) => void;
+  addRecord: (type: RecordType, content: string, caption?: string) => void;
   deleteRecord: (id: string) => void;
   setWrapped: (v: boolean) => void;
   updateSettings: (updates: Partial<AppSettings>) => void;
@@ -27,13 +27,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const slots = useMemo(() => generateSlots(settings), [settings]);
   const currentSlot = useMemo(() => getCurrentSlot(slots, settings.interval), [slots, settings.interval]);
 
-  const addRecord = useCallback((type: RecordType, content: string) => {
+  const addRecord = useCallback((type: RecordType, content: string, caption?: string) => {
     const slot = getCurrentSlot(slots, settings.interval);
     const record: MyRecord = {
       id: Date.now().toString(),
       slotTime: slot,
       type,
       content,
+      caption,
       createdAt: Date.now(),
     };
     setAppData(prev => {

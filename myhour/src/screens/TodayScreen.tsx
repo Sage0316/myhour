@@ -75,7 +75,11 @@ function RecordTile({ record, onLongPress }: { record: MyRecord; onLongPress: ()
       {/* Label */}
       <div style={{ paddingLeft: 2 }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {record.type === 'text' ? (record.content.length > 16 ? record.content.slice(0, 14) + '…' : record.content) : TYPE_LABELS[record.type] + ' 기록'}
+          {record.caption
+            ? record.caption
+            : record.type === 'text'
+              ? (record.content.length > 16 ? record.content.slice(0, 14) + '…' : record.content)
+              : TYPE_LABELS[record.type] + ' 기록'}
         </div>
         <div style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>{TYPE_LABELS[record.type].toUpperCase()}</div>
       </div>

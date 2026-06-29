@@ -63,7 +63,7 @@ function AppContent() {
   const activeScreen = modal === 'record' ? (
     <RecordScreen
       onClose={() => setModal(null)}
-      onSave={(type, content) => { addRecord(type, content); setModal(null); }}
+      onSave={(type, content, caption) => { addRecord(type, content, caption); setModal(null); }}
     />
   ) : modal === 'wrapup' ? (
     <WrapUpScreen onClose={() => setModal(null)} onSave={handleSave} />

@@ -4,7 +4,7 @@ import { useApp } from '../context';
 
 interface RecordScreenProps {
   onClose: () => void;
-  onSave: (type: RecordType, content: string) => void;
+  onSave: (type: RecordType, content: string, caption?: string) => void;
 }
 
 type Mode = '영상' | '사진' | '음성' | '글';
@@ -90,58 +90,9 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   );
 }
 
-function PhotoRecordMode({ onSave }: { onSave: (c: string) => void }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLoading(true);
-    const compressed = await compressImage(file);
-    setPreview(compressed);
-    setLoading(false);
-  }
-
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 12, minHeight: 0, overflowY: 'auto' }}>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
-      {loading && (
-        <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>처리 중…</div>
-        </div>
-      )}
-      {!loading && preview && (
-        <>
-          <div style={{ borderRadius: 24, overflow: 'hidden', maxHeight: '55vh', flexShrink: 0 }}>
-            <img src={preview} style={{ width: '100%', objectFit: 'cover', display: 'block', maxHeight: '55vh' }} />
-          </div>
-          <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
-            <button onClick={() => { setPreview(null); inputRef.current && (inputRef.current.value = ''); }} style={{ flex: 1, height: 46, borderRadius: 50, background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>다시 찍기</button>
-            <button onClick={() => onSave(preview)} style={{ flex: 1.5, height: 46, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>저장하기</button>
-          </div>
-        </>
-      )}
-      {!loading && !preview && (
-        <>
-          <div onClick={() => inputRef.current?.click()} style={{ flex: 1, minHeight: 220, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}>
-            <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
-            </div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 사진 찍기</div>
-          </div>
-          <button onClick={() => inputRef.current?.click()} style={{ height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', flexShrink: 0 }}>카메라 열기</button>
-        </>
-      )}
-    </div>
-  );
-}
-
-function AudioRecordMode({ onSave }: { onSave: (c: string) => void }) {
-  const [phase, setPhase] = useState<'idle' | 'recording' | 'done'>('idle');
+function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
+  const [phase, setPhase] = useState<'idle' | 'recording'>('idle');
   const [seconds, setSeconds] = useState(0);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -155,7 +106,7 @@ function AudioRecordMode({ onSave }: { onSave: (c: string) => void }) {
       mr.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' });
         const reader = new FileReader();
-        reader.onload = () => { setAudioUrl(reader.result as string); setPhase('done'); };
+        reader.onload = () => onCapture(reader.result as string);
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(t => t.stop());
       };
@@ -174,27 +125,8 @@ function AudioRecordMode({ onSave }: { onSave: (c: string) => void }) {
     recorderRef.current?.stop();
   }
 
-  function reset() {
-    setAudioUrl(null);
-    setPhase('idle');
-    setSeconds(0);
-  }
-
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
   const ss = String(seconds % 60).padStart(2, '0');
-
-  if (phase === 'done' && audioUrl) {
-    return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 20, alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.4px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>녹음 완료 · {mm}:{ss}</div>
-        <audio src={audioUrl} controls style={{ width: '100%', borderRadius: 12 }} />
-        <div style={{ display: 'flex', gap: 9, width: '100%' }}>
-          <button onClick={reset} style={{ flex: 1, height: 46, borderRadius: 50, background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>다시 녹음</button>
-          <button onClick={() => onSave(audioUrl)} style={{ flex: 1.5, height: 46, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>저장하기</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28, padding: '0 22px 30px' }}>
@@ -227,53 +159,71 @@ function AudioRecordMode({ onSave }: { onSave: (c: string) => void }) {
   );
 }
 
-function VideoRecordMode({ onSave }: { onSave: (c: string) => void }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [thumbnail, setThumbnail] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLoading(true);
-    const thumb = await videoThumbnail(file);
-    setThumbnail(thumb);
-    setLoading(false);
-  }
+function CaptionStep({ content, type, onSave, onSkip, onRetake }: {
+  content: string;
+  type: RecordType;
+  onSave: (caption: string) => void;
+  onSkip: () => void;
+  onRetake?: () => void;
+}) {
+  const [text, setText] = useState('');
+  const isMedia = type === 'photo' || type === 'video';
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 12, minHeight: 0, overflowY: 'auto' }}>
-      <input ref={inputRef} type="file" accept="video/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
-      {loading && (
-        <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>썸네일 생성 중…</div>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 14, minHeight: 0, overflowY: 'auto' }}>
+      {/* 미리보기 */}
+      {isMedia && (
+        <div style={{ borderRadius: 20, overflow: 'hidden', maxHeight: '42vh', flexShrink: 0, position: 'relative' }}>
+          <img src={content} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: '42vh', display: 'block' }} />
+          {type === 'video' && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 0, height: 0, borderLeft: '12px solid #fff', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+              </div>
+            </div>
+          )}
+          {onRetake && (
+            <button
+              onClick={onRetake}
+              style={{ position: 'absolute', top: 10, right: 10, padding: '5px 12px', borderRadius: 50, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+            >
+              다시 찍기
+            </button>
+          )}
         </div>
       )}
-      {!loading && thumbnail && (
-        <>
-          <div style={{ borderRadius: 24, overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '55vh', flexShrink: 0 }}>
-            <img src={thumbnail} style={{ width: '100%', objectFit: 'cover', display: 'block', maxHeight: '55vh' }} />
-            <div style={{ position: 'absolute', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 0, height: 0, borderLeft: '18px solid #fff', borderTop: '11px solid transparent', borderBottom: '11px solid transparent', marginLeft: 4 }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
-            <button onClick={() => { setThumbnail(null); inputRef.current && (inputRef.current.value = ''); }} style={{ flex: 1, height: 46, borderRadius: 50, background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>다시 찍기</button>
-            <button onClick={() => onSave(thumbnail)} style={{ flex: 1.5, height: 46, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>저장하기</button>
-          </div>
-        </>
+      {type === 'audio' && (
+        <div style={{ borderRadius: 16, background: 'rgba(255,255,255,0.06)', padding: '14px 16px', flexShrink: 0 }}>
+          <audio src={content} controls style={{ width: '100%', height: 36 }} />
+        </div>
       )}
-      {!loading && !thumbnail && (
-        <>
-          <div onClick={() => inputRef.current?.click()} style={{ flex: 1, minHeight: 220, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}>
-            <div style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E5533C' }} />
-            </div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 영상 찍기</div>
-          </div>
-          <button onClick={() => inputRef.current?.click()} style={{ height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', flexShrink: 0 }}>카메라 열기</button>
-        </>
-      )}
+
+      {/* 문구 입력 */}
+      <div style={{ flex: 1, borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 16, minHeight: 100 }}>
+        <textarea
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder="점심 도시락, 오후 산책..."
+          autoFocus
+          style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 15, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
+        />
+      </div>
+
+      {/* 버튼 */}
+      <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
+        <button
+          onClick={onSkip}
+          style={{ flex: 1, height: 50, borderRadius: 50, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+        >
+          스킵
+        </button>
+        <button
+          onClick={() => onSave(text.trim())}
+          style={{ flex: 1.5, height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+        >
+          문구 입력하기
+        </button>
+      </div>
     </div>
   );
 }
@@ -283,10 +233,111 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const defaultMode: Mode = settings.captureMode === 'fixed'
     ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '글')
     : '글';
+
   const [mode, setMode] = useState<Mode>(defaultMode);
+  const [loading, setLoading] = useState(false);
+  const [capturedContent, setCapturedContent] = useState<string | null>(null);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    const compressed = await compressImage(file);
+    setLoading(false);
+    setCapturedContent(compressed);
+    e.target.value = '';
+  }
+
+  async function handleVideoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    const thumb = await videoThumbnail(file);
+    setLoading(false);
+    setCapturedContent(thumb);
+    e.target.value = '';
+  }
+
+  function switchMode(m: Mode) {
+    setMode(m);
+    setCapturedContent(null);
+    if (m === '사진') photoInputRef.current?.click();
+    else if (m === '영상') videoInputRef.current?.click();
+  }
+
+  function retake() {
+    setCapturedContent(null);
+    if (mode === '사진') photoInputRef.current?.click();
+    else if (mode === '영상') videoInputRef.current?.click();
+  }
+
+  function handleCaptionSave(caption: string) {
+    onSave(MODE_TYPE[mode], capturedContent!, caption || undefined);
+  }
+
+  function handleSkip() {
+    onSave(MODE_TYPE[mode], capturedContent!);
+  }
+
+  function renderContent() {
+    if (capturedContent) {
+      return (
+        <CaptionStep
+          content={capturedContent}
+          type={MODE_TYPE[mode]}
+          onSave={handleCaptionSave}
+          onSkip={handleSkip}
+          onRetake={mode !== '음성' ? retake : undefined}
+        />
+      );
+    }
+    if (loading) {
+      return (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>처리 중…</div>
+        </div>
+      );
+    }
+    if (mode === '글') return <TextRecordMode onSave={c => onSave('text', c)} />;
+    if (mode === '음성') return <AudioRecordMode onCapture={setCapturedContent} />;
+
+    // 사진/영상 — 카메라 미실행 상태 (사용자가 취소했거나 다시 탭했을 때)
+    const isPhoto = mode === '사진';
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
+        <div
+          onClick={() => isPhoto ? photoInputRef.current?.click() : videoInputRef.current?.click()}
+          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}
+        >
+          {isPhoto ? (
+            <>
+              <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
+              </div>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
+            </>
+          ) : (
+            <>
+              <div style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E5533C' }} />
+              </div>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
+      {/* 숨겨진 파일 입력 */}
+      <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
+      <input ref={videoInputRef} type="file" accept="video/*" capture="environment" onChange={handleVideoFile} style={{ display: 'none' }} />
+
       <div style={{ padding: '58px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>
         <div style={{ ...MONO, fontSize: 11, letterSpacing: '1px', color: 'rgba(255,255,255,0.6)' }}>SLOT {slot}</div>
@@ -296,21 +347,22 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       <div style={{ padding: '16px 22px 0', display: 'flex', justifyContent: 'center' }}>
         <div style={{ display: 'inline-flex', gap: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 50, padding: 4 }}>
           {MODES.map(m => (
-            <button key={m} onClick={() => setMode(m)} style={{
-              padding: '8px 16px', borderRadius: 50,
-              background: mode === m ? '#fff' : 'none',
-              color: mode === m ? '#16161A' : 'rgba(255,255,255,0.55)',
-              fontSize: 13, fontWeight: mode === m ? 600 : 400,
-              border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-            }}>{m}</button>
+            <button
+              key={m}
+              onClick={() => switchMode(m)}
+              style={{
+                padding: '8px 16px', borderRadius: 50,
+                background: mode === m ? '#fff' : 'none',
+                color: mode === m ? '#16161A' : 'rgba(255,255,255,0.55)',
+                fontSize: 13, fontWeight: mode === m ? 600 : 400,
+                border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              }}
+            >{m}</button>
           ))}
         </div>
       </div>
 
-      {mode === '글' && <TextRecordMode onSave={c => onSave(MODE_TYPE[mode], c)} />}
-      {mode === '사진' && <PhotoRecordMode onSave={c => onSave(MODE_TYPE[mode], c)} />}
-      {mode === '음성' && <AudioRecordMode onSave={c => onSave(MODE_TYPE[mode], c)} />}
-      {mode === '영상' && <VideoRecordMode onSave={c => onSave(MODE_TYPE[mode], c)} />}
+      {renderContent()}
     </div>
   );
 }

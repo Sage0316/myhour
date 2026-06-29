@@ -71,9 +71,13 @@ function TimelineRow({ time, status, record }: { time: string; status: 'filled' 
 
   let label: string;
   if (status === 'filled' && record) {
-    label = record.type === 'text'
-      ? (record.content.length > 14 ? record.content.slice(0, 12) + '…' : record.content)
-      : TYPE_LABELS[record.type] + ' 기록';
+    if (record.caption) {
+      label = record.caption.length > 14 ? record.caption.slice(0, 12) + '…' : record.caption;
+    } else {
+      label = record.type === 'text'
+        ? (record.content.length > 14 ? record.content.slice(0, 12) + '…' : record.content)
+        : TYPE_LABELS[record.type] + ' 기록';
+    }
   } else {
     label = status === 'missed' ? '놓친 시간 · 기록 안 함' : '기록 대기';
   }

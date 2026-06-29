@@ -5,6 +5,7 @@ export interface MyRecord {
   slotTime: string;
   type: RecordType;
   content: string;
+  caption?: string;
   createdAt: number;
 }
 
@@ -61,11 +62,11 @@ export function generateSlots(settings: AppSettings): string[] {
   const startM = slotToMinutes(settings.startTime);
   const endM = settings.endMode === 'fixed'
     ? slotToMinutes(settings.endTime)
-    : startM + 12 * 60; // 12-hour window for open mode
+    : 23 * 60 + 59; // open mode: until end of day
 
   const slots: string[] = [];
   let cur = startM;
-  while (cur <= endM && slots.length < 24 && cur < 24 * 60) {
+  while (cur <= endM && slots.length < 48 && cur < 24 * 60) {
     slots.push(`${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`);
     cur += settings.interval;
   }
