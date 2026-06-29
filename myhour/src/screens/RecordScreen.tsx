@@ -105,19 +105,19 @@ function PhotoRecordMode({ onSave }: { onSave: (c: string) => void }) {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: '16px 22px 30px', gap: 12 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 12, minHeight: 0, overflowY: 'auto' }}>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
       {loading && (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>처리 중…</div>
         </div>
       )}
       {!loading && preview && (
         <>
-          <div style={{ flex: 1, borderRadius: 24, overflow: 'hidden' }}>
-            <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <div style={{ borderRadius: 24, overflow: 'hidden', maxHeight: '55vh', flexShrink: 0 }}>
+            <img src={preview} style={{ width: '100%', objectFit: 'cover', display: 'block', maxHeight: '55vh' }} />
           </div>
-          <div style={{ display: 'flex', gap: 9 }}>
+          <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
             <button onClick={() => { setPreview(null); inputRef.current && (inputRef.current.value = ''); }} style={{ flex: 1, height: 46, borderRadius: 50, background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>다시 찍기</button>
             <button onClick={() => onSave(preview)} style={{ flex: 1.5, height: 46, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>저장하기</button>
           </div>
@@ -125,13 +125,13 @@ function PhotoRecordMode({ onSave }: { onSave: (c: string) => void }) {
       )}
       {!loading && !preview && (
         <>
-          <div onClick={() => inputRef.current?.click()} style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}>
+          <div onClick={() => inputRef.current?.click()} style={{ flex: 1, minHeight: 220, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}>
             <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
             </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 사진 찍기</div>
           </div>
-          <button onClick={() => inputRef.current?.click()} style={{ height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>카메라 열기</button>
+          <button onClick={() => inputRef.current?.click()} style={{ height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', flexShrink: 0 }}>카메라 열기</button>
         </>
       )}
     </div>
@@ -242,22 +242,22 @@ function VideoRecordMode({ onSave }: { onSave: (c: string) => void }) {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: '16px 22px 30px', gap: 12 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 12, minHeight: 0, overflowY: 'auto' }}>
       <input ref={inputRef} type="file" accept="video/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
       {loading && (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>썸네일 생성 중…</div>
         </div>
       )}
       {!loading && thumbnail && (
         <>
-          <div style={{ flex: 1, borderRadius: 24, overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src={thumbnail} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <div style={{ borderRadius: 24, overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '55vh', flexShrink: 0 }}>
+            <img src={thumbnail} style={{ width: '100%', objectFit: 'cover', display: 'block', maxHeight: '55vh' }} />
             <div style={{ position: 'absolute', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: 0, height: 0, borderLeft: '18px solid #fff', borderTop: '11px solid transparent', borderBottom: '11px solid transparent', marginLeft: 4 }} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 9 }}>
+          <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
             <button onClick={() => { setThumbnail(null); inputRef.current && (inputRef.current.value = ''); }} style={{ flex: 1, height: 46, borderRadius: 50, background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>다시 찍기</button>
             <button onClick={() => onSave(thumbnail)} style={{ flex: 1.5, height: 46, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>저장하기</button>
           </div>
@@ -265,13 +265,13 @@ function VideoRecordMode({ onSave }: { onSave: (c: string) => void }) {
       )}
       {!loading && !thumbnail && (
         <>
-          <div onClick={() => inputRef.current?.click()} style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}>
+          <div onClick={() => inputRef.current?.click()} style={{ flex: 1, minHeight: 220, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}>
             <div style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E5533C' }} />
             </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 영상 찍기</div>
           </div>
-          <button onClick={() => inputRef.current?.click()} style={{ height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>카메라 열기</button>
+          <button onClick={() => inputRef.current?.click()} style={{ height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', flexShrink: 0 }}>카메라 열기</button>
         </>
       )}
     </div>
