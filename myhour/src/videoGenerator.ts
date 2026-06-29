@@ -70,11 +70,16 @@ function roundBar(ctx: CanvasRenderingContext2D, x: number, y: number, w: number
 
 type DrawFn = (t: number, frame: number) => void;
 
-async function renderSegment(duration: number, draw: DrawFn) {
+async function renderSegment(
+  duration: number,
+  draw: DrawFn,
+  onFrameProgress?: (framesDone: number, totalFrames: number) => void,
+) {
   const frames = Math.round(duration * FPS);
   const frameMs = 1000 / FPS;
   for (let f = 0; f < frames; f++) {
     draw(f / frames, f);
+    onFrameProgress?.(f + 1, frames);
     await new Promise<void>(r => setTimeout(r, frameMs));
   }
 }
@@ -117,11 +122,19 @@ export async function generateVideo(
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   await new Promise<void>(res => { recorder.onstart = () => res(); recorder.start(100); });
 
-  const total = records.length + 2;
-  let step = 0;
+  const TITLE_DUR = 2;
+  const RECORD_DUR = 2;
+  const CLOSE_DUR = 2;
+  const totalFrames = Math.round((TITLE_DUR + records.length * RECORD_DUR + CLOSE_DUR) * FPS);
+  let framesDone = 0;
+
+  function frameProgress(done: number) {
+    framesDone += done;
+    onProgress?.(framesDone / totalFrames);
+  }
 
   // Title card
-  await renderSegment(2.5, (_t) => {
+  await renderSegment(TITLE_DUR, (_t) => {
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, '#D5EADC'); grad.addColorStop(0.52, '#E2DBF0'); grad.addColorStop(1, '#EFE2D5');
     ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
@@ -141,15 +154,14 @@ export async function generateVideo(
     ctx.font = `400 24px system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(26,26,26,0.5)';
     ctx.fillText(`${records.length}개의 순간`, 40, H * 0.72);
-  });
-  onProgress?.(++step / total);
+  }, (done) => frameProgress(done));
 
   // Each record
   for (const record of records) {
     const bg = TYPE_COLORS[record.type];
     const img = imgMap.get(record.id) ?? null;
 
-    await renderSegment(3, (t) => {
+    await renderSegment(RECORD_DUR, (t) => {
       if (record.type === 'text') {
         ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
         ctx.font = `bold 22px "Courier New", monospace`;
@@ -219,12 +231,11 @@ export async function generateVideo(
           ctx.fillText(record.caption, 40, H - 70);
         }
       }
-    });
-    onProgress?.(++step / total);
+    }, (done) => frameProgress(done));
   }
 
   // Closing card
-  await renderSegment(2.5, (_t) => {
+  await renderSegment(CLOSE_DUR, (_t) => {
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, '#EFE2D5'); grad.addColorStop(0.5, '#E2DBF0'); grad.addColorStop(1, '#D5EADC');
     ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
@@ -234,8 +245,7 @@ export async function generateVideo(
     ctx.font = `bold 22px "Courier New", monospace`;
     ctx.fillStyle = 'rgba(26,26,26,0.28)';
     ctx.fillText('MYHOUR', 40, H - 52);
-  });
-  onProgress?.(++step / total);
+  }, (done) => frameProgress(done));
 
   recorder.stop();
   await new Promise<void>(res => { recorder.onstop = () => res(); });
