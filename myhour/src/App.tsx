@@ -7,7 +7,7 @@ import ArchiveScreen from './screens/ArchiveScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
 import { AppProvider, useApp } from './context';
-import { loadVideoFromIDB, getSessionDate } from './store';
+import { addToArchive, getSessionDate } from './store';
 import './App.css';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -31,16 +31,7 @@ function FrameWrapper({ label, children, dark }: { label: string; children: Reac
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [modal, setModal] = useState<ModalScreen>(null);
-  const [wrappedVideoUrl, setWrappedVideoUrl] = useState<string | null>(null);
-  const { isWrapped, setWrapped, addRecord, settings } = useApp();
-
-  useEffect(() => {
-    if (!isWrapped) return;
-    const sessionDate = getSessionDate(settings.startTime);
-    loadVideoFromIDB(`wrapped_${sessionDate}`).then(url => {
-      if (url) setWrappedVideoUrl(url);
-    });
-  }, [isWrapped, settings.startTime]);
+  const { addRecord, settings, records, reset } = useApp();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
 
   useEffect(() => {
@@ -49,11 +40,12 @@ function AppContent() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  function handleSave(videoUrl?: string) {
+  function handleSave(_videoUrl?: string) {
+    const sessionDate = getSessionDate(settings.startTime);
+    addToArchive({ date: sessionDate, records, isWrapped: true });
+    reset();
     setModal(null);
-    setWrapped(true);
-    if (videoUrl) setWrappedVideoUrl(videoUrl);
-    setActiveTab('home');
+    setActiveTab('archive');
   }
 
   function renderMain() {
@@ -63,7 +55,7 @@ function AppContent() {
           onTabChange={setActiveTab}
           onRecord={() => setModal('record')}
           onWrapUp={() => setModal('wrapup')}
-          videoUrl={wrappedVideoUrl}
+          videoUrl={null}
         />
       );
       case 'today': return <TodayScreen onTabChange={setActiveTab} onWrapUp={() => setModal('wrapup')} />;
@@ -91,7 +83,7 @@ function AppContent() {
 
   const mainLabel = modal === 'record' ? 'MYHOUR · 기록하기'
     : modal === 'wrapup' ? 'MYHOUR · 하루 마감'
-    : activeTab === 'home' ? (isWrapped ? 'MYHOUR · 홈 · 마감 후' : 'MYHOUR · 홈 · 기록 중')
+    : activeTab === 'home' ? 'MYHOUR · 홈'
     : activeTab === 'today' ? 'MYHOUR · 오늘'
     : activeTab === 'archive' ? 'MYHOUR · 아카이브' : 'MYHOUR · 설정';
 

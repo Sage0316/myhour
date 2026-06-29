@@ -214,8 +214,8 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
             >
               {genState === 'generating' ? '생성 중...' : '영상 만들기'}
             </button>
-            <button onClick={onClose} style={{ flex: 1, height: 52, borderRadius: 50, background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
-              닫기
+            <button onClick={handleWrapUp} style={{ flex: 1, height: 52, borderRadius: 50, background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+              마감하기
             </button>
           </>
         )}

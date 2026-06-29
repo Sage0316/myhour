@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS } from '../store';
+import { useEffect, useMemo, useState } from 'react';
+import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, saveVideoToIDB } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { generateVideo } from '../videoGenerator';
 import TabBar from '../components/TabBar';
@@ -56,7 +56,6 @@ function RecordThumb({ record }: { record: MyRecord }) {
       </div>
     );
   }
-  // audio
   return (
     <div style={{ width: '100%', height: '100%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
       {[10, 22, 14, 30, 18, 26, 12, 28, 16, 20].map((h, i) => (
@@ -72,7 +71,14 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [showPlayer, setShowPlayer] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadVideoFromIDB(`wrapped_${entry.date}`).then(url => {
+      if (url) { setVideoUrl(url); setGenState('done'); }
+    });
+  }, [entry.date]);
 
   const lead = entry.records.find(r => r.type === 'photo' && r.content.startsWith('data:'))
     ?? entry.records.find(r => r.type === 'video' && r.content.startsWith('data:'))
@@ -89,9 +95,11 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
       const [, m, d] = entry.date.split('-');
       const dateStr = `${Number(m)}월 ${Number(d)}일`;
       const blob = await generateVideo(entry.records, dateStr, (pct) => setProgress(pct));
+      saveVideoToIDB(`wrapped_${entry.date}`, blob);
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
       setGenState('done');
+      setShowPlayer(true);
     } catch (e) {
       setGenError(e instanceof Error ? e.message : '오류가 발생했어요');
       setGenState('idle');
@@ -100,7 +108,7 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {genState === 'done' && videoUrl ? (
+      {showPlayer && videoUrl ? (
         <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: '#000' }}>
           <video
             src={videoUrl}
@@ -133,6 +141,18 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
               {[...new Set(entry.records.map(r => r.type))].map(t => (
                 <div key={t} style={{ width: 6, height: 6, borderRadius: '50%', background: TYPE_COLORS[t], border: '1px solid rgba(255,255,255,0.6)' }} />
               ))}
+            </div>
+          )}
+
+          {/* Video exists overlay — show play icon */}
+          {genState === 'done' && videoUrl && (
+            <div
+              onClick={() => setShowPlayer(true)}
+              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.22)', cursor: 'pointer' }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 0, height: 0, borderLeft: '13px solid #1A1A1A', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+              </div>
             </div>
           )}
 
@@ -169,10 +189,18 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
             marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
             background: '#1A1A1A', color: '#fff', border: 'none',
             fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-          }}>영상 만들기</button>
+          }}>영상 생성하기</button>
         )}
 
-        {genState === 'done' && (
+        {genState === 'done' && !showPlayer && (
+          <button onClick={() => setShowPlayer(true)} style={{
+            marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
+            background: '#7C5CC4', color: '#fff', border: 'none',
+            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+          }}>영상 보기 ▶</button>
+        )}
+
+        {genState === 'done' && showPlayer && (
           <a
             href={videoUrl ?? ''}
             download={`myhour-${entry.date}.webm`}
@@ -219,7 +247,7 @@ export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: 0.45 }}>
           <div style={{ fontSize: 14, color: 'rgba(26,26,26,0.6)', textAlign: 'center', lineHeight: 1.8 }}>
             아직 저장된 하루가 없어요<br />
-            <span style={{ fontSize: 12 }}>백업 파일을 가져오면 여기에 남아요</span>
+            <span style={{ fontSize: 12 }}>하루를 마무리하면 여기에 쌓여요</span>
           </div>
         </div>
         <TabBar active="archive" onTabChange={onTabChange} />
