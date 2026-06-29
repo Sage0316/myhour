@@ -29,5 +29,5 @@ button {
 
 @media (max-width: 599px) {
   html, body { background: #fff; overflow: hidden; height: 100dvh; }
-  #root { padding: 0; min-height: 100dvh; overflow: hidden; }
+  #root { padding: 0; min-height: 100dvh; width: 100%; overflow: hidden; }
 }

@@ -12,6 +12,7 @@ interface AppContextValue {
   slots: string[];
   currentSlot: string;
   addRecord: (type: RecordType, content: string) => void;
+  deleteRecord: (id: string) => void;
   setWrapped: (v: boolean) => void;
   updateSettings: (updates: Partial<AppSettings>) => void;
   reset: () => void;
@@ -41,6 +42,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, [slots, settings.interval]);
+
+  const deleteRecord = useCallback((id: string) => {
+    setAppData(prev => {
+      const next = { ...prev, records: prev.records.filter(r => r.id !== id) };
+      saveAppData(next);
+      return next;
+    });
+  }, []);
 
   const setWrapped = useCallback((v: boolean) => {
     setAppData(prev => {
@@ -73,6 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       slots,
       currentSlot,
       addRecord,
+      deleteRecord,
       setWrapped,
       updateSettings,
       reset,

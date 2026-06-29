@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { useApp } from '../context';
 import { getDateStrings, TYPE_COLORS, TYPE_LABELS } from '../store';
 import type { MyRecord, RecordType } from '../store';
@@ -36,15 +37,33 @@ function isDataUrl(s: string) {
   return s.startsWith('data:');
 }
 
-function RecordCard({ record }: { record: MyRecord }) {
+function RecordCard({ record, onLongPress }: { record: MyRecord; onLongPress: () => void }) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasMedia = isDataUrl(record.content);
   const label = record.type === 'text' ? record.content : TYPE_LABELS[record.type] + ' 기록';
   const detail = record.type === 'text'
     ? `TEXT · ${record.content.length}자`
     : TYPE_LABELS[record.type].toUpperCase();
 
+  function handlePointerDown() {
+    timerRef.current = setTimeout(() => {
+      navigator.vibrate?.(30);
+      onLongPress();
+    }, 500);
+  }
+
+  function handlePointerUp() {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+  }
+
   return (
-    <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16, overflow: 'hidden' }}>
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16, overflow: 'hidden', userSelect: 'none', WebkitUserSelect: 'none' }}
+    >
       {record.type === 'photo' && hasMedia && (
         <img src={record.content} alt="" style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
       )}
@@ -78,12 +97,17 @@ function RecordCard({ record }: { record: MyRecord }) {
 }
 
 export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps) {
-  const { records, slots, currentSlot } = useApp();
+  const { records, slots, currentSlot, deleteRecord } = useApp();
   const { dateShort, weekdayEn } = getDateStrings();
   const currentSlotIdx = slots.indexOf(currentSlot);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const slotMap = new Map<string, MyRecord>();
   for (const r of records) slotMap.set(r.slotTime, r);
+
+  function confirmDelete() {
+    if (pendingDelete) { deleteRecord(pendingDelete); setPendingDelete(null); }
+  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
@@ -105,7 +129,9 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
           const isFarFuture = idx > currentSlotIdx + 1;
           if (isFarFuture) return null;
 
-          if (record) return <RecordCard key={slot} record={record} />;
+          if (record) return (
+            <RecordCard key={slot} record={record} onLongPress={() => setPendingDelete(record.id)} />
+          );
 
           if (isActive) return (
             <div key={slot} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: 11, border: '1.5px dashed rgba(124,92,196,0.4)', borderRadius: 16, background: 'rgba(124,92,196,0.04)' }}>
@@ -133,6 +159,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
             </div>
           );
         })}
+        <div style={{ height: 8 }} />
       </div>
 
       {records.length > 0 && (
@@ -144,6 +171,33 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
       )}
 
       <TabBar active="today" onTabChange={onTabChange} />
+
+      {/* Delete action sheet */}
+      {pendingDelete && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setPendingDelete(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px 22px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}
+          >
+            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.45)', textAlign: 'center', marginBottom: 4 }}>이 기록을 삭제할까요?</div>
+            <button
+              onClick={confirmDelete}
+              style={{ width: '100%', height: 52, borderRadius: 50, background: '#E5533C', color: '#fff', fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+            >
+              삭제하기
+            </button>
+            <button
+              onClick={() => setPendingDelete(null)}
+              style={{ width: '100%', height: 52, borderRadius: 50, background: 'rgba(26,26,26,0.06)', color: '#1A1A1A', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
