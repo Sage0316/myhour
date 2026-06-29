@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import type { RecordType } from '../store';
+import { saveVideoToIDB } from '../store';
 import { useApp } from '../context';
 
 interface RecordScreenProps {
   onClose: () => void;
-  onSave: (type: RecordType, content: string, caption?: string) => void;
+  onSave: (type: RecordType, content: string, caption?: string, videoKey?: string) => void;
 }
 
 type Mode = '영상' | '사진' | '음성' | '글';
@@ -240,6 +241,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const pendingVideoKeyRef = useRef<string | null>(null);
 
   async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -255,7 +257,12 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     setLoading(true);
-    const thumb = await videoThumbnail(file);
+    const videoKey = `video_${Date.now()}`;
+    const [thumb] = await Promise.all([
+      videoThumbnail(file),
+      saveVideoToIDB(videoKey, file),
+    ]);
+    pendingVideoKeyRef.current = videoKey;
     setLoading(false);
     setCapturedContent(thumb);
     e.target.value = '';
@@ -264,6 +271,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   function switchMode(m: Mode) {
     setMode(m);
     setCapturedContent(null);
+    pendingVideoKeyRef.current = null;
     if (m === '사진') photoInputRef.current?.click();
     else if (m === '영상') videoInputRef.current?.click();
   }
@@ -275,11 +283,13 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   }
 
   function handleCaptionSave(caption: string) {
-    onSave(MODE_TYPE[mode], capturedContent!, caption || undefined);
+    onSave(MODE_TYPE[mode], capturedContent!, caption || undefined, pendingVideoKeyRef.current ?? undefined);
+    pendingVideoKeyRef.current = null;
   }
 
   function handleSkip() {
-    onSave(MODE_TYPE[mode], capturedContent!);
+    onSave(MODE_TYPE[mode], capturedContent!, undefined, pendingVideoKeyRef.current ?? undefined);
+    pendingVideoKeyRef.current = null;
   }
 
   function renderContent() {

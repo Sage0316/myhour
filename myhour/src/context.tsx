@@ -11,7 +11,7 @@ interface AppContextValue {
   settings: AppSettings;
   slots: string[];
   currentSlot: string;
-  addRecord: (type: RecordType, content: string, caption?: string) => void;
+  addRecord: (type: RecordType, content: string, caption?: string, videoKey?: string) => void;
   deleteRecord: (id: string) => void;
   setWrapped: (v: boolean) => void;
   updateSettings: (updates: Partial<AppSettings>) => void;
@@ -37,7 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [slots, settings.interval, settings.startTime, tick],
   );
 
-  const addRecord = useCallback((type: RecordType, content: string, caption?: string) => {
+  const addRecord = useCallback((type: RecordType, content: string, caption?: string, videoKey?: string) => {
     const slot = getCurrentSlot(slots, settings.interval, settings.startTime);
     const record: MyRecord = {
       id: Date.now().toString(),
@@ -46,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       content,
       caption,
       createdAt: Date.now(),
+      ...(videoKey ? { videoKey } : {}),
     };
     setAppData(prev => {
       const next = { ...prev, records: [...prev.records, record] };

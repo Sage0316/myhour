@@ -7,6 +7,45 @@ export interface MyRecord {
   content: string;
   caption?: string;
   createdAt: number;
+  videoKey?: string; // IndexedDB key for the actual video file
+}
+
+// ─── IndexedDB video storage (localStorage can't handle large video files) ──
+
+function openVideoDB(): Promise<IDBDatabase> {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('myhour_videos_v1', 1);
+    req.onupgradeneeded = e => { (e.target as IDBOpenDBRequest).result.createObjectStore('videos'); };
+    req.onsuccess = e => res((e.target as IDBOpenDBRequest).result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+export async function saveVideoToIDB(key: string, file: File | Blob): Promise<void> {
+  try {
+    const db = await openVideoDB();
+    await new Promise<void>((res, rej) => {
+      const tx = db.transaction('videos', 'readwrite');
+      tx.objectStore('videos').put(file, key);
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    });
+  } catch { /* ignore */ }
+}
+
+export async function loadVideoFromIDB(key: string): Promise<string | null> {
+  try {
+    const db = await openVideoDB();
+    const blob: Blob | undefined = await new Promise((res, rej) => {
+      const tx = db.transaction('videos', 'readonly');
+      const req = tx.objectStore('videos').get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+    return blob ? URL.createObjectURL(blob) : null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────

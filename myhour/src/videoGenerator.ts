@@ -1,5 +1,5 @@
 import type { MyRecord } from './store';
-import { TYPE_COLORS, generateTitle, generateClosing } from './store';
+import { TYPE_COLORS, generateTitle, generateClosing, loadVideoFromIDB } from './store';
 
 const W = 540;
 const H = 960;
@@ -14,6 +14,51 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
+
+// Extract frames from an actual video file via blob URL (seeked approach — works reliably)
+async function extractVideoFrames(blobUrl: string, count: number): Promise<HTMLImageElement[]> {
+  const frames: HTMLImageElement[] = [];
+
+  const vid = await new Promise<HTMLVideoElement | null>(res => {
+    const v = document.createElement('video');
+    v.muted = true;
+    v.playsInline = true;
+    const t = setTimeout(() => res(null), 10_000);
+    v.onloadeddata = () => { clearTimeout(t); res(v); };
+    v.onerror = () => { clearTimeout(t); res(null); };
+    v.src = blobUrl;
+    v.load();
+  });
+
+  if (!vid || !vid.videoWidth) { URL.revokeObjectURL(blobUrl); return frames; }
+
+  const dur = isFinite(vid.duration) && vid.duration > 0 ? Math.min(vid.duration, 5) : 3;
+
+  const capture = async (): Promise<void> => {
+    const c = document.createElement('canvas');
+    c.width = vid.videoWidth; c.height = vid.videoHeight;
+    c.getContext('2d')!.drawImage(vid, 0, 0);
+    const img = await loadImage(c.toDataURL('image/jpeg', 0.8));
+    if (img) frames.push(img);
+  };
+
+  const seekTo = (t: number): Promise<void> => new Promise(res => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; vid.onseeked = null; res(); } };
+    vid.onseeked = finish;
+    vid.currentTime = t;
+    setTimeout(finish, 2000);
+  });
+
+  await capture(); // first frame at time 0
+  for (let i = 1; i < count; i++) {
+    await seekTo((i / count) * dur);
+    await capture();
+  }
+
+  URL.revokeObjectURL(blobUrl);
+  return frames;
+}
 
 function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, scale = 1) {
   const ia = img.naturalWidth / img.naturalHeight;
@@ -72,13 +117,23 @@ export async function generateVideo(
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
 
-  // Preload: photos and videos in parallel
-  // Video records store a JPEG thumbnail (not actual video), so loadImage works for both
+  // Preload: photos load as images; videos load actual frames from IDB if available
   const imgMap = new Map<string, HTMLImageElement | null>();
+  const vidFramesMap = new Map<string, HTMLImageElement[]>();
+
   await Promise.all(records.map(async r => {
-    if (!r.content.startsWith('data:')) return;
-    if (r.type === 'photo' || r.type === 'video') {
-      imgMap.set(r.id, await loadImage(r.content));
+    if (r.type === 'photo') {
+      if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
+    } else if (r.type === 'video') {
+      if (r.videoKey) {
+        const blobUrl = await loadVideoFromIDB(r.videoKey);
+        if (blobUrl) {
+          const frames = await extractVideoFrames(blobUrl, 6);
+          if (frames.length > 0) { vidFramesMap.set(r.id, frames); return; }
+        }
+      }
+      // fallback: JPEG thumbnail
+      if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
     }
   }));
 
@@ -133,8 +188,10 @@ export async function generateVideo(
   for (const record of records) {
     const bg = TYPE_COLORS[record.type];
     const img = imgMap.get(record.id) ?? null;
+    const vidFrames = vidFramesMap.get(record.id) ?? null;
+    const totalFrameCount = Math.round(RECORD_DUR * FPS);
 
-    await renderSegment(RECORD_DUR, (t) => {
+    await renderSegment(RECORD_DUR, (t, frame) => {
       if (record.type === 'text') {
         ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
         ctx.font = `bold 22px "Courier New", monospace`;
@@ -150,13 +207,18 @@ export async function generateVideo(
         }
 
       } else if (record.type === 'photo' || record.type === 'video') {
-        if (img) {
+        // For video records with extracted frames, cycle through them
+        const activeImg = record.type === 'video' && vidFrames && vidFrames.length > 0
+          ? vidFrames[Math.floor((frame / totalFrameCount) * vidFrames.length) % vidFrames.length]
+          : img;
+
+        if (activeImg) {
           ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-          // Photos get a subtle zoom; video frame stays still
+          // Photos get a subtle zoom; video frames cycle without zoom
           const scale = record.type === 'photo' ? 1 + t * 0.04 : 1;
           ctx.save();
           ctx.translate(W / 2, H / 2); ctx.scale(scale, scale); ctx.translate(-W / 2, -H / 2);
-          drawCover(ctx, img);
+          drawCover(ctx, activeImg);
           ctx.restore();
           const grd = ctx.createLinearGradient(0, H * 0.55, 0, H);
           grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.65)');
@@ -164,7 +226,7 @@ export async function generateVideo(
         } else {
           ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
         }
-        if (record.type === 'video' && !img) {
+        if (record.type === 'video' && !activeImg) {
           // fallback play icon when frame extraction failed
           ctx.fillStyle = 'rgba(255,255,255,0.6)';
           ctx.beginPath(); ctx.arc(W / 2, H / 2, 44, 0, Math.PI * 2); ctx.fill();
@@ -175,7 +237,7 @@ export async function generateVideo(
           ctx.lineTo(W / 2 - 10, H / 2 + 18);
           ctx.closePath(); ctx.fill();
         }
-        const dark = !!img;
+        const dark = !!activeImg;
         ctx.font = `bold 22px "Courier New", monospace`;
         ctx.fillStyle = dark ? 'rgba(255,255,255,0.8)' : 'rgba(26,26,26,0.4)';
         ctx.fillText(record.slotTime, 30, H - (record.caption ? 74 : 46));
