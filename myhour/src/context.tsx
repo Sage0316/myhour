@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useMemo, useCallback, type ReactNo
 import {
   type MyRecord, type RecordType, type AppData, type AppSettings,
   loadAppData, saveAppData, loadSettings, saveSettings,
-  getCurrentSlot, generateSlots,
+  getCurrentSlot, generateSlots, getSessionDate,
 } from './store';
 
 interface AppContextValue {
@@ -21,14 +21,17 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [appData, setAppData] = useState<AppData>(loadAppData);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [appData, setAppData] = useState<AppData>(() => loadAppData(loadSettings().startTime));
 
   const slots = useMemo(() => generateSlots(settings), [settings]);
-  const currentSlot = useMemo(() => getCurrentSlot(slots, settings.interval), [slots, settings.interval]);
+  const currentSlot = useMemo(
+    () => getCurrentSlot(slots, settings.interval, settings.startTime),
+    [slots, settings.interval, settings.startTime],
+  );
 
   const addRecord = useCallback((type: RecordType, content: string, caption?: string) => {
-    const slot = getCurrentSlot(slots, settings.interval);
+    const slot = getCurrentSlot(slots, settings.interval, settings.startTime);
     const record: MyRecord = {
       id: Date.now().toString(),
       slotTime: slot,
@@ -42,7 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveAppData(next);
       return next;
     });
-  }, [slots, settings.interval]);
+  }, [slots, settings.interval, settings.startTime]);
 
   const deleteRecord = useCallback((id: string) => {
     setAppData(prev => {
@@ -69,11 +72,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reset = useCallback(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const fresh: AppData = { records: [], isWrapped: false, date: today };
+    const date = getSessionDate(settings.startTime);
+    const fresh: AppData = { records: [], isWrapped: false, date };
     saveAppData(fresh);
     setAppData(fresh);
-  }, []);
+  }, [settings.startTime]);
 
   return (
     <AppContext.Provider value={{

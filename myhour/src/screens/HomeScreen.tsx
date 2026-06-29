@@ -103,7 +103,7 @@ function TimelineRow({ time, status, record }: { time: string; status: 'filled' 
 function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () => void }) {
   const { records, slots, currentSlot, settings } = useApp();
   const { dateDay, dateWeekday } = getDateStrings();
-  const nextSlot = getNextSlot(slots);
+  const nextSlot = getNextSlot(slots, settings.startTime);
 
   const slotMap = new Map<string, MyRecord>();
   for (const r of records) slotMap.set(r.slotTime, r);
@@ -117,8 +117,8 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
   }
 
   const hasActiveRecord = slotMap.has(currentSlot);
-  const timeLeft = formatTime(minutesLeftInSlot(currentSlot, slots, settings.interval));
-  const nextIn = nextSlot ? formatTime(minutesUntilSlot(nextSlot)) : null;
+  const timeLeft = formatTime(minutesLeftInSlot(currentSlot, slots, settings.interval, settings.startTime));
+  const nextIn = nextSlot ? formatTime(minutesUntilSlot(nextSlot, settings.startTime)) : null;
 
   return (
     <div style={{ flex: 1, padding: '60px 22px 0', display: 'flex', flexDirection: 'column', gap: 14, overflow: 'hidden' }}>

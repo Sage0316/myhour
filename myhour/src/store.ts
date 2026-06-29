@@ -58,50 +58,71 @@ function slotToMinutes(slot: string): number {
   return h * 60 + m;
 }
 
+// Convert slot time to "session minutes" — slots past midnight get +24h offset
+function toSessionM(slot: string, startM: number): number {
+  const m = slotToMinutes(slot);
+  return m < startM ? m + 24 * 60 : m;
+}
+
+// Current time in session minutes (past-midnight = add 24h)
+function nowSessionM(startM: number): number {
+  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+  return nowM < startM ? nowM + 24 * 60 : nowM;
+}
+
 export function generateSlots(settings: AppSettings): string[] {
   const startM = slotToMinutes(settings.startTime);
+
+  // open mode: last slot is just before next session start (up to +24h)
+  // e.g. start=09:00, interval=120 → last slot at 07:00 next day
   const endM = settings.endMode === 'fixed'
     ? slotToMinutes(settings.endTime)
-    : 23 * 60 + 59; // open mode: until end of day
+    : startM + 24 * 60 - settings.interval;
 
   const slots: string[] = [];
   let cur = startM;
-  while (cur <= endM && slots.length < 48 && cur < 24 * 60) {
-    slots.push(`${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`);
+  while (cur <= endM && slots.length < 48) {
+    const wallM = cur % (24 * 60);
+    slots.push(`${String(Math.floor(wallM / 60)).padStart(2, '0')}:${String(wallM % 60).padStart(2, '0')}`);
     cur += settings.interval;
   }
   return slots;
 }
 
-export function getCurrentSlot(slots: string[], interval: number): string {
-  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+export function getCurrentSlot(slots: string[], interval: number, startTime?: string): string {
+  const startM = startTime ? slotToMinutes(startTime) : 0;
+  const effNow = nowSessionM(startM);
+
   for (let i = 0; i < slots.length; i++) {
-    const start = slotToMinutes(slots[i]);
-    const end = i < slots.length - 1 ? slotToMinutes(slots[i + 1]) : start + interval;
-    if (nowM >= start && nowM < end) return slots[i];
+    const sM = toSessionM(slots[i], startM);
+    const eM = i < slots.length - 1 ? toSessionM(slots[i + 1], startM) : sM + interval;
+    if (effNow >= sM && effNow < eM) return slots[i];
   }
-  if (slots.length === 0) return '09:00';
-  if (nowM < slotToMinutes(slots[0])) return slots[0];
+  if (slots.length === 0) return startTime ?? '09:00';
+  if (effNow < toSessionM(slots[0], startM)) return slots[0];
   return slots[slots.length - 1];
 }
 
-export function getNextSlot(slots: string[]): string | null {
-  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-  return slots.find(s => slotToMinutes(s) > nowM) ?? null;
+export function getNextSlot(slots: string[], startTime?: string): string | null {
+  const startM = startTime ? slotToMinutes(startTime) : 0;
+  const effNow = nowSessionM(startM);
+  return slots.find(s => toSessionM(s, startM) > effNow) ?? null;
 }
 
-export function minutesLeftInSlot(slot: string, slots: string[], interval: number): number {
-  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+export function minutesLeftInSlot(slot: string, slots: string[], interval: number, startTime?: string): number {
+  const startM = startTime ? slotToMinutes(startTime) : 0;
+  const effNow = nowSessionM(startM);
   const idx = slots.indexOf(slot);
-  const end = idx >= 0 && idx < slots.length - 1
-    ? slotToMinutes(slots[idx + 1])
-    : slotToMinutes(slot) + interval;
-  return Math.max(0, end - nowM);
+  const endM = idx >= 0 && idx < slots.length - 1
+    ? toSessionM(slots[idx + 1], startM)
+    : toSessionM(slot, startM) + interval;
+  return Math.max(0, endM - effNow);
 }
 
-export function minutesUntilSlot(slot: string): number {
-  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-  return Math.max(0, slotToMinutes(slot) - nowM);
+export function minutesUntilSlot(slot: string, startTime?: string): number {
+  const startM = startTime ? slotToMinutes(startTime) : 0;
+  const effNow = nowSessionM(startM);
+  return Math.max(0, toSessionM(slot, startM) - effNow);
 }
 
 export function formatTime(minutes: number): string {
@@ -115,6 +136,19 @@ export function formatTime(minutes: number): string {
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
+
+// Session date: if current time is before startTime, we're still in yesterday's session
+export function getSessionDate(startTime: string): string {
+  const now = new Date();
+  const startM = slotToMinutes(startTime);
+  const nowM = now.getHours() * 60 + now.getMinutes();
+  if (nowM < startM) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+  return now.toISOString().slice(0, 10);
+}
 
 export function getDateStrings() {
   const now = new Date();
@@ -194,16 +228,16 @@ export interface AppData {
 
 const DATA_KEY = 'myhour_v1';
 
-export function loadAppData(): AppData {
-  const today = new Date().toISOString().slice(0, 10);
+export function loadAppData(startTime: string = DEFAULT_SETTINGS.startTime): AppData {
+  const date = getSessionDate(startTime);
   try {
     const raw = localStorage.getItem(DATA_KEY);
-    if (!raw) return { records: [], isWrapped: false, date: today };
+    if (!raw) return { records: [], isWrapped: false, date };
     const data: AppData = JSON.parse(raw);
-    if (data.date !== today) return { records: [], isWrapped: false, date: today };
+    if (data.date !== date) return { records: [], isWrapped: false, date };
     return data;
   } catch {
-    return { records: [], isWrapped: false, date: today };
+    return { records: [], isWrapped: false, date };
   }
 }
 
