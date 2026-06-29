@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import IOSFrame from './components/IOSFrame';
 import HomeScreen from './screens/HomeScreen';
 import TodayScreen from './screens/TodayScreen';
@@ -6,10 +6,10 @@ import RecordScreen from './screens/RecordScreen';
 import ArchiveScreen from './screens/ArchiveScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
-
-type Tab = 'home' | 'today' | 'archive' | 'settings';
+import { AppProvider, useApp } from './context';
 import './App.css';
 
+type Tab = 'home' | 'today' | 'archive' | 'settings';
 type ModalScreen = 'record' | 'wrapup' | null;
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -27,76 +27,81 @@ function FrameWrapper({ label, children, dark }: { label: string; children: Reac
   );
 }
 
-export default function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [modal, setModal] = useState<ModalScreen>(null);
-  const [isWrapped, setIsWrapped] = useState(false);
+  const { isWrapped, setWrapped, addRecord } = useApp();
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 600);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   function handleSave() {
     setModal(null);
-    setIsWrapped(true);
+    setWrapped(true);
     setActiveTab('home');
   }
 
   function renderMain() {
     switch (activeTab) {
-      case 'home':
-        return (
-          <HomeScreen
-            isWrapped={isWrapped}
-            onTabChange={setActiveTab}
-            onRecord={() => setModal('record')}
-            onWrapUp={() => setModal('wrapup')}
-            onWatchVideo={() => {}}
-            dateDay="6월 25일"
-            dateWeekday="목요일"
-            recordCount={4}
-            nextIn="52분"
-          />
-        );
-      case 'today':
-        return (
-          <TodayScreen
-            onTabChange={setActiveTab}
-            onWrapUp={() => setModal('wrapup')}
-          />
-        );
-      case 'archive':
-        return <ArchiveScreen onTabChange={setActiveTab} />;
-      case 'settings':
-        return <SettingsScreen onTabChange={setActiveTab} />;
+      case 'home': return (
+        <HomeScreen
+          onTabChange={setActiveTab}
+          onRecord={() => setModal('record')}
+          onWrapUp={() => setModal('wrapup')}
+        />
+      );
+      case 'today': return <TodayScreen onTabChange={setActiveTab} onWrapUp={() => setModal('wrapup')} />;
+      case 'archive': return <ArchiveScreen onTabChange={setActiveTab} />;
+      case 'settings': return <SettingsScreen onTabChange={setActiveTab} />;
     }
   }
 
-  const mainLabel = activeTab === 'home'
-    ? (isWrapped ? '홈 · 마감 후' : '홈 · 기록 중')
-    : activeTab === 'today' ? '오늘'
-    : activeTab === 'archive' ? '아카이브' : '설정';
+  const activeScreen = modal === 'record' ? (
+    <RecordScreen
+      onClose={() => setModal(null)}
+      onSave={(type, content) => { addRecord(type, content); setModal(null); }}
+    />
+  ) : modal === 'wrapup' ? (
+    <WrapUpScreen onClose={() => setModal(null)} onSave={handleSave} />
+  ) : renderMain();
+
+  if (isMobile) {
+    return (
+      <div style={{ height: '100dvh', overflow: 'hidden', background: '#fff' }}>
+        {activeScreen}
+      </div>
+    );
+  }
+
+  const mainLabel = modal === 'record' ? 'MYHOUR · 기록하기'
+    : modal === 'wrapup' ? 'MYHOUR · 하루 마감'
+    : activeTab === 'home' ? (isWrapped ? 'MYHOUR · 홈 · 마감 후' : 'MYHOUR · 홈 · 기록 중')
+    : activeTab === 'today' ? 'MYHOUR · 오늘'
+    : activeTab === 'archive' ? 'MYHOUR · 아카이브' : 'MYHOUR · 설정';
 
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 0 48px' }}>
-
-      {/* Interactive main app */}
-      <FrameWrapper label={`MYHOUR · ${mainLabel}`}>
-        {modal === 'record' ? (
-          <RecordScreen onClose={() => setModal(null)} />
-        ) : modal === 'wrapup' ? (
-          <WrapUpScreen onClose={() => setModal(null)} onSave={handleSave} />
-        ) : (
-          renderMain()
-        )}
+      <FrameWrapper label={mainLabel}>
+        {activeScreen}
       </FrameWrapper>
-
-      {/* Static reference: Record screen */}
       <FrameWrapper label="지금 기록하기" dark>
-        <RecordScreen onClose={() => {}} />
+        <RecordScreen onClose={() => {}} onSave={() => {}} />
       </FrameWrapper>
-
-      {/* Static reference: WrapUp screen */}
       <FrameWrapper label="하루 마감 → 영상 생성">
         <WrapUpScreen onClose={() => {}} onSave={() => {}} />
       </FrameWrapper>
-
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
   );
 }

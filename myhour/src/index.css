@@ -26,3 +26,8 @@ button {
   padding: 0;
   font-family: inherit;
 }
+
+@media (max-width: 599px) {
+  html, body { background: #fff; overflow: hidden; height: 100dvh; }
+  #root { padding: 0; min-height: 100dvh; overflow: hidden; }
+}
