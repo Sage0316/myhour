@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import {
   getNextSlot, minutesLeftInSlot, minutesUntilSlot,
-  formatTime, getDateStrings, TYPE_COLORS, TYPE_LABELS,
+  formatTime, getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS,
   guessMood, generateTitle, generateClosing,
 } from '../store';
 import type { MyRecord, RecordType } from '../store';
@@ -92,7 +92,7 @@ function TimelineRow({ time, status, record }: { time: string; status: 'filled' 
 
 function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () => void }) {
   const { records, slots, currentSlot, settings } = useApp();
-  const { dateDay, dateWeekday } = getDateStrings();
+  const { dateDay, dateWeekday } = getDateStrings(getSessionDate(settings.startTime));
   const nextSlot = getNextSlot(slots, settings.startTime);
 
   const slotMap = new Map<string, MyRecord>();
@@ -245,8 +245,8 @@ function TimelineSheet({ onClose }: { onClose: () => void }) {
 }
 
 function HomeWrapped({ videoUrl }: { videoUrl?: string | null }) {
-  const { records } = useApp();
-  const { dateDay, dateWeekday, dateShort } = getDateStrings();
+  const { records, settings } = useApp();
+  const { dateDay, dateWeekday, dateShort } = getDateStrings(getSessionDate(settings.startTime));
   const mood = guessMood(records);
   const title = generateTitle(records);
   const closing = generateClosing(records);

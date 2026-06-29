@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context';
-import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings } from '../store';
+import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, saveVideoToIDB } from '../store';
 import type { MoodItem } from '../store';
 import { generateVideo } from '../videoGenerator';
 
@@ -15,8 +15,9 @@ const EMOJIS = ['😌', '🤪', '🥹', '😵', '😤'];
 type GenState = 'idle' | 'generating' | 'done';
 
 export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
-  const { records } = useApp();
-  const { dateShort, dateDay, dateWeekday } = getDateStrings();
+  const { records, settings } = useApp();
+  const sessionDate = getSessionDate(settings.startTime);
+  const { dateShort, dateDay, dateWeekday } = getDateStrings(sessionDate);
 
   const autoMood = guessMood(records);
   const [selectedMood, setSelectedMood] = useState<MoodItem>(autoMood);
@@ -42,6 +43,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     setGenError(null);
     try {
       const blob = await generateVideo(records, `${dateDay} ${dateWeekday}`, p => setProgress(p));
+      saveVideoToIDB(`wrapped_${sessionDate}`, blob);
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
       setGenState('done');

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useApp } from '../context';
-import { getDateStrings, TYPE_COLORS, TYPE_LABELS } from '../store';
+import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS } from '../store';
 import type { MyRecord } from '../store';
 import TabBar from '../components/TabBar';
 
@@ -116,8 +116,9 @@ function EmptyTile({ slot, isCurrent }: { slot: string; isCurrent: boolean }) {
 }
 
 export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps) {
-  const { records, slots, currentSlot, deleteRecord } = useApp();
-  const { dateShort, weekdayEn } = getDateStrings();
+  const { records, slots, currentSlot, deleteRecord, isWrapped, settings } = useApp();
+  const sessionDate = getSessionDate(settings.startTime);
+  const { dateShort, weekdayEn } = getDateStrings(sessionDate);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const slotMap = new Map(records.map(r => [r.slotTime, r]));
@@ -156,7 +157,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
               const record = slotMap.get(slot);
               const isCurrent = slot === currentSlot;
               if (record) return <RecordTile key={slot} record={record} onLongPress={() => setPendingDelete(record.id)} />;
-              return <EmptyTile key={slot} slot={slot} isCurrent={isCurrent} />;
+              return <EmptyTile key={slot} slot={slot} isCurrent={!isWrapped && isCurrent} />;
             })}
           </div>
         )}

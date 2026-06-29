@@ -7,6 +7,7 @@ import ArchiveScreen from './screens/ArchiveScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
 import { AppProvider, useApp } from './context';
+import { loadVideoFromIDB, getSessionDate } from './store';
 import './App.css';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -31,7 +32,15 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [modal, setModal] = useState<ModalScreen>(null);
   const [wrappedVideoUrl, setWrappedVideoUrl] = useState<string | null>(null);
-  const { isWrapped, setWrapped, addRecord } = useApp();
+  const { isWrapped, setWrapped, addRecord, settings } = useApp();
+
+  useEffect(() => {
+    if (!isWrapped) return;
+    const sessionDate = getSessionDate(settings.startTime);
+    loadVideoFromIDB(`wrapped_${sessionDate}`).then(url => {
+      if (url) setWrappedVideoUrl(url);
+    });
+  }, [isWrapped, settings.startTime]);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
 
   useEffect(() => {

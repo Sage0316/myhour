@@ -189,13 +189,13 @@ export function getSessionDate(startTime: string): string {
   return now.toISOString().slice(0, 10);
 }
 
-export function getDateStrings() {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
+export function getDateStrings(sessionDate?: string) {
+  const d = sessionDate ? new Date(sessionDate + 'T12:00:00') : new Date();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
   const KO = ['일', '월', '화', '수', '목', '금', '토'];
   const EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const wd = now.getDay();
+  const wd = d.getDay();
   return {
     dateDay: `${month}월 ${day}일`,
     dateWeekday: `${KO[wd]}요일`,
