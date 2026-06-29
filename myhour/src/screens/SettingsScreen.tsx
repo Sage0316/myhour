@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context';
-import { type AppSettings, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel } from '../store';
+import { type AppSettings, type AppData, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel, loadSettings, getSessionDate, addToArchive } from '../store';
 import TabBar from '../components/TabBar';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -137,8 +137,22 @@ function DataSection() {
         if (payload.version !== 1 || !payload.data || !payload.settings) {
           throw new Error('올바른 MYHOUR 백업 파일이 아니에요');
         }
-        localStorage.setItem('myhour_v1', payload.data);
-        localStorage.setItem('myhour_settings_v1', payload.settings);
+        const importedData: AppData = JSON.parse(payload.data);
+        const currentDate = getSessionDate(loadSettings().startTime);
+
+        if (importedData.date === currentDate) {
+          // Same day: restore as current session
+          localStorage.setItem('myhour_v1', payload.data);
+          localStorage.setItem('myhour_settings_v1', payload.settings);
+        } else {
+          // Different day: add to archive
+          addToArchive({
+            date: importedData.date,
+            records: importedData.records,
+            isWrapped: importedData.isWrapped,
+          });
+          localStorage.setItem('myhour_settings_v1', payload.settings);
+        }
         setImportOk(true);
         setTimeout(() => window.location.reload(), 800);
       } catch (err) {

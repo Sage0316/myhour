@@ -245,6 +245,36 @@ export function saveAppData(data: AppData) {
   localStorage.setItem(DATA_KEY, JSON.stringify(data));
 }
 
+// ─── Archive ─────────────────────────────────────────────────────────────────
+
+export interface ArchiveEntry {
+  date: string;
+  records: MyRecord[];
+  isWrapped: boolean;
+}
+
+const ARCHIVE_KEY = 'myhour_archive_v1';
+
+export function loadArchive(): ArchiveEntry[] {
+  try {
+    const raw = localStorage.getItem(ARCHIVE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function saveArchive(entries: ArchiveEntry[]) {
+  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(entries));
+}
+
+export function addToArchive(entry: ArchiveEntry) {
+  const entries = loadArchive().filter(e => e.date !== entry.date);
+  entries.unshift(entry);
+  saveArchive(entries);
+}
+
 // ─── Settings display labels ──────────────────────────────────────────────────
 
 export function intervalLabel(v: number) {
