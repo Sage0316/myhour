@@ -12,8 +12,6 @@ interface WrapUpScreenProps {
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 const EMOJIS = ['😌', '🤪', '🥹', '😵', '😤'];
 
-type GenState = 'idle' | 'generating' | 'done';
-
 export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const { records, settings } = useApp();
   const sessionDate = getSessionDate(settings.startTime);
@@ -24,9 +22,8 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState(0);
   const [calmness, setCalmness] = useState(72);
-  const [genState, setGenState] = useState<GenState>('idle');
+  const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
 
   const title = generateTitle(records);
@@ -37,34 +34,20 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     : ['#F0D9C8', '#D9EAD9', '#E4DBF5', '#F4ECD9', '#F0D9C8'];
 
   async function handleGenerate() {
-    if (records.length === 0 || genState === 'generating') return;
-    setGenState('generating');
+    if (records.length === 0 || generating) return;
+    setGenerating(true);
     setProgress(0);
     setGenError(null);
     try {
       const blob = await generateVideo(records, `${dateDay} ${dateWeekday}`, p => setProgress(p));
       saveVideoToIDB(`wrapped_${sessionDate}`, blob);
       const url = URL.createObjectURL(blob);
-      setVideoUrl(url);
-      setGenState('done');
       onSave(url);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '영상 생성에 실패했어요';
       setGenError(msg);
-      setGenState('idle');
+      setGenerating(false);
     }
-  }
-
-  function handleDownload() {
-    if (!videoUrl) return;
-    const a = document.createElement('a');
-    a.href = videoUrl;
-    a.download = `myhour-${dateShort}.webm`;
-    a.click();
-  }
-
-  function handleWrapUp() {
-    onSave(videoUrl ?? undefined);
   }
 
   return (
@@ -78,7 +61,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
         </div>
 
         <div style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.5px', lineHeight: 1.25 }}>
-          오늘을 영상으로 정리했어요
+          오늘을 영상으로 마무리해요
         </div>
 
         <div>
@@ -155,71 +138,61 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           </div>
         </div>
 
-        {/* Video preview area */}
-        {genState === 'idle' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div
-              onClick={handleGenerate}
-              style={{ minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}
-            >
-              <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 0, height: 0, borderLeft: '13px solid #1E2240', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
-              </div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>탭하여 영상 생성</div>
-            </div>
-            {genError && (
-              <div style={{ fontSize: 12, color: '#E5533C', lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
-            )}
-          </div>
-        )}
-
-        {genState === 'generating' && (
+        {generating ? (
           <div style={{ minHeight: 100, borderRadius: 20, background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '24px 28px' }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>
+            <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>
               영상 생성 중 · {Math.round(progress * 100)}%
             </div>
             <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 2, background: '#7C5CC4', width: `${progress * 100}%`, transition: 'width 0.3s ease' }} />
             </div>
           </div>
-        )}
-
-        {genState === 'done' && videoUrl && (
-          <div style={{ borderRadius: 20, overflow: 'hidden', position: 'relative' }}>
-            <video
-              src={videoUrl}
-              controls
-              playsInline
-              style={{ width: '100%', display: 'block', borderRadius: 20 }}
-            />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
+              onClick={handleGenerate}
+              style={{ minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: records.length === 0 ? 'default' : 'pointer', opacity: records.length === 0 ? 0.5 : 1 }}
+            >
+              <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 0, height: 0, borderLeft: '13px solid #1E2240', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+              </div>
+              <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>탭하여 영상 생성</div>
+            </div>
+            {genError && (
+              <div style={{ fontSize: 12, color: '#E5533C', lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
+            )}
           </div>
         )}
       </div>
 
       <div style={{ padding: '12px 22px 30px', display: 'flex', gap: 9 }}>
-        {genState === 'done' ? (
-          <>
-            <button onClick={handleDownload} style={{ flex: 1.5, height: 52, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
-              영상 저장하기
-            </button>
-            <button onClick={handleWrapUp} style={{ flex: 1, height: 52, borderRadius: 50, background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
-              마감하기
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={handleGenerate}
-              disabled={genState === 'generating' || records.length === 0}
-              style={{ flex: 1.5, height: 52, borderRadius: 50, background: genState === 'generating' ? 'rgba(26,26,26,0.3)' : '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: genState === 'generating' ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif' }}
-            >
-              {genState === 'generating' ? '생성 중...' : '영상 만들기'}
-            </button>
-            <button onClick={handleWrapUp} style={{ flex: 1, height: 52, borderRadius: 50, background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
-              마감하기
-            </button>
-          </>
-        )}
+        <button
+          onClick={handleGenerate}
+          disabled={generating || records.length === 0}
+          style={{
+            flex: 1.5, height: 52, borderRadius: 50,
+            background: generating ? 'rgba(26,26,26,0.3)' : '#1A1A1A',
+            color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none',
+            cursor: generating || records.length === 0 ? 'default' : 'pointer',
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          {generating ? '생성 중...' : '영상 만들기'}
+        </button>
+        <button
+          onClick={() => onSave()}
+          disabled={generating}
+          style={{
+            flex: 1, height: 52, borderRadius: 50,
+            background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)',
+            fontSize: 14, fontWeight: 500,
+            cursor: generating ? 'default' : 'pointer',
+            color: 'rgba(26,26,26,0.5)',
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          영상 없이 마감
+        </button>
       </div>
     </div>
   );
