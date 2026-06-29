@@ -47,6 +47,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
       setGenState('done');
+      onSave(url);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '영상 생성에 실패했어요';
       setGenError(msg);
