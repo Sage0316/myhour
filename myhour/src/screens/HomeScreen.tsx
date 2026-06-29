@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useApp } from '../context';
 import {
   getNextSlot, minutesLeftInSlot, minutesUntilSlot,
@@ -184,12 +185,72 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
   );
 }
 
+function TimelineSheet({ onClose }: { onClose: () => void }) {
+  const { records, slots } = useApp();
+  const slotMap = new Map(records.map(r => [r.slotTime, r]));
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', background: '#F7F7F5', borderRadius: '24px 24px 0 0', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+      >
+        {/* Handle + header */}
+        <div style={{ padding: '14px 22px 12px', borderBottom: '1px solid rgba(26,26,26,0.07)', flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(26,26,26,0.15)', margin: '0 auto 14px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>오늘의 타임라인</div>
+            <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{records.length}개 기록</div>
+          </div>
+        </div>
+
+        {/* Timeline list */}
+        <div style={{ overflowY: 'auto', padding: '8px 22px 32px', position: 'relative' }}>
+          <div style={{ position: 'absolute', left: 29, top: 0, bottom: 0, width: 2, background: 'rgba(26,26,26,0.1)' }} />
+          {slots.map(slot => {
+            const record = slotMap.get(slot);
+            return (
+              <div key={slot} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '7px 0' }}>
+                <div style={{ width: 14, display: 'flex', justifyContent: 'center', zIndex: 1, flexShrink: 0 }}>
+                  <div style={{
+                    width: 10, height: 10, borderRadius: '50%',
+                    background: record ? '#1A1A1A' : 'transparent',
+                    border: record ? 'none' : '2px solid rgba(26,26,26,0.2)',
+                  }} />
+                </div>
+                <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)', width: 38, flexShrink: 0 }}>{slot}</div>
+                {record ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 7, background: TYPE_COLORS[record.type], flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {record.caption || (record.type === 'text' ? record.content.slice(0, 20) : TYPE_LABELS[record.type] + ' 기록')}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>{TYPE_LABELS[record.type]}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.3)' }}>기록 안 함</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HomeWrapped({ videoUrl }: { videoUrl?: string | null }) {
   const { records } = useApp();
   const { dateDay, dateWeekday, dateShort } = getDateStrings();
   const mood = guessMood(records);
   const title = generateTitle(records);
   const closing = generateClosing(records);
+  const [showTimeline, setShowTimeline] = useState(false);
 
   function handleDownload() {
     if (!videoUrl) return;
@@ -228,13 +289,17 @@ function HomeWrapped({ videoUrl }: { videoUrl?: string | null }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16 }}>
+      <div
+        onClick={() => setShowTimeline(true)}
+        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16, cursor: 'pointer' }}
+      >
         <div style={{ display: 'flex', gap: 5 }}>
           {records.slice(0, 6).map(r => (
             <div key={r.id} style={{ width: 7, height: 7, borderRadius: '50%', background: TYPE_COLORS[r.type] }} />
           ))}
         </div>
         <div style={{ flex: 1, fontSize: 13, color: 'rgba(26,26,26,0.7)' }}>오늘 {records.length}개 기록</div>
+        <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.35)' }}>›</div>
       </div>
 
       {videoUrl && (
@@ -244,6 +309,8 @@ function HomeWrapped({ videoUrl }: { videoUrl?: string | null }) {
           </button>
         </div>
       )}
+
+      {showTimeline && <TimelineSheet onClose={() => setShowTimeline(false)} />}
     </div>
   );
 }
