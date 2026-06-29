@@ -8,42 +8,98 @@ export interface MyRecord {
   createdAt: number;
 }
 
-export const SLOTS = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+export interface AppSettings {
+  startTime: string;                         // "09:00"
+  endMode: 'open' | 'fixed';
+  endTime: string;                           // "21:00" (only used when endMode === 'fixed')
+  interval: 30 | 60 | 120;                  // minutes
+  notifyTiming: 'before' | 'exact' | 'both';
+  captureMode: 'choose' | 'fixed';
+  defaultType: RecordType;
+  outputRatio: '9:16' | '1:1';
+  bgMusic: string;
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  startTime: '09:00',
+  endMode: 'open',
+  endTime: '21:00',
+  interval: 120,
+  notifyTiming: 'before',
+  captureMode: 'choose',
+  defaultType: 'text',
+  outputRatio: '9:16',
+  bgMusic: '잔잔한 피아노',
+};
+
+const SETTINGS_KEY = 'myhour_settings_v1';
+
+export function loadSettings(): AppSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+export function saveSettings(s: AppSettings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+// ─── Slot utilities ───────────────────────────────────────────────────────────
 
 function slotToMinutes(slot: string): number {
   const [h, m] = slot.split(':').map(Number);
   return h * 60 + m;
 }
 
-export function getCurrentSlot(): string {
-  const now = new Date();
-  const nowM = now.getHours() * 60 + now.getMinutes();
-  for (let i = 0; i < SLOTS.length; i++) {
-    const start = slotToMinutes(SLOTS[i]);
-    const end = i < SLOTS.length - 1 ? slotToMinutes(SLOTS[i + 1]) : start + 120;
-    if (nowM >= start && nowM < end) return SLOTS[i];
+export function generateSlots(settings: AppSettings): string[] {
+  const startM = slotToMinutes(settings.startTime);
+  const endM = settings.endMode === 'fixed'
+    ? slotToMinutes(settings.endTime)
+    : startM + 12 * 60; // 12-hour window for open mode
+
+  const slots: string[] = [];
+  let cur = startM;
+  while (cur <= endM && slots.length < 24 && cur < 24 * 60) {
+    slots.push(`${String(Math.floor(cur / 60)).padStart(2, '0')}:${String(cur % 60).padStart(2, '0')}`);
+    cur += settings.interval;
   }
-  if (nowM < slotToMinutes(SLOTS[0])) return SLOTS[0];
-  return SLOTS[SLOTS.length - 1];
+  return slots;
 }
 
-export function getNextSlot(): string | null {
-  const now = new Date();
-  const nowM = now.getHours() * 60 + now.getMinutes();
-  return SLOTS.find(s => slotToMinutes(s) > nowM) ?? null;
+export function getCurrentSlot(slots: string[], interval: number): string {
+  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+  for (let i = 0; i < slots.length; i++) {
+    const start = slotToMinutes(slots[i]);
+    const end = i < slots.length - 1 ? slotToMinutes(slots[i + 1]) : start + interval;
+    if (nowM >= start && nowM < end) return slots[i];
+  }
+  if (slots.length === 0) return '09:00';
+  if (nowM < slotToMinutes(slots[0])) return slots[0];
+  return slots[slots.length - 1];
 }
 
-export function minutesLeftInSlot(slot: string): number {
-  const now = new Date();
-  const nowM = now.getHours() * 60 + now.getMinutes();
-  const idx = SLOTS.indexOf(slot);
-  const end = idx < SLOTS.length - 1 ? slotToMinutes(SLOTS[idx + 1]) : slotToMinutes(slot) + 120;
+export function getNextSlot(slots: string[]): string | null {
+  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+  return slots.find(s => slotToMinutes(s) > nowM) ?? null;
+}
+
+export function minutesLeftInSlot(slot: string, slots: string[], interval: number): number {
+  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+  const idx = slots.indexOf(slot);
+  const end = idx >= 0 && idx < slots.length - 1
+    ? slotToMinutes(slots[idx + 1])
+    : slotToMinutes(slot) + interval;
   return Math.max(0, end - nowM);
 }
 
 export function minutesUntilSlot(slot: string): number {
-  const now = new Date();
-  const nowM = now.getHours() * 60 + now.getMinutes();
+  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
   return Math.max(0, slotToMinutes(slot) - nowM);
 }
 
@@ -56,6 +112,8 @@ export function formatTime(minutes: number): string {
   }
   return `${minutes}분`;
 }
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
 
 export function getDateStrings() {
   const now = new Date();
@@ -72,6 +130,8 @@ export function getDateStrings() {
   };
 }
 
+// ─── Record metadata ──────────────────────────────────────────────────────────
+
 export const TYPE_COLORS: Record<RecordType, string> = {
   text: '#F4ECD9',
   video: '#F4C9B8',
@@ -86,11 +146,13 @@ export const TYPE_LABELS: Record<RecordType, string> = {
   audio: '음성',
 };
 
+// ─── Mood / title ─────────────────────────────────────────────────────────────
+
 export const MOOD_LIST = [
   { mood: '잔잔함', color: '#CDEBDD', dot: '#3FA37B' },
   { mood: '뿌듯함', color: '#E7F0BE', dot: '#7FA02B' },
-  { mood: '감성', color: '#E4DBF5', dot: '#7C5CC4' },
-  { mood: '웃김', color: '#F6D7C6', dot: '#D9743F' },
+  { mood: '감성',   color: '#E4DBF5', dot: '#7C5CC4' },
+  { mood: '웃김',   color: '#F6D7C6', dot: '#D9743F' },
   { mood: '정신없음', color: '#FAD9E3', dot: '#C4567A' },
 ] as const;
 
@@ -103,7 +165,7 @@ export function guessMood(records: MyRecord[]): MoodItem {
 }
 
 export function generateTitle(records: MyRecord[]): string {
-  const texts = records.filter(r => r.type === 'text');
+  const texts = records.filter(r => r.type === 'text' && !r.content.startsWith('data:'));
   if (texts.length === 0) return `오늘의 ${records.length}개 순간`;
   const first = texts[0].content.trim();
   return first.length <= 20 ? first : first.slice(0, 18) + '…';
@@ -121,18 +183,20 @@ export function generateClosing(records: MyRecord[]): string {
   return CLOSING[records.length % CLOSING.length];
 }
 
+// ─── App data (records + wrap state) ────────────────────────────────────────
+
 export interface AppData {
   records: MyRecord[];
   isWrapped: boolean;
   date: string;
 }
 
-const KEY = 'myhour_v1';
+const DATA_KEY = 'myhour_v1';
 
 export function loadAppData(): AppData {
   const today = new Date().toISOString().slice(0, 10);
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(DATA_KEY);
     if (!raw) return { records: [], isWrapped: false, date: today };
     const data: AppData = JSON.parse(raw);
     if (data.date !== today) return { records: [], isWrapped: false, date: today };
@@ -143,5 +207,19 @@ export function loadAppData(): AppData {
 }
 
 export function saveAppData(data: AppData) {
-  localStorage.setItem(KEY, JSON.stringify(data));
+  localStorage.setItem(DATA_KEY, JSON.stringify(data));
+}
+
+// ─── Settings display labels ──────────────────────────────────────────────────
+
+export function intervalLabel(v: number) {
+  return v === 30 ? '30분' : v === 60 ? '1시간' : '2시간';
+}
+
+export function notifyLabel(v: AppSettings['notifyTiming']) {
+  return v === 'before' ? '1분 전' : v === 'exact' ? '기록 시각' : '둘 다';
+}
+
+export function captureModeLabel(v: AppSettings['captureMode']) {
+  return v === 'choose' ? '매번 선택' : '하나로 고정';
 }

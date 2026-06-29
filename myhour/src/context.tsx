@@ -1,11 +1,19 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import { type MyRecord, type RecordType, type AppData, loadAppData, saveAppData, getCurrentSlot } from './store';
+import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from 'react';
+import {
+  type MyRecord, type RecordType, type AppData, type AppSettings,
+  loadAppData, saveAppData, loadSettings, saveSettings,
+  getCurrentSlot, generateSlots,
+} from './store';
 
 interface AppContextValue {
   records: MyRecord[];
   isWrapped: boolean;
+  settings: AppSettings;
+  slots: string[];
+  currentSlot: string;
   addRecord: (type: RecordType, content: string) => void;
   setWrapped: (v: boolean) => void;
+  updateSettings: (updates: Partial<AppSettings>) => void;
   reset: () => void;
 }
 
@@ -13,20 +21,16 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [appData, setAppData] = useState<AppData>(loadAppData);
+  const [settings, setSettings] = useState<AppSettings>(loadSettings);
 
-  function update(partial: Partial<AppData>) {
-    setAppData(prev => {
-      const next = { ...prev, ...partial };
-      saveAppData(next);
-      return next;
-    });
-  }
+  const slots = useMemo(() => generateSlots(settings), [settings]);
+  const currentSlot = useMemo(() => getCurrentSlot(slots, settings.interval), [slots, settings.interval]);
 
   const addRecord = useCallback((type: RecordType, content: string) => {
-    const slotTime = getCurrentSlot();
+    const slot = getCurrentSlot(slots, settings.interval);
     const record: MyRecord = {
       id: Date.now().toString(),
-      slotTime,
+      slotTime: slot,
       type,
       content,
       createdAt: Date.now(),
@@ -36,9 +40,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveAppData(next);
       return next;
     });
+  }, [slots, settings.interval]);
+
+  const setWrapped = useCallback((v: boolean) => {
+    setAppData(prev => {
+      const next = { ...prev, isWrapped: v };
+      saveAppData(next);
+      return next;
+    });
   }, []);
 
-  const setWrapped = useCallback((v: boolean) => update({ isWrapped: v }), []);
+  const updateSettings = useCallback((updates: Partial<AppSettings>) => {
+    setSettings(prev => {
+      const next = { ...prev, ...updates };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
 
   const reset = useCallback(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -48,7 +66,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ records: appData.records, isWrapped: appData.isWrapped, addRecord, setWrapped, reset }}>
+    <AppContext.Provider value={{
+      records: appData.records,
+      isWrapped: appData.isWrapped,
+      settings,
+      slots,
+      currentSlot,
+      addRecord,
+      setWrapped,
+      updateSettings,
+      reset,
+    }}>
       {children}
     </AppContext.Provider>
   );

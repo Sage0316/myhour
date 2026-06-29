@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import type { RecordType } from '../store';
-import { getCurrentSlot } from '../store';
+import { useApp } from '../context';
 
 interface RecordScreenProps {
   onClose: () => void;
@@ -279,8 +279,11 @@ function VideoRecordMode({ onSave }: { onSave: (c: string) => void }) {
 }
 
 export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
-  const [mode, setMode] = useState<Mode>('글');
-  const slot = getCurrentSlot();
+  const { currentSlot: slot, settings } = useApp();
+  const defaultMode: Mode = settings.captureMode === 'fixed'
+    ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '글')
+    : '글';
+  const [mode, setMode] = useState<Mode>(defaultMode);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>

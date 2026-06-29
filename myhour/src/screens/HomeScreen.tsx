@@ -1,6 +1,6 @@
 import { useApp } from '../context';
 import {
-  SLOTS, getCurrentSlot, getNextSlot, minutesLeftInSlot, minutesUntilSlot,
+  getNextSlot, minutesLeftInSlot, minutesUntilSlot,
   formatTime, getDateStrings, TYPE_COLORS, TYPE_LABELS,
   guessMood, generateTitle, generateClosing,
 } from '../store';
@@ -97,24 +97,23 @@ function TimelineRow({ time, status, record }: { time: string; status: 'filled' 
 }
 
 function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () => void }) {
-  const { records } = useApp();
+  const { records, slots, currentSlot, settings } = useApp();
   const { dateDay, dateWeekday } = getDateStrings();
-  const currentSlot = getCurrentSlot();
-  const nextSlot = getNextSlot();
+  const nextSlot = getNextSlot(slots);
 
   const slotMap = new Map<string, MyRecord>();
   for (const r of records) slotMap.set(r.slotTime, r);
 
-  const currentIdx = SLOTS.indexOf(currentSlot);
+  const currentIdx = slots.indexOf(currentSlot);
 
   function slotStatus(slot: string): 'filled' | 'active' | 'missed' | 'upcoming' {
     if (slotMap.has(slot)) return 'filled';
     if (slot === currentSlot) return 'active';
-    return SLOTS.indexOf(slot) < currentIdx ? 'missed' : 'upcoming';
+    return slots.indexOf(slot) < currentIdx ? 'missed' : 'upcoming';
   }
 
   const hasActiveRecord = slotMap.has(currentSlot);
-  const timeLeft = formatTime(minutesLeftInSlot(currentSlot));
+  const timeLeft = formatTime(minutesLeftInSlot(currentSlot, slots, settings.interval));
   const nextIn = nextSlot ? formatTime(minutesUntilSlot(nextSlot)) : null;
 
   return (
@@ -129,7 +128,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
         <div style={{ textAlign: 'right' }}>
           <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', color: 'rgba(26,26,26,0.45)' }}>RECORDS</div>
           <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: '-0.5px', marginTop: 3 }}>
-            {records.length}<span style={{ fontSize: 13, fontWeight: 400, color: 'rgba(26,26,26,0.45)' }}>/{SLOTS.length}</span>
+            {records.length}<span style={{ fontSize: 13, fontWeight: 400, color: 'rgba(26,26,26,0.45)' }}>/{slots.length}</span>
           </div>
         </div>
       </div>
@@ -157,7 +156,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden', marginTop: 2 }}>
         <div style={{ position: 'absolute', left: 6, top: 14, bottom: 14, width: 2, background: 'rgba(26,26,26,0.12)' }} />
 
-        {SLOTS.map(slot => {
+        {slots.map(slot => {
           const status = slotStatus(slot);
           if (status === 'active') {
             return (

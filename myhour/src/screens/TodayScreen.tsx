@@ -1,5 +1,5 @@
 import { useApp } from '../context';
-import { SLOTS, getCurrentSlot, getDateStrings, TYPE_COLORS, TYPE_LABELS } from '../store';
+import { getDateStrings, TYPE_COLORS, TYPE_LABELS } from '../store';
 import type { MyRecord, RecordType } from '../store';
 import TabBar from '../components/TabBar';
 
@@ -78,10 +78,9 @@ function RecordCard({ record }: { record: MyRecord }) {
 }
 
 export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps) {
-  const { records } = useApp();
+  const { records, slots, currentSlot } = useApp();
   const { dateShort, weekdayEn } = getDateStrings();
-  const currentSlot = getCurrentSlot();
-  const currentSlotIdx = SLOTS.indexOf(currentSlot);
+  const currentSlotIdx = slots.indexOf(currentSlot);
 
   const slotMap = new Map<string, MyRecord>();
   for (const r of records) slotMap.set(r.slotTime, r);
@@ -99,7 +98,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '0 22px', display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {SLOTS.map((slot, idx) => {
+        {slots.map((slot, idx) => {
           const record = slotMap.get(slot);
           const isActive = slot === currentSlot && !record;
           const isPast = idx < currentSlotIdx && !record;
