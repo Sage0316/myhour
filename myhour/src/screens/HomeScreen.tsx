@@ -109,6 +109,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
   for (const r of records) slotMap.set(r.slotTime, r);
 
   const currentIdx = slots.indexOf(currentSlot);
+  const visibleSlots = slots.slice(0, currentIdx + 1);
 
   function slotStatus(slot: string): 'filled' | 'active' | 'missed' | 'upcoming' {
     if (slotMap.has(slot)) return 'filled';
@@ -160,7 +161,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
       <div style={{ flex: 1, overflowY: 'auto', marginTop: 2, position: 'relative' }}>
         <div style={{ position: 'absolute', left: 6, top: 14, bottom: 14, width: 2, background: 'rgba(26,26,26,0.12)', pointerEvents: 'none' }} />
 
-        {slots.map(slot => {
+        {visibleSlots.map(slot => {
           const status = slotStatus(slot);
           if (status === 'active') {
             return (
