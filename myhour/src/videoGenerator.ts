@@ -14,22 +14,16 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-async function loadVideoFrame(src: string): Promise<HTMLImageElement | null> {
+async function loadVideoEl(src: string): Promise<HTMLVideoElement | null> {
   return new Promise(resolve => {
     const vid = document.createElement('video');
     vid.muted = true;
     vid.playsInline = true;
-    vid.onseeked = () => {
-      const tc = document.createElement('canvas');
-      tc.width = vid.videoWidth || W;
-      tc.height = vid.videoHeight || H;
-      tc.getContext('2d')!.drawImage(vid, 0, 0);
-      loadImage(tc.toDataURL('image/jpeg', 0.85)).then(resolve);
-    };
-    vid.onerror = () => resolve(null);
+    const timer = setTimeout(() => resolve(null), 8000);
+    vid.oncanplay = () => { clearTimeout(timer); resolve(vid); };
+    vid.onerror = () => { clearTimeout(timer); resolve(null); };
     vid.src = src;
     vid.load();
-    vid.currentTime = 0.01;
   });
 }
 
@@ -40,6 +34,16 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, scale =
   if (ia > ca) { sh = H * scale; sw = sh * ia; }
   else { sw = W * scale; sh = sw / ia; }
   ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
+}
+
+function drawVideoCover(ctx: CanvasRenderingContext2D, vid: HTMLVideoElement) {
+  if (!vid.videoWidth || !vid.videoHeight) return;
+  const ia = vid.videoWidth / vid.videoHeight;
+  const ca = W / H;
+  let sw: number, sh: number;
+  if (ia > ca) { sh = H; sw = sh * ia; }
+  else { sw = W; sh = sw / ia; }
+  ctx.drawImage(vid, (W - sw) / 2, (H - sh) / 2, sw, sh);
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lh: number): number {
@@ -73,13 +77,13 @@ type DrawFn = (t: number, frame: number) => void;
 async function renderSegment(
   duration: number,
   draw: DrawFn,
-  onFrameProgress?: (framesDone: number, totalFrames: number) => void,
+  onFrameProgress?: () => void,
 ) {
   const frames = Math.round(duration * FPS);
   const frameMs = 1000 / FPS;
   for (let f = 0; f < frames; f++) {
     draw(f / frames, f);
-    onFrameProgress?.(f + 1, frames);
+    onFrameProgress?.();
     await new Promise<void>(r => setTimeout(r, frameMs));
   }
 }
@@ -96,10 +100,11 @@ export async function generateVideo(
 
   // Preload media
   const imgMap = new Map<string, HTMLImageElement | null>();
+  const vidMap = new Map<string, HTMLVideoElement | null>();
   for (const r of records) {
     if (!r.content.startsWith('data:')) continue;
     if (r.type === 'photo') imgMap.set(r.id, await loadImage(r.content));
-    else if (r.type === 'video') imgMap.set(r.id, await loadVideoFrame(r.content));
+    else if (r.type === 'video') vidMap.set(r.id, await loadVideoEl(r.content));
   }
 
   const title = generateTitle(records);
@@ -122,11 +127,10 @@ export async function generateVideo(
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   recorder.onerror = (e) => { throw new Error('MediaRecorder 오류: ' + (e as ErrorEvent).message); };
   recorder.start(200);
-  // Wait a tick for the recorder to initialize before drawing
   await new Promise<void>(r => setTimeout(r, 100));
 
   const TITLE_DUR = 2;
-  const RECORD_DUR = 2;
+  const RECORD_DUR = 3;
   const CLOSE_DUR = 2;
   const totalFrames = Math.round((TITLE_DUR + records.length * RECORD_DUR + CLOSE_DUR) * FPS);
   let framesDone = 0;
@@ -157,12 +161,24 @@ export async function generateVideo(
     ctx.font = `400 24px system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(26,26,26,0.5)';
     ctx.fillText(`${records.length}개의 순간`, 40, H * 0.72);
-  }, () => frameProgress());
+  }, frameProgress);
 
   // Each record
   for (const record of records) {
     const bg = TYPE_COLORS[record.type];
     const img = imgMap.get(record.id) ?? null;
+    const vidEl = vidMap.get(record.id) ?? null;
+
+    // For video records: seek to start then play so canvas draws live frames
+    if (record.type === 'video' && vidEl) {
+      vidEl.currentTime = 0;
+      await new Promise<void>(res => {
+        const onSeeked = () => { vidEl.removeEventListener('seeked', onSeeked); res(); };
+        vidEl.addEventListener('seeked', onSeeked);
+        setTimeout(res, 2000);
+      });
+      await vidEl.play().catch(() => {});
+    }
 
     await renderSegment(RECORD_DUR, (t) => {
       if (record.type === 'text') {
@@ -179,10 +195,10 @@ export async function generateVideo(
           ctx.fillText(record.caption, 40, H - 70);
         }
 
-      } else if (record.type === 'photo' || record.type === 'video') {
+      } else if (record.type === 'photo') {
         if (img) {
           ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-          const scale = record.type === 'photo' ? 1 + t * 0.04 : 1;
+          const scale = 1 + t * 0.04;
           ctx.save();
           ctx.translate(W / 2, H / 2); ctx.scale(scale, scale); ctx.translate(-W / 2, -H / 2);
           drawCover(ctx, img);
@@ -193,23 +209,33 @@ export async function generateVideo(
         } else {
           ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
         }
-        if (record.type === 'video') {
-          ctx.fillStyle = 'rgba(255,255,255,0.85)';
-          ctx.beginPath(); ctx.arc(W / 2, H / 2, 44, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#1A1A1A';
-          ctx.beginPath();
-          ctx.moveTo(W / 2 - 10, H / 2 - 18);
-          ctx.lineTo(W / 2 + 20, H / 2);
-          ctx.lineTo(W / 2 - 10, H / 2 + 18);
-          ctx.closePath(); ctx.fill();
-        }
-        const dark = !!img;
+        const darkPhoto = !!img;
         ctx.font = `bold 22px "Courier New", monospace`;
-        ctx.fillStyle = dark ? 'rgba(255,255,255,0.8)' : 'rgba(26,26,26,0.4)';
+        ctx.fillStyle = darkPhoto ? 'rgba(255,255,255,0.8)' : 'rgba(26,26,26,0.4)';
         ctx.fillText(record.slotTime, 30, H - (record.caption ? 74 : 46));
         if (record.caption) {
           ctx.font = `500 30px system-ui, sans-serif`;
-          ctx.fillStyle = dark ? '#fff' : 'rgba(26,26,26,0.7)';
+          ctx.fillStyle = darkPhoto ? '#fff' : 'rgba(26,26,26,0.7)';
+          ctx.fillText(record.caption, 30, H - 36);
+        }
+
+      } else if (record.type === 'video') {
+        const hasFrame = vidEl && vidEl.readyState >= 2;
+        if (hasFrame) {
+          ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+          drawVideoCover(ctx, vidEl!);
+          const grd = ctx.createLinearGradient(0, H * 0.55, 0, H);
+          grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.65)');
+          ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+        } else {
+          ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        }
+        ctx.font = `bold 22px "Courier New", monospace`;
+        ctx.fillStyle = hasFrame ? 'rgba(255,255,255,0.8)' : 'rgba(26,26,26,0.4)';
+        ctx.fillText(record.slotTime, 30, H - (record.caption ? 74 : 46));
+        if (record.caption) {
+          ctx.font = `500 30px system-ui, sans-serif`;
+          ctx.fillStyle = hasFrame ? '#fff' : 'rgba(26,26,26,0.7)';
           ctx.fillText(record.caption, 30, H - 36);
         }
 
@@ -234,7 +260,9 @@ export async function generateVideo(
           ctx.fillText(record.caption, 40, H - 70);
         }
       }
-    }, () => frameProgress());
+    }, frameProgress);
+
+    if (record.type === 'video' && vidEl) vidEl.pause();
   }
 
   // Closing card
@@ -248,7 +276,7 @@ export async function generateVideo(
     ctx.font = `bold 22px "Courier New", monospace`;
     ctx.fillStyle = 'rgba(26,26,26,0.28)';
     ctx.fillText('MYHOUR', 40, H - 52);
-  }, () => frameProgress());
+  }, frameProgress);
 
   onProgress?.(1);
   recorder.stop();
