@@ -117,10 +117,13 @@ export async function generateVideo(
   if (!mimeType) throw new Error('이 브라우저는 영상 생성을 지원하지 않아요\n(Chrome 또는 Android에서 시도해 보세요)');
 
   const stream = canvas.captureStream(FPS);
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_000_000 });
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2_000_000 });
   const chunks: Blob[] = [];
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-  await new Promise<void>(res => { recorder.onstart = () => res(); recorder.start(100); });
+  recorder.onerror = (e) => { throw new Error('MediaRecorder 오류: ' + (e as ErrorEvent).message); };
+  recorder.start(200);
+  // Wait a tick for the recorder to initialize before drawing
+  await new Promise<void>(r => setTimeout(r, 100));
 
   const TITLE_DUR = 2;
   const RECORD_DUR = 2;
@@ -128,9 +131,9 @@ export async function generateVideo(
   const totalFrames = Math.round((TITLE_DUR + records.length * RECORD_DUR + CLOSE_DUR) * FPS);
   let framesDone = 0;
 
-  function frameProgress(done: number) {
-    framesDone += done;
-    onProgress?.(framesDone / totalFrames);
+  function frameProgress() {
+    framesDone += 1;
+    onProgress?.(Math.min(framesDone / totalFrames, 0.99));
   }
 
   // Title card
@@ -154,7 +157,7 @@ export async function generateVideo(
     ctx.font = `400 24px system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(26,26,26,0.5)';
     ctx.fillText(`${records.length}개의 순간`, 40, H * 0.72);
-  }, (done) => frameProgress(done));
+  }, () => frameProgress());
 
   // Each record
   for (const record of records) {
@@ -231,7 +234,7 @@ export async function generateVideo(
           ctx.fillText(record.caption, 40, H - 70);
         }
       }
-    }, (done) => frameProgress(done));
+    }, () => frameProgress());
   }
 
   // Closing card
@@ -245,8 +248,9 @@ export async function generateVideo(
     ctx.font = `bold 22px "Courier New", monospace`;
     ctx.fillStyle = 'rgba(26,26,26,0.28)';
     ctx.fillText('MYHOUR', 40, H - 52);
-  }, (done) => frameProgress(done));
+  }, () => frameProgress());
 
+  onProgress?.(1);
   recorder.stop();
   await new Promise<void>(res => { recorder.onstop = () => res(); });
   return new Blob(chunks, { type: mimeType });
