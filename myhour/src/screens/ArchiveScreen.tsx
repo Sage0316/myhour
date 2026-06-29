@@ -98,54 +98,54 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
     }
   }
 
-  function handleDownload() {
-    if (!videoUrl) return;
-    if (navigator.share) {
-      fetch(videoUrl).then(r => r.blob()).then(blob => {
-        const file = new File([blob], `myhour-${entry.date}.webm`, { type: blob.type });
-        navigator.share({ files: [file] }).catch(() => triggerDownload());
-      });
-    } else {
-      triggerDownload();
-    }
-  }
-
-  function triggerDownload() {
-    if (!videoUrl) return;
-    const a = document.createElement('a');
-    a.href = videoUrl;
-    a.download = `myhour-${entry.date}.webm`;
-    a.click();
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{
-        position: 'relative', width: '100%', aspectRatio: '3/4',
-        borderRadius: 16, overflow: 'hidden',
-        background: fallbackBg,
-      }}>
-        {lead ? <RecordThumb record={lead} /> : (
-          <div style={{ width: '100%', height: '100%', background: fallbackBg }} />
-        )}
-
-        <div style={{
-          position: 'absolute', bottom: 8, right: 8,
-          background: 'rgba(0,0,0,0.45)', borderRadius: 8,
-          padding: '2px 7px', ...MONO as React.CSSProperties,
-          fontSize: 10, color: '#fff',
-        }}>
-          {entry.records.length}
+      {genState === 'done' && videoUrl ? (
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: '#000' }}>
+          <video
+            src={videoUrl}
+            controls
+            playsInline
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          />
         </div>
+      ) : (
+        <div style={{
+          position: 'relative', width: '100%', aspectRatio: '3/4',
+          borderRadius: 16, overflow: 'hidden',
+          background: fallbackBg,
+        }}>
+          {lead ? <RecordThumb record={lead} /> : (
+            <div style={{ width: '100%', height: '100%', background: fallbackBg }} />
+          )}
 
-        {entry.records.length > 1 && (
-          <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 3 }}>
-            {[...new Set(entry.records.map(r => r.type))].map(t => (
-              <div key={t} style={{ width: 6, height: 6, borderRadius: '50%', background: TYPE_COLORS[t], border: '1px solid rgba(255,255,255,0.6)' }} />
-            ))}
+          <div style={{
+            position: 'absolute', bottom: 8, right: 8,
+            background: 'rgba(0,0,0,0.45)', borderRadius: 8,
+            padding: '2px 7px', ...MONO as React.CSSProperties,
+            fontSize: 10, color: '#fff',
+          }}>
+            {entry.records.length}
           </div>
-        )}
-      </div>
+
+          {entry.records.length > 1 && (
+            <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 3 }}>
+              {[...new Set(entry.records.map(r => r.type))].map(t => (
+                <div key={t} style={{ width: 6, height: 6, borderRadius: '50%', background: TYPE_COLORS[t], border: '1px solid rgba(255,255,255,0.6)' }} />
+              ))}
+            </div>
+          )}
+
+          {genState === 'generating' && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <div style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>생성 중... {Math.round(progress * 100)}%</div>
+              <div style={{ width: '70%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.round(progress * 100)}%`, background: '#fff', borderRadius: 2, transition: 'width 0.1s' }} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -172,23 +172,17 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
           }}>영상 만들기</button>
         )}
 
-        {genState === 'generating' && (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.5)', marginBottom: 4, textAlign: 'center' }}>
-              생성 중... {Math.round(progress * 100)}%
-            </div>
-            <div style={{ height: 4, background: 'rgba(26,26,26,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.round(progress * 100)}%`, background: '#1A1A1A', borderRadius: 2, transition: 'width 0.1s' }} />
-            </div>
-          </div>
-        )}
-
         {genState === 'done' && (
-          <button onClick={handleDownload} style={{
-            marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
-            background: '#3FA37B', color: '#fff', border: 'none',
-            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-          }}>영상 저장하기 ↓</button>
+          <a
+            href={videoUrl ?? ''}
+            download={`myhour-${entry.date}.webm`}
+            style={{
+              display: 'block', marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
+              background: '#3FA37B', color: '#fff', border: 'none',
+              fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box',
+            }}
+          >영상 저장하기 ↓</a>
         )}
 
         {genError && (
