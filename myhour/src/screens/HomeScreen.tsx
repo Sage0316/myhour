@@ -157,8 +157,8 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
         </div>
       </div>
 
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', marginTop: 2 }}>
-        <div style={{ position: 'absolute', left: 6, top: 14, bottom: 14, width: 2, background: 'rgba(26,26,26,0.12)' }} />
+      <div style={{ flex: 1, overflowY: 'auto', marginTop: 2, position: 'relative' }}>
+        <div style={{ position: 'absolute', left: 6, top: 14, bottom: 14, width: 2, background: 'rgba(26,26,26,0.12)', pointerEvents: 'none' }} />
 
         {slots.map(slot => {
           const status = slotStatus(slot);
