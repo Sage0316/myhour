@@ -22,6 +22,24 @@
   <body>
     <div id="root"></div>
     <script>
+      // 앱이 하얀 화면으로 죽는 대신 에러를 보여주고 재시도할 수 있게
+      function showFatal(msg) {
+        var root = document.getElementById('root');
+        if (root && root.childElementCount > 0) return; // 앱이 이미 떠 있으면 무시
+        document.body.innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;padding:30px;text-align:center;font-family:system-ui,sans-serif">' +
+          '<div style="font-size:15px;font-weight:600">앱을 불러오지 못했어요</div>' +
+          '<div style="font-size:12px;color:#888;word-break:break-all;max-width:100%">' + msg + '</div>' +
+          '<button onclick="location.reload()" style="height:44px;padding:0 28px;border-radius:50px;background:#1A1A1A;color:#fff;border:none;font-size:14px">다시 시도</button>' +
+          '</div>';
+      }
+      window.addEventListener('error', function (e) {
+        var isScript = e.target && e.target.tagName === 'SCRIPT';
+        if (!e.message && !isScript) return;
+        showFatal(e.message || '스크립트 로드 실패: ' + (e.target.src || ''));
+      }, true);
+    </script>
+    <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/myhour/sw.js');
