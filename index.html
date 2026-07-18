@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>MYHOUR</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/myhour/manifest.json" />
+    <meta name="theme-color" content="#1A1A1A" />
+
+    <!-- iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MYHOUR" />
+    <link rel="apple-touch-icon" href="/myhour/apple-touch-icon.png" />
+
+    <link rel="icon" type="image/svg+xml" href="/myhour/favicon.svg" />
+    <script type="module" crossorigin src="/myhour/assets/index-DWdRJ02S.js"></script>
+    <link rel="stylesheet" crossorigin href="/myhour/assets/index-D6f-O4Mf.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/myhour/sw.js');
+        });
+      }
+    </script>
+  </body>
+</html>
