@@ -1,4 +1,27 @@
-const CACHE = 'myhour-v3';
+const CACHE = 'myhour-v4';
+
+// ─── 푸시 알림 수신 ─────────────────────────────────────────────────────────
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { /* 페이로드 없으면 기본 문구 */ }
+  e.waitUntil(self.registration.showNotification(data.title || 'MYHOUR', {
+    body: data.body || '지금 이 순간을 기록해볼까요? 📝',
+    icon: '/myhour/icon-192.png',
+    badge: '/myhour/icon-192.png',
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url.includes('/myhour/')) return c.focus();
+      }
+      return clients.openWindow('/myhour/');
+    })
+  );
+});
 
 self.addEventListener('install', e => {
   e.waitUntil(
