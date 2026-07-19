@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context';
-import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, saveVideoToIDB, addToArchive } from '../store';
+import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, saveVideoToIDB, addToArchive, archiveVideoKey, trimRecords, deleteRecordMedia } from '../store';
 import type { MoodItem } from '../store';
 import { generateVideo } from '../videoGenerator';
+import { ensureDiaryFont } from '../scenes';
+import { analyzeDay, loadApiKey, BGM_TRACKS, pickBgmFile } from '../llmDirector';
+import type { DirectorOutput } from '../llmDirector';
 
 interface WrapUpScreenProps {
   onClose: () => void;
@@ -26,8 +29,30 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [progress, setProgress] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
 
-  const title = generateTitle(records);
-  const closing = generateClosing(records);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [director, setDirector] = useState<DirectorOutput | null>(null);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+
+  const fallbackTitle = generateTitle(records);
+  const fallbackClosing = generateClosing(records);
+  const title = director?.title ?? fallbackTitle;
+  const closing = director?.closing ?? fallbackClosing;
+
+  // 손글씨 폰트를 미리 데워둬서, 영상 만들기 탭 시점엔 이미 캐시돼 있게
+  useEffect(() => { ensureDiaryFont(); }, []);
+
+  useEffect(() => {
+    const apiKey = loadApiKey();
+    if (!apiKey || records.length === 0) return;
+    setAnalyzing(true);
+    analyzeDay(records, `${dateDay} ${dateWeekday}`, apiKey)
+      .then(out => {
+        setDirector(out);
+        setAnalyzing(false);
+        try { localStorage.setItem(`myhour_director_${sessionDate}`, JSON.stringify(out)); } catch { /* ignore */ }
+      })
+      .catch(e => { setAnalyzeError(e instanceof Error ? e.message : 'AI 분석 실패'); setAnalyzing(false); });
+  }, []);
 
   const clipColors = records.length > 0
     ? records.slice(0, 5).map(r => TYPE_COLORS[r.type])
@@ -39,9 +64,22 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     setProgress(0);
     setGenError(null);
     try {
-      const blob = await generateVideo(records, `${dateDay} ${dateWeekday}`, p => setProgress(p));
-      await saveVideoToIDB(`wrapped_${sessionDate}`, blob);
-      addToArchive({ date: sessionDate, records, isWrapped: true });
+      const bgmTrack = director?.bgmTrack ?? 'calm';
+      const bgmUrl = `${import.meta.env.BASE_URL}bgm/${pickBgmFile(bgmTrack)}`;
+      const warnings: string[] = [];
+      const blob = await generateVideo(records, `${dateDay} ${dateWeekday}`, p => setProgress(p), {
+        title, closing, bgmUrl,
+        emojis: director?.emojis,
+        mood: selectedMood.mood,
+        captions: director?.captions,
+        diaryEmojis: director?.diaryEmojis,
+      }, msg => warnings.push(msg));
+      if (warnings.length > 0) alert('영상은 생성됐지만 문제가 있었어요:\n\n' + warnings.join('\n'));
+      const entryId = Date.now().toString();
+      await saveVideoToIDB(archiveVideoKey({ id: entryId, date: sessionDate }), blob);
+      // 영상이 완성됐으니 원본 미디어는 정리하고 글 텍스트만 남긴다
+      addToArchive({ id: entryId, date: sessionDate, records: trimRecords(records), isWrapped: true, trimmed: true });
+      deleteRecordMedia(records);
       onSave(URL.createObjectURL(blob));
     } catch (e) {
       const msg = e instanceof Error ? e.message : '영상 생성에 실패했어요';
@@ -52,7 +90,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
   function handleSkipVideo() {
     try {
-      addToArchive({ date: sessionDate, records, isWrapped: false });
+      addToArchive({ id: Date.now().toString(), date: sessionDate, records, isWrapped: false });
       onSave();
     } catch {
       setGenError('저장에 실패했어요. 저장 공간이 부족할 수 있어요.');
@@ -118,9 +156,38 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           )}
 
           <div>
-            <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
-            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', marginTop: 7, lineHeight: 1.5 }}>"{closing}"</div>
+            {analyzing ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.5 }}>
+                <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.6)' }}>AI 분석 중...</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
+                <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', marginTop: 7, lineHeight: 1.5 }}>"{closing}"</div>
+              </>
+            )}
           </div>
+
+          {director && (
+            <>
+              <div style={{ height: 1, background: 'rgba(26,26,26,0.08)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>AI 촬영감독 · 분석</div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 22 }}>{director.emojis}</span>
+                  <span style={{ fontSize: 13, color: 'rgba(26,26,26,0.7)', lineHeight: 1.4 }}>{director.mood}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <div style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.4)', whiteSpace: 'nowrap' }}>BGM</div>
+                  <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.6)', background: 'rgba(26,26,26,0.05)', borderRadius: 8, padding: '4px 10px' }}>{BGM_TRACKS[director.bgmTrack]} · {director.bgMusic}</div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {analyzeError && (
+            <div style={{ fontSize: 11, color: '#E5533C', opacity: 0.8 }}>{analyzeError}</div>
+          )}
 
           <div style={{ height: 1, background: 'rgba(26,26,26,0.08)' }} />
 

@@ -33,6 +33,18 @@ export async function saveVideoToIDB(key: string, file: File | Blob): Promise<vo
   } catch { /* ignore */ }
 }
 
+export async function deleteVideoFromIDB(key: string): Promise<void> {
+  try {
+    const db = await openVideoDB();
+    await new Promise<void>((res, rej) => {
+      const tx = db.transaction('videos', 'readwrite');
+      tx.objectStore('videos').delete(key);
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    });
+  } catch { /* ignore */ }
+}
+
 export async function loadVideoFromIDB(key: string): Promise<string | null> {
   try {
     const db = await openVideoDB();
@@ -296,9 +308,64 @@ export function saveAppData(data: AppData) {
 // ─── Archive ─────────────────────────────────────────────────────────────────
 
 export interface ArchiveEntry {
+  id?: string;            // 항목 고유 ID — 같은 날짜에 여러 번 마감해도 누적된다 (구버전 항목엔 없음)
   date: string;
   records: MyRecord[];
   isWrapped: boolean;
+  trimmed?: boolean;      // 원본 미디어가 정리된 항목 (영상 완성 or 3일 경과)
+}
+
+// ─── 원본 정리 정책: 완성된 영상이 상품, 원본은 재료 ─────────────────────────
+// 영상이 만들어졌거나 3일이 지난 항목은 무거운 원본(사진/음성/클립)을 비우고
+// 글 텍스트·시간·캡션만 남긴다.
+
+function stripRecordMedia(r: MyRecord): MyRecord {
+  if (r.type === 'text') return r;
+  const { videoKey: _vk, ...rest } = r;
+  void _vk;
+  return { ...rest, content: '' };
+}
+
+export function trimRecords(records: MyRecord[]): MyRecord[] {
+  return records.map(stripRecordMedia);
+}
+
+export function deleteRecordMedia(records: MyRecord[]) {
+  for (const r of records) if (r.videoKey) void deleteVideoFromIDB(r.videoKey);
+}
+
+const TRIM_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
+
+export function sweepArchive() {
+  const entries = loadArchive();
+  let changed = false;
+  const now = Date.now();
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    if (e.trimmed) continue;
+    const created = e.id && /^\d+$/.test(e.id) ? Number(e.id) : new Date(`${e.date}T00:00:00`).getTime();
+    if (e.isWrapped || now - created > TRIM_AFTER_MS) {
+      deleteRecordMedia(e.records);
+      entries[i] = { ...e, records: trimRecords(e.records), trimmed: true };
+      changed = true;
+    }
+  }
+  if (changed) saveArchive(entries);
+}
+
+// 아카이브에서 뒤늦게 영상을 만들었을 때: 항목을 완성 상태로 바꾸고 원본 정리
+export function markArchiveGenerated(entry: ArchiveEntry) {
+  const entries = loadArchive();
+  const idx = entries.findIndex(e => (entry.id ? e.id === entry.id : e.id === undefined && e.date === entry.date));
+  if (idx < 0) return;
+  deleteRecordMedia(entries[idx].records);
+  entries[idx] = { ...entries[idx], isWrapped: true, trimmed: true, records: trimRecords(entries[idx].records) };
+  saveArchive(entries);
+}
+
+// 영상 IDB 키: 신규 항목은 고유 ID, 구버전 항목은 날짜 키를 그대로 쓴다
+export function archiveVideoKey(entry: Pick<ArchiveEntry, 'id' | 'date'>): string {
+  return `wrapped_${entry.id ?? entry.date}`;
 }
 
 const ARCHIVE_KEY = 'myhour_archive_v1';
@@ -318,8 +385,15 @@ export function saveArchive(entries: ArchiveEntry[]) {
 }
 
 export function addToArchive(entry: ArchiveEntry) {
-  const entries = loadArchive().filter(e => e.date !== entry.date);
+  const entries = loadArchive();
   entries.unshift(entry);
+  saveArchive(entries);
+}
+
+export function removeFromArchive(entry: ArchiveEntry) {
+  const entries = loadArchive().filter(e =>
+    entry.id ? e.id !== entry.id : !(e.id === undefined && e.date === entry.date),
+  );
   saveArchive(entries);
 }
 

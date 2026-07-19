@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context';
 import { type AppSettings, type AppData, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel, loadSettings, getSessionDate, addToArchive } from '../store';
+import { loadApiKey, saveApiKey } from '../llmDirector';
+import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush } from '../push';
 import TabBar from '../components/TabBar';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -13,6 +15,77 @@ const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
 const START_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00'];
 const END_TIMES   = ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+
+// 기록 시간 푸시 알림 — 서버(push-server/) 배포 전에는 준비 중 상태로 표시
+function PushSection() {
+  const { settings } = useApp();
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { getPushEnabled().then(setEnabled); }, []);
+
+  const ready = PUSH_SERVER_URL !== '' && isPushSupported();
+
+  async function toggle() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (enabled) {
+        await disablePush();
+        setEnabled(false);
+      } else {
+        await enablePush(settings);
+        setEnabled(true);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '알림 설정에 실패했어요');
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div>
+      <SectionHeader label="알림" />
+      <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 15 }}>기록 시간 알림</div>
+            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>
+              {ready
+                ? `${settings.startTime}부터 ${intervalLabel(settings.interval)} 간격으로 알려드려요`
+                : PUSH_SERVER_URL === ''
+                  ? '알림 서버 배포 후 사용할 수 있어요 (준비 완료)'
+                  : 'iOS 16.4 이상 + 홈 화면 설치가 필요해요'}
+            </div>
+          </div>
+          <button
+            onClick={toggle}
+            disabled={!ready || busy}
+            style={{
+              minWidth: 52, height: 32, borderRadius: 50, border: 'none',
+              background: enabled ? '#1A1A1A' : 'rgba(26,26,26,0.1)',
+              color: enabled ? '#fff' : 'rgba(26,26,26,0.5)',
+              fontSize: 12, fontWeight: 600,
+              cursor: ready && !busy ? 'pointer' : 'default',
+              opacity: ready ? 1 : 0.5,
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
+            {busy ? '...' : enabled ? 'ON' : 'OFF'}
+          </button>
+        </div>
+        {error && <div style={{ fontSize: 11, color: '#E5533C', whiteSpace: 'pre-line' }}>{error}</div>}
+        {enabled && (
+          <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>
+            시작 시간·간격을 바꾸면 알림을 껐다 다시 켜야 반영돼요
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function SectionHeader({ label }: { label: string }) {
   return (
@@ -85,6 +158,57 @@ function SettingGroup({ header, children }: { header: string; children: React.Re
       <SectionHeader label={header} />
       <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden' }}>
         {children}
+      </div>
+    </div>
+  );
+}
+
+function ApiKeySection() {
+  const [key, setKey] = useState(loadApiKey);
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    saveApiKey(key.trim());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div>
+      <SectionHeader label="AI · 촬영감독" />
+      <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', lineHeight: 1.6 }}>
+          Anthropic API 키를 입력하면 하루 마감 시 AI가 제목, 무드, BGM을 자동으로 분석해줘요.
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="password"
+            value={key}
+            onChange={e => setKey(e.target.value)}
+            placeholder="sk-ant-..."
+            style={{
+              flex: 1, height: 42, borderRadius: 10, border: '1px solid rgba(26,26,26,0.15)',
+              padding: '0 12px', fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
+              outline: 'none', background: '#F7F7F5',
+            }}
+          />
+          <button
+            onClick={handleSave}
+            style={{
+              height: 42, padding: '0 18px', borderRadius: 10,
+              background: saved ? '#3FA37B' : '#1A1A1A',
+              color: '#fff', fontSize: 13, fontWeight: 500,
+              border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              transition: 'background 0.2s',
+            }}
+          >{saved ? '저장됨' : '저장'}</button>
+        </div>
+        {key && (
+          <button
+            onClick={() => { setKey(''); saveApiKey(''); }}
+            style={{ alignSelf: 'flex-start', fontSize: 12, color: '#E5533C', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >키 삭제</button>
+        )}
       </div>
     </div>
   );
@@ -299,7 +423,15 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
           </SettingRow>
         </SettingGroup>
 
+        <PushSection />
+
         <DataSection />
+
+        <ApiKeySection />
+
+        <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(26,26,26,0.3)', fontFamily: "'JetBrains Mono', monospace", padding: '8px 0' }}>
+          MYHOUR {__BUILD_VERSION__}
+        </div>
 
         <div style={{ height: 20 }} />
       </div>

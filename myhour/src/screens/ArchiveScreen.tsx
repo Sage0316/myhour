@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, saveVideoToIDB } from '../store';
+import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { generateVideo } from '../videoGenerator';
 import TabBar from '../components/TabBar';
@@ -65,20 +65,120 @@ function RecordThumb({ record }: { record: MyRecord }) {
   );
 }
 
-function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
+function VideoFullscreen({ url, onClose }: { url: string; onClose: () => void }) {
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={onClose}
+    >
+      <video
+        src={url}
+        controls
+        autoPlay
+        playsInline
+        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        onClick={onClose}
+        style={{
+          position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 20,
+          width: 40, height: 40, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          color: '#fff', fontSize: 16, fontWeight: 500,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', lineHeight: 1,
+        }}
+      >✕</button>
+    </div>
+  );
+}
+
+// 아카이브 항목의 개별 기록을 열람하는 시트 — 영상이 만들어져도 원본 기록은 남는다
+function DetailRow({ record }: { record: MyRecord }) {
+  const [clipUrl, setClipUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (record.type === 'video' && record.videoKey) {
+      loadVideoFromIDB(record.videoKey).then(setClipUrl);
+    }
+  }, [record]);
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.45)' }}>{record.slotTime}</span>
+        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 50, background: TYPE_COLORS[record.type], color: 'rgba(26,26,26,0.65)' }}>{TYPE_LABELS[record.type]}</span>
+      </div>
+      {record.type === 'text' && (
+        <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{record.content}</div>
+      )}
+      {record.type === 'photo' && (
+        record.content.startsWith('data:')
+          ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+      )}
+      {record.type === 'audio' && (
+        record.content.startsWith('data:')
+          ? <audio src={record.content} controls style={{ width: '100%', height: 36 }} />
+          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+      )}
+      {record.type === 'video' && (
+        clipUrl
+          ? <video src={clipUrl} controls playsInline style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+          : record.content.startsWith('data:')
+            ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
+            : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+      )}
+      {record.caption && (
+        <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>{record.caption}</div>
+      )}
+    </div>
+  );
+}
+
+function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () => void }) {
+  const sorted = [...entry.records].sort((a, b) => a.createdAt - b.createdAt);
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', background: '#F7F7F5', borderRadius: '24px 24px 0 0', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}
+      >
+        <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid rgba(26,26,26,0.07)', flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(26,26,26,0.15)', margin: '0 auto 14px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{dateLabel(entry.date)}의 기록</div>
+            <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{entry.records.length}개</div>
+          </div>
+        </div>
+        <div style={{ overflowY: 'auto', padding: '12px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {sorted.map(r => <DetailRow key={r.id} record={r} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () => void }) {
   const mood = guessMood(entry.records);
   const title = generateTitle(entry.records);
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [showPlayer, setShowPlayer] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadVideoFromIDB(`wrapped_${entry.date}`).then(url => {
+    loadVideoFromIDB(archiveVideoKey(entry)).then(url => {
       if (url) { setVideoUrl(url); setGenState('done'); }
     });
-  }, [entry.date]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.id, entry.date]);
 
   const lead = entry.records.find(r => r.type === 'photo' && r.content.startsWith('data:'))
     ?? entry.records.find(r => r.type === 'video' && r.content.startsWith('data:'))
@@ -95,11 +195,12 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
       const [, m, d] = entry.date.split('-');
       const dateStr = `${Number(m)}월 ${Number(d)}일`;
       const blob = await generateVideo(entry.records, dateStr, (pct) => setProgress(pct));
-      saveVideoToIDB(`wrapped_${entry.date}`, blob);
+      await saveVideoToIDB(archiveVideoKey(entry), blob);
+      markArchiveGenerated(entry);
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
       setGenState('done');
-      setShowPlayer(true);
+      setFullscreen(true);
     } catch (e) {
       setGenError(e instanceof Error ? e.message : '오류가 발생했어요');
       setGenState('idle');
@@ -107,17 +208,14 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {showPlayer && videoUrl ? (
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: '#000' }}>
-          <video
-            src={videoUrl}
-            controls
-            playsInline
-            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-          />
-        </div>
-      ) : (
+    <>
+      {fullscreen && videoUrl && (
+        <VideoFullscreen url={videoUrl} onClose={() => setFullscreen(false)} />
+      )}
+      {showDetail && (
+        <DayDetailSheet entry={entry} onClose={() => setShowDetail(false)} />
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{
           position: 'relative', width: '100%', aspectRatio: '3/4',
           borderRadius: 16, overflow: 'hidden',
@@ -136,6 +234,16 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
             {entry.records.length}
           </div>
 
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(); }}
+            style={{
+              position: 'absolute', top: 8, right: 8, width: 24, height: 24,
+              borderRadius: '50%', background: 'rgba(0,0,0,0.4)', color: 'rgba(255,255,255,0.9)',
+              fontSize: 11, border: 'none', cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', zIndex: 1,
+            }}
+          >✕</button>
+
           {entry.records.length > 1 && (
             <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 3 }}>
               {[...new Set(entry.records.map(r => r.type))].map(t => (
@@ -144,10 +252,9 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
             </div>
           )}
 
-          {/* Video exists overlay — show play icon */}
           {genState === 'done' && videoUrl && (
             <div
-              onClick={() => setShowPlayer(true)}
+              onClick={() => setFullscreen(true)}
               style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.22)', cursor: 'pointer' }}
             >
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -165,64 +272,52 @@ function ArchiveCard({ entry }: { entry: ArchiveEntry }) {
             </div>
           )}
         </div>
-      )}
 
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.5)' }}>{dateLabel(entry.date)}</span>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '2px 8px', borderRadius: 50,
-            background: mood.color, fontSize: 10, fontWeight: 500,
-          }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: mood.dot, display: 'inline-block' }} />
-            {mood.mood}
-          </span>
-        </div>
-        <div style={{ fontSize: 13, fontWeight: 500, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-        <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>
-          {[...new Set(entry.records.map(r => TYPE_LABELS[r.type]))].join(' · ')}
-        </div>
+        <div onClick={() => setShowDetail(true)} style={{ cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.5)' }}>{dateLabel(entry.date)}</span>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '2px 8px', borderRadius: 50,
+              background: mood.color, fontSize: 10, fontWeight: 500,
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: mood.dot, display: 'inline-block' }} />
+              {mood.mood}
+            </span>
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 500, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+          <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>
+            {[...new Set(entry.records.map(r => TYPE_LABELS[r.type]))].join(' · ')}
+          </div>
 
-        {genState === 'idle' && (
-          <button onClick={handleGenerate} style={{
-            marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
-            background: '#1A1A1A', color: '#fff', border: 'none',
-            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-          }}>영상 생성하기</button>
-        )}
+          <div style={{ fontSize: 10, color: 'rgba(26,26,26,0.35)', marginTop: 3 }}>기록 보기 ›</div>
 
-        {genState === 'done' && !showPlayer && (
-          <button onClick={() => setShowPlayer(true)} style={{
-            marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
-            background: '#7C5CC4', color: '#fff', border: 'none',
-            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-          }}>영상 보기 ▶</button>
-        )}
-
-        {genState === 'done' && showPlayer && (
-          <a
-            href={videoUrl ?? ''}
-            download={`myhour-${entry.date}.webm`}
-            style={{
-              display: 'block', marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
-              background: '#3FA37B', color: '#fff', border: 'none',
+          {genState === 'idle' && !entry.trimmed && (
+            <button onClick={e => { e.stopPropagation(); handleGenerate(); }} style={{
+              marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
+              background: '#1A1A1A', color: '#fff', border: 'none',
               fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-              textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box',
-            }}
-          >영상 저장하기 ↓</a>
-        )}
+            }}>영상 생성하기</button>
+          )}
 
-        {genError && (
-          <div style={{ marginTop: 6, fontSize: 10, color: '#E5533C', lineHeight: 1.4 }}>{genError}</div>
-        )}
+          {genError && (
+            <div style={{ marginTop: 6, fontSize: 10, color: '#E5533C', lineHeight: 1.4 }}>{genError}</div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
 export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
-  const entries = useMemo(() => loadArchive(), []);
+  const [entries, setEntries] = useState<ArchiveEntry[]>(() => { sweepArchive(); return loadArchive(); });
+
+  function handleDelete(entry: ArchiveEntry) {
+    if (!confirm('이 항목의 기록과 영상을 삭제할까요?\n삭제하면 되돌릴 수 없어요.')) return;
+    removeFromArchive(entry);
+    deleteVideoFromIDB(archiveVideoKey(entry));
+    setEntries(loadArchive());
+  }
 
   const months = useMemo(() => {
     const seen = new Set<string>();
@@ -235,6 +330,10 @@ export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
   }, [entries]);
 
   const [activeMonth, setActiveMonth] = useState(months[0] ?? '');
+  // 삭제로 달이 사라졌으면 첫 달로 이동
+  useEffect(() => {
+    if (activeMonth && !months.includes(activeMonth)) setActiveMonth(months[0] ?? '');
+  }, [months, activeMonth]);
   const filtered = entries.filter(e => monthLabel(e.date) === activeMonth);
 
   if (entries.length === 0) {
@@ -281,7 +380,9 @@ export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
         display: 'grid', gridTemplateColumns: '1fr 1fr',
         gap: 14, alignContent: 'start',
       }}>
-        {filtered.map(entry => <ArchiveCard key={entry.date} entry={entry} />)}
+        {filtered.map((entry, i) => (
+          <ArchiveCard key={entry.id ?? `${entry.date}-${i}`} entry={entry} onDelete={() => handleDelete(entry)} />
+        ))}
       </div>
 
       <TabBar active="archive" onTabChange={onTabChange} />

@@ -30,6 +30,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, []);
 
+  // iOS PWA는 앱을 메모리에 살려둔 채 다음날 다시 열 수 있다.
+  // 그때 어제의 기록/마감 상태가 그대로 보이지 않도록, 포그라운드 복귀 시 날짜를 재확인한다.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const fresh = loadAppData(settings.startTime);
+      setAppData(prev => (prev.date !== fresh.date ? fresh : prev));
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [settings.startTime]);
+
   const slots = useMemo(() => generateSlots(settings), [settings]);
   const currentSlot = useMemo(
     () => getCurrentSlot(slots, settings.interval, settings.startTime),
@@ -38,10 +50,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const addRecord = useCallback((type: RecordType, content: string, caption?: string, videoKey?: string) => {
-    const slot = getCurrentSlot(slots, settings.interval, settings.startTime);
+    const now = new Date();
+    const slotTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const record: MyRecord = {
       id: Date.now().toString(),
-      slotTime: slot,
+      slotTime,
       type,
       content,
       caption,
@@ -50,7 +63,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     setAppData(prev => {
       const next = { ...prev, records: [...prev.records, record] };
-      saveAppData(next);
+      try {
+        saveAppData(next);
+      } catch {
+        // localStorage 용량 초과 — 상태를 바꾸지 않고 알린다 (렌더링 크래시 방지)
+        setTimeout(() => alert('저장 공간이 부족해서 기록을 저장하지 못했어요.\n아카이브에서 오래된 기록을 정리해 주세요.'), 0);
+        return prev;
+      }
       return next;
     });
   }, [slots, settings.interval, settings.startTime]);

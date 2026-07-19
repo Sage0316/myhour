@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import {
-  getNextSlot, minutesLeftInSlot, minutesUntilSlot,
-  formatTime, getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS,
+  getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS,
   guessMood, generateTitle, generateClosing,
 } from '../store';
 import type { MyRecord, RecordType } from '../store';
@@ -91,25 +90,9 @@ function TimelineRow({ time, status, record }: { time: string; status: 'filled' 
 }
 
 function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () => void }) {
-  const { records, slots, currentSlot, settings } = useApp();
+  const { records, settings } = useApp();
   const { dateDay, dateWeekday } = getDateStrings(getSessionDate(settings.startTime));
-  const nextSlot = getNextSlot(slots, settings.startTime);
-
-  const slotMap = new Map<string, MyRecord>();
-  for (const r of records) slotMap.set(r.slotTime, r);
-
-  const currentIdx = slots.indexOf(currentSlot);
-  const visibleSlots = slots.slice(0, currentIdx + 1);
-
-  function slotStatus(slot: string): 'filled' | 'active' | 'missed' | 'upcoming' {
-    if (slotMap.has(slot)) return 'filled';
-    if (slot === currentSlot) return 'active';
-    return slots.indexOf(slot) < currentIdx ? 'missed' : 'upcoming';
-  }
-
-  const hasActiveRecord = slotMap.has(currentSlot);
-  const timeLeft = formatTime(minutesLeftInSlot(currentSlot, slots, settings.interval, settings.startTime));
-  const nextIn = nextSlot ? formatTime(minutesUntilSlot(nextSlot, settings.startTime)) : null;
+  const sorted = [...records].sort((a, b) => a.createdAt - b.createdAt);
 
   return (
     <div style={{ flex: 1, padding: '60px 22px 0', display: 'flex', flexDirection: 'column', gap: 14, overflow: 'hidden' }}>
@@ -122,63 +105,31 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', color: 'rgba(26,26,26,0.45)' }}>RECORDS</div>
-          <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: '-0.5px', marginTop: 3 }}>
-            {records.length}<span style={{ fontSize: 13, fontWeight: 400, color: 'rgba(26,26,26,0.45)' }}>/{slots.length}</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#E4DBF5', borderRadius: 14, padding: '11px 14px', marginTop: 2 }}>
-        <div>
-          <div style={{ ...MONO, fontSize: 9, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>
-            {hasActiveRecord ? 'Next in' : 'Left'}
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.6px', lineHeight: 1, marginTop: 3 }}>
-            {hasActiveRecord ? (nextIn ?? '–') : timeLeft}
-          </div>
-        </div>
-        <div style={{ width: 1, height: 30, background: 'rgba(26,26,26,0.14)' }} />
-        <div style={{ flex: 1, fontSize: 12, color: 'rgba(26,26,26,0.62)', lineHeight: 1.4 }}>
-          {hasActiveRecord ? `${currentSlot} 기록 완료` : `${currentSlot} 슬롯이 열려있어요`}<br />
-          <span style={{ color: '#7C5CC4', fontWeight: 500 }}>
-            {hasActiveRecord
-              ? (nextSlot ? `다음 기록까지 ${nextIn}` : '오늘 기록 완료!')
-              : '이 시간이 지나면 기록할 수 없어요'}
-          </span>
+          <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: '-0.5px', marginTop: 3 }}>{records.length}</div>
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', marginTop: 2, position: 'relative' }}>
-        <div style={{ position: 'absolute', left: 6, top: 14, bottom: 14, width: 2, background: 'rgba(26,26,26,0.12)', pointerEvents: 'none' }} />
-
-        {visibleSlots.map(slot => {
-          const status = slotStatus(slot);
-          if (status === 'active') {
-            return (
-              <div key={slot} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '6px 0' }}>
-                <div style={{ width: 14, display: 'flex', justifyContent: 'center', zIndex: 1 }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#7C5CC4', border: '3px solid #fff', boxShadow: '0 0 0 4px rgba(124,92,196,0.18)' }} />
-                </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid rgba(124,92,196,0.32)', borderRadius: 14, padding: '10px 12px', boxShadow: '0 6px 16px rgba(124,92,196,0.12)' }}>
-                  <div style={{ ...MONO, fontSize: 11, color: '#7C5CC4', fontWeight: 500, width: 38 }}>{slot}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>지금 기록할 시간</div>
-                    <div style={{ ...MONO, fontSize: 10, letterSpacing: '0.6px', color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>남은 시간 · {timeLeft}</div>
-                  </div>
-                  <button onClick={onRecord} style={{ height: 32, padding: '0 14px', borderRadius: 50, background: '#7C5CC4', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif', display: 'flex', alignItems: 'center' }}>
-                    기록 →
-                  </button>
-                </div>
-              </div>
-            );
-          }
-          return <TimelineRow key={slot} time={slot} status={status} record={slotMap.get(slot)} />;
-        })}
+        {sorted.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, opacity: 0.4 }}>
+            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)' }}>아직 기록이 없어요</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ position: 'absolute', left: 6, top: 14, bottom: 14, width: 2, background: 'rgba(26,26,26,0.12)', pointerEvents: 'none' }} />
+            {sorted.map(record => (
+              <TimelineRow key={record.id} time={record.slotTime} status="filled" record={record} />
+            ))}
+          </>
+        )}
       </div>
 
-      <div style={{ padding: '10px 0 12px' }}>
-        <button onClick={onWrapUp} style={{ width: '100%', height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
-          하루 마감하고 영상 만들기
+      <div style={{ padding: '10px 0 12px', display: 'flex', gap: 9 }}>
+        <button onClick={onRecord} style={{ flex: 1, height: 48, borderRadius: 50, background: '#F0F0EE', color: '#1A1A1A', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+          + 기록하기
+        </button>
+        <button onClick={onWrapUp} style={{ flex: 1.5, height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+          하루 마감
         </button>
       </div>
     </div>
@@ -244,12 +195,21 @@ function TimelineSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
+function loadDirector(sessionDate: string): { title?: string; closing?: string } | null {
+  try {
+    const raw = localStorage.getItem(`myhour_director_${sessionDate}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 function HomeWrapped({ videoUrl }: { videoUrl?: string | null }) {
   const { records, settings } = useApp();
-  const { dateDay, dateWeekday, dateShort } = getDateStrings(getSessionDate(settings.startTime));
+  const sessionDate = getSessionDate(settings.startTime);
+  const { dateDay, dateWeekday, dateShort } = getDateStrings(sessionDate);
   const mood = guessMood(records);
-  const title = generateTitle(records);
-  const closing = generateClosing(records);
+  const director = loadDirector(sessionDate);
+  const title = director?.title ?? generateTitle(records);
+  const closing = director?.closing ?? generateClosing(records);
   const [showTimeline, setShowTimeline] = useState(false);
 
   function handleDownload() {

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { RecordType } from '../store';
 import { saveVideoToIDB } from '../store';
 import { useApp } from '../context';
@@ -64,6 +64,145 @@ function videoThumbnail(file: File): Promise<string> {
   });
 }
 
+function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, key: string) => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [phase, setPhase] = useState<'starting' | 'preview' | 'recording' | 'processing' | 'error'>('starting');
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        try {
+          await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: false } as MediaTrackConstraintSet] });
+        } catch { /* torch 미지원 기기는 무시 */ }
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        setPhase('preview');
+      } catch {
+        if (!cancelled) setPhase('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  function startRecording() {
+    if (!streamRef.current) return;
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) ?? '';
+    const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
+    chunksRef.current = [];
+    mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    mr.start();
+    recorderRef.current = mr;
+    setSeconds(0);
+    timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
+    setPhase('recording');
+  }
+
+  function stopRecording() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    const mr = recorderRef.current;
+    if (!mr) return;
+    setPhase('processing');
+    mr.onstop = async () => {
+      const mimeType = mr.mimeType || 'video/webm';
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      const file = new File([blob], `video.${ext}`, { type: mimeType });
+      const videoKey = `video_${Date.now()}`;
+      const [thumb] = await Promise.all([videoThumbnail(file), saveVideoToIDB(videoKey, file)]);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      onCapture(thumb, videoKey);
+    };
+    mr.stop();
+  }
+
+  const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+  const ss = String(seconds % 60).padStart(2, '0');
+
+  if (phase === 'error') return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 22 }}>
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 1.7 }}>
+        카메라 접근 권한이 필요해요<br />
+        <span style={{ fontSize: 12 }}>브라우저 설정에서 허용해주세요</span>
+      </div>
+    </div>
+  );
+
+  if (phase === 'processing') return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>처리 중…</div>
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, position: 'relative', margin: '16px 22px 30px', borderRadius: 24, overflow: 'hidden', background: '#23232B' }}>
+      <video
+        ref={videoRef}
+        muted
+        playsInline
+        autoPlay
+        style={{
+          width: '100%', height: '100%', objectFit: 'cover',
+          // 5초가 지나면 미리보기를 회색으로 — 여기부터는 요약 영상에 안 담긴다는 신호
+          // (녹화는 스트림에서 직접 따가므로 저장 영상은 컬러 그대로)
+          filter: phase === 'recording' && seconds >= 5 ? 'grayscale(1) brightness(0.75)' : 'none',
+          transition: 'filter 0.6s ease',
+        }}
+      />
+      {phase === 'starting' && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>카메라 준비 중…</div>
+        </div>
+      )}
+      {phase === 'recording' && (
+        <div style={{ position: 'absolute', top: 16, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(0,0,0,0.5)', borderRadius: 50, padding: '6px 14px' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#E5533C' }} />
+            <span style={{ ...MONO, fontSize: 13, color: seconds >= 5 ? 'rgba(255,255,255,0.45)' : '#fff' }}>{mm}:{ss}</span>
+          </div>
+          {seconds >= 5 && (
+            <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: 50, padding: '4px 12px', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
+              영상에는 앞 5초만 담겨요
+            </div>
+          )}
+        </div>
+      )}
+      {phase === 'preview' && (
+        <div style={{ position: 'absolute', bottom: 112, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ background: 'rgba(0,0,0,0.45)', borderRadius: 50, padding: '5px 13px', fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+            하루 요약 영상에는 앞 5초만 담겨요
+          </div>
+        </div>
+      )}
+      {(phase === 'preview' || phase === 'recording') && (
+        <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+          <button
+            onClick={phase === 'preview' ? startRecording : stopRecording}
+            style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }}
+          >
+            {phase === 'preview'
+              ? <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E5533C' }} />
+              : <div style={{ width: 24, height: 24, borderRadius: 4, background: '#E5533C' }} />
+            }
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
   return (
@@ -91,28 +230,43 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   );
 }
 
+// 음성 메모는 WAV(PCM)로 녹음한다.
+// iOS MediaRecorder가 만드는 audio/mp4는 사파리 자신의 decodeAudioData조차
+// 거부하는 경우가 있어 영상 믹싱이 조용히 실패한다. WAV는 어디서나 디코딩된다.
 function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
   const [phase, setPhase] = useState<'idle' | 'recording'>('idle');
   const [seconds, setSeconds] = useState(0);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ctxRef = useRef<AudioContext | null>(null);
+  const procRef = useRef<ScriptProcessorNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const samplesRef = useRef<Float32Array[]>([]);
+  const rateRef = useRef(44100);
 
   async function start() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
-      chunksRef.current = [];
-      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mr.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' });
-        const reader = new FileReader();
-        reader.onload = () => onCapture(reader.result as string);
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(t => t.stop());
+      type AC = typeof AudioContext;
+      const Ctor: AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: AC }).webkitAudioContext;
+      const ctx = new Ctor();
+      await ctx.resume().catch(() => {});
+      rateRef.current = ctx.sampleRate;
+      const src = ctx.createMediaStreamSource(stream);
+      const proc = ctx.createScriptProcessor(4096, 1, 1);
+      samplesRef.current = [];
+      proc.onaudioprocess = e => {
+        samplesRef.current.push(new Float32Array(e.inputBuffer.getChannelData(0)));
       };
-      mr.start();
-      recorderRef.current = mr;
+      // 스피커로 되돌아가 하울링이 나지 않게 무음 게인을 거쳐 연결
+      const mute = ctx.createGain();
+      mute.gain.value = 0;
+      src.connect(proc);
+      proc.connect(mute);
+      mute.connect(ctx.destination);
+
+      ctxRef.current = ctx;
+      procRef.current = proc;
+      streamRef.current = stream;
       setPhase('recording');
       setSeconds(0);
       timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
@@ -123,7 +277,39 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
 
   function stop() {
     if (timerRef.current) clearInterval(timerRef.current);
-    recorderRef.current?.stop();
+    procRef.current?.disconnect();
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    ctxRef.current?.close().catch(() => {});
+
+    // 수집한 샘플을 이어붙이고 16kHz 모노로 다운샘플 (음성용, 용량 절약)
+    const chunks = samplesRef.current;
+    const total = chunks.reduce((a, c) => a + c.length, 0);
+    const all = new Float32Array(total);
+    let off = 0;
+    for (const c of chunks) { all.set(c, off); off += c.length; }
+
+    const targetRate = 16000;
+    const factor = Math.max(1, Math.round(rateRef.current / targetRate));
+    const outRate = Math.round(rateRef.current / factor);
+    const n = Math.floor(all.length / factor);
+    const wav = new ArrayBuffer(44 + n * 2);
+    const v = new DataView(wav);
+    const writeStr = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    writeStr(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); writeStr(8, 'WAVE'); writeStr(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, outRate, true); v.setUint32(28, outRate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    writeStr(36, 'data'); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) {
+      // factor개 샘플 평균으로 다운샘플
+      let sum = 0;
+      for (let j = 0; j < factor; j++) sum += all[i * factor + j];
+      const s = Math.max(-1, Math.min(1, sum / factor));
+      v.setInt16(44 + i * 2, s * 0x7FFF, true);
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => onCapture(reader.result as string);
+    reader.readAsDataURL(new Blob([wav], { type: 'audio/wav' }));
   }
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
@@ -139,8 +325,10 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
             ))}
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ ...MONO, fontSize: 32, color: '#fff', letterSpacing: 3 }}>{mm}:{ss}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>녹음 중</div>
+            <div style={{ ...MONO, fontSize: 32, color: seconds >= 5 ? 'rgba(255,255,255,0.45)' : '#fff', letterSpacing: 3 }}>{mm}:{ss}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>
+              {seconds >= 5 ? '영상에는 앞 5초만 담겨요' : '녹음 중'}
+            </div>
           </div>
           <button onClick={stop} style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
             <div style={{ width: 22, height: 22, borderRadius: 4, background: '#E5533C' }} />
@@ -150,6 +338,7 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
         <>
           <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7 }}>
             마이크로 이 순간을<br />짧게 남겨보세요
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>하루 요약 영상에는 앞 5초만 담겨요</div>
           </div>
           <button onClick={start} style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E5533C' }} />
@@ -160,11 +349,10 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
   );
 }
 
-function CaptionStep({ content, type, onSave, onSkip, onRetake }: {
+function CaptionStep({ content, type, onSave, onRetake }: {
   content: string;
   type: RecordType;
   onSave: (caption: string) => void;
-  onSkip: () => void;
   onRetake?: () => void;
 }) {
   const [text, setText] = useState('');
@@ -210,19 +398,13 @@ function CaptionStep({ content, type, onSave, onSkip, onRetake }: {
         />
       </div>
 
-      {/* 버튼 */}
-      <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
-        <button
-          onClick={onSkip}
-          style={{ flex: 1, height: 50, borderRadius: 50, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-        >
-          스킵
-        </button>
+      {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
+      <div style={{ flexShrink: 0 }}>
         <button
           onClick={() => onSave(text.trim())}
-          style={{ flex: 1.5, height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+          style={{ width: '100%', height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
         >
-          문구 입력하기
+          저장하기
         </button>
       </div>
     </div>
@@ -240,8 +422,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const [capturedContent, setCapturedContent] = useState<string | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
   const pendingVideoKeyRef = useRef<string | null>(null);
+  const [retakeKey, setRetakeKey] = useState(0);
 
   async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -253,42 +435,21 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     e.target.value = '';
   }
 
-  async function handleVideoFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLoading(true);
-    const videoKey = `video_${Date.now()}`;
-    const [thumb] = await Promise.all([
-      videoThumbnail(file),
-      saveVideoToIDB(videoKey, file),
-    ]);
-    pendingVideoKeyRef.current = videoKey;
-    setLoading(false);
-    setCapturedContent(thumb);
-    e.target.value = '';
-  }
-
   function switchMode(m: Mode) {
     setMode(m);
     setCapturedContent(null);
     pendingVideoKeyRef.current = null;
     if (m === '사진') photoInputRef.current?.click();
-    else if (m === '영상') videoInputRef.current?.click();
   }
 
   function retake() {
     setCapturedContent(null);
     if (mode === '사진') photoInputRef.current?.click();
-    else if (mode === '영상') videoInputRef.current?.click();
+    else if (mode === '영상') setRetakeKey(k => k + 1);
   }
 
   function handleCaptionSave(caption: string) {
     onSave(MODE_TYPE[mode], capturedContent!, caption || undefined, pendingVideoKeyRef.current ?? undefined);
-    pendingVideoKeyRef.current = null;
-  }
-
-  function handleSkip() {
-    onSave(MODE_TYPE[mode], capturedContent!, undefined, pendingVideoKeyRef.current ?? undefined);
     pendingVideoKeyRef.current = null;
   }
 
@@ -299,7 +460,6 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
           content={capturedContent}
           type={MODE_TYPE[mode]}
           onSave={handleCaptionSave}
-          onSkip={handleSkip}
           onRetake={mode !== '음성' ? retake : undefined}
         />
       );
@@ -313,30 +473,24 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     }
     if (mode === '글') return <TextRecordMode onSave={c => onSave('text', c)} />;
     if (mode === '음성') return <AudioRecordMode onCapture={setCapturedContent} />;
+    if (mode === '영상') return (
+      <CameraVideoMode
+        key={retakeKey}
+        onCapture={(thumb, key) => { pendingVideoKeyRef.current = key; setCapturedContent(thumb); }}
+      />
+    );
 
-    // 사진/영상 — 카메라 미실행 상태 (사용자가 취소했거나 다시 탭했을 때)
-    const isPhoto = mode === '사진';
+    // 사진 — 카메라 미실행 상태
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
         <div
-          onClick={() => isPhoto ? photoInputRef.current?.click() : videoInputRef.current?.click()}
+          onClick={() => photoInputRef.current?.click()}
           style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}
         >
-          {isPhoto ? (
-            <>
-              <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
-              </div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
-            </>
-          ) : (
-            <>
-              <div style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E5533C' }} />
-              </div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
-            </>
-          )}
+          <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
+          </div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
         </div>
       </div>
     );
@@ -344,9 +498,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
-      {/* 숨겨진 파일 입력 */}
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
-      <input ref={videoInputRef} type="file" accept="video/*" capture="environment" onChange={handleVideoFile} style={{ display: 'none' }} />
 
       <div style={{ padding: '58px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MYHOUR BGM 시청</title>
+<style>
+  body { margin: 0; padding: 24px 18px 60px; background: #FAF9F7; color: #1A1A1A; font-family: -apple-system, system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: rgba(26,26,26,0.45); margin-bottom: 24px; }
+  h2 { font-size: 13px; letter-spacing: 1px; color: rgba(26,26,26,0.45); font-family: "Courier New", monospace; margin: 26px 0 10px; text-transform: uppercase; }
+  .track { background: #fff; border: 1px solid rgba(26,26,26,0.08); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+  .name { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  audio { width: 100%; height: 36px; }
+</style>
+</head>
+<body>
+<h1>MYHOUR BGM 시청</h1>
+<div class="sub">무드별 3곡 · AI가 무드를 고르면 그 안에서 랜덤 선곡돼요</div>
+<div id="list"></div>
+<script>
+const MOODS = [
+  ['잔잔한 lo-fi (calm)', ['calm.mp3', 'slice-of-life.mp3', 'lagoon.mp3']],
+  ['경쾌한 멜로디 (bright)', ['bright.mp3', 'just-like-that.mp3', 'city-sunshine.mp3']],
+  ['감성적인 빌드업 (emotional)', ['emotional.mp3', 'shining-stars.mp3', 'magic-garden.mp3']],
+  ['잔잔한 피아노 (piano)', ['piano.mp3', 'landras-dream.mp3', 'piano-magic.mp3']],
+  ['경쾌한 우쿨렐레 (ukulele)', ['ukulele.mp3', 'ukulele-song.mp3', 'funshine.mp3']],
+  ['따뜻한 노스탤지어 (nostalgic)', ['nostalgic.mp3', 'travelers-notebook.mp3', 'tournesol.mp3']],
+];
+const list = document.getElementById('list');
+for (const [mood, files] of MOODS) {
+  const h = document.createElement('h2');
+  h.textContent = mood;
+  list.appendChild(h);
+  for (const f of files) {
+    const div = document.createElement('div');
+    div.className = 'track';
+    div.innerHTML = '<div class="name">' + f.replace('.mp3', '') + '</div>' +
+      '<audio controls preload="none" src="bgm/' + f + '"></audio>';
+    list.appendChild(div);
+  }
+}
+// 한 곡 재생하면 다른 곡은 멈추게
+document.addEventListener('play', e => {
+  document.querySelectorAll('audio').forEach(a => { if (a !== e.target) a.pause(); });
+}, true);
+</script>
+</body>
+</html>
