@@ -3,8 +3,7 @@
 import type { AppSettings } from './store';
 
 // 워커 배포 후 여기에 URL을 넣으면 설정 화면의 알림 섹션이 활성화된다.
-// 예: 'https://myhour-push.<계정>.workers.dev'
-export const PUSH_SERVER_URL = '';
+export const PUSH_SERVER_URL: string = 'https://myhour-push.sage0316.workers.dev';
 
 const VAPID_PUBLIC_KEY = 'BHkes45_SwI_Bp-hKFFAPy1pAKx_2NjCXpQjucklSjNwrEEm--ZhR4cMdb1ULOBLLLeUygBp6wR5uU0VFJlf5Ys';
 

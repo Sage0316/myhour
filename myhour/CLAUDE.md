@@ -46,14 +46,14 @@ cd /tmp/deploy && git add -A && git commit -q -m "Deploy" && git push -q origin 
 - 무료 음원 추가는 GitHub의 0lhi/FreePD(퍼블릭 도메인) 미러에서. 시청 페이지: /myhour/bgm.html
 - 사용자 데이터는 전부 폰 안 — 홈 화면 아이콘 삭제 = 데이터 소실. 백업/가져오기는 설정에 있음
 
-## 푸시 알림 (95% 완성 — 배포만 남음)
-iOS 16.4+ PWA 푸시. 코드는 전부 준비됨, Cloudflare Workers 배포만 하면 됨:
-- `push-server/`: 워커 코드(worker.js — Web Push aes128gcm 암호화+VAPID 직접 구현, 라운드트립 테스트 통과), wrangler.toml, README(배포 순서)
-- 앱 쪽: `src/push.ts`(구독), sw.js(push/notificationclick 핸들러), 설정에 알림 섹션 — `PUSH_SERVER_URL`이 빈 문자열이라 "준비 중" 상태로 배포돼 있음
-- VAPID 공개키는 push.ts/wrangler.toml에 있고, **비밀키(vapid-keys.json)는 사용자가 파일로 보관 중** — 배포 시 `wrangler secret put VAPID_PRIVATE_JWK`로 등록
-- 배포 방법: 사용자가 Claude 환경 네트워크 설정에 api.cloudflare.com 허용 + Cloudflare API 토큰 제공 → 세션에서 wrangler로 배포 (또는 Cloudflare 대시보드 웹 에디터에서 수동). 배포 후 push.ts의 PUSH_SERVER_URL 채우고 앱 재배포
+## 푸시 알림 (배포 완료 — 2026-07-19)
+iOS 16.4+ PWA 푸시. 워커 배포됨: **https://myhour-push.sage0316.workers.dev**
+- `push-server/`: 워커 코드(worker.js — Web Push aes128gcm 암호화+VAPID 직접 구현, 라운드트립 테스트 통과), wrangler.toml(KV id 기입됨), README(배포 순서)
+- 앱 쪽: `src/push.ts`(구독, `PUSH_SERVER_URL` 기입됨 — string 타입 명시 필수, 리터럴이면 `=== ''` 비교가 TS2367), sw.js(push/notificationclick 핸들러), 설정에 알림 섹션
+- Cloudflare: 계정 f68efd92d83fa98ee254ffd8c8a0ab6e, workers.dev 서브도메인 `sage0316`(API로 등록함), KV `SUBS`=7c47c7793fdd44d19f7476317399b038, 시크릿 `VAPID_PRIVATE_JWK` 등록됨, 크론 */30. 재배포는 push-server/에서 `npx wrangler deploy` (CLOUDFLARE_API_TOKEN 환경변수)
+- 비밀키(vapid-keys.json)는 사용자가 파일로 보관 중 — 저장소에 커밋 금지
+- 세션 네트워크 정책이 api.cloudflare.com만 허용 → workers.dev로 /health 직접 확인 불가, 배포 상태는 API(scripts/myhour-push/subdomain·secrets·schedules)로 검증
 - 크론 30분 단위, 사용자별 interval(30/60/120)·시작/종료시간·타임존 반영. 만료 구독(410) 자동 정리
 
 ## 다음 과제 후보
-- 푸시 서버 배포 (위 참조 — 최우선)
 - 앱스토어 출시 준비: Capacitor 래핑, API 프록시 서버(푸시 워커에 합치면 됨), 백업 강화, 과금 모델

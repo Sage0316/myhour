@@ -5,7 +5,7 @@ compatibility_date = "2026-07-01"
 # 배포 전 `npx wrangler kv namespace create SUBS` 실행 후 나온 id로 교체
 [[kv_namespaces]]
 binding = "SUBS"
-id = "REPLACE_WITH_KV_ID"
+id = "7c47c7793fdd44d19f7476317399b038"
 
 [triggers]
 crons = ["*/30 * * * *"]
