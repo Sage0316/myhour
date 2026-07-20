@@ -240,7 +240,7 @@ export const TYPE_LABELS: Record<RecordType, string> = {
   video: '영상',
   photo: '사진',
   audio: '음성',
-  meme: '짤',
+  meme: '앨범',
 };
 
 // ─── Mood / title ─────────────────────────────────────────────────────────────

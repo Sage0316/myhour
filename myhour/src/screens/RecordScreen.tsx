@@ -8,9 +8,10 @@ interface RecordScreenProps {
   onSave: (type: RecordType, content: string, caption?: string, videoKey?: string) => void;
 }
 
-type Mode = '영상' | '사진' | '짤' | '음성' | '글';
-const MODES: Mode[] = ['영상', '사진', '짤', '음성', '글'];
-const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 짤: 'meme', 음성: 'audio', 글: 'text' };
+type Mode = '영상' | '사진' | '음성' | '글';
+const MODES: Mode[] = ['영상', '사진', '음성', '글'];
+// 사진 모드는 촬영(photo)과 앨범 선택(meme) 두 갈래 — 실제 타입은 소스에 따라 갈린다
+const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' };
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
 function compressImage(file: File): Promise<string> {
@@ -428,7 +429,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const [capturedContent, setCapturedContent] = useState<string | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const memeInputRef = useRef<HTMLInputElement>(null);
+  const albumInputRef = useRef<HTMLInputElement>(null);
+  const photoSourceRef = useRef<'camera' | 'album'>('camera');
   const pendingVideoKeyRef = useRef<string | null>(null);
   const [retakeKey, setRetakeKey] = useState(0);
 
@@ -446,19 +448,21 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     setMode(m);
     setCapturedContent(null);
     pendingVideoKeyRef.current = null;
-    if (m === '사진') photoInputRef.current?.click();
-    if (m === '짤') memeInputRef.current?.click();
   }
+
+  // 사진 모드의 실제 타입 — 촬영은 photo(풀스크린 장면), 앨범 선택은 meme(폴라로이드/스크랩북 장면)
+  const photoType: RecordType = mode === '사진' && photoSourceRef.current === 'album' ? 'meme' : MODE_TYPE[mode];
 
   function retake() {
     setCapturedContent(null);
-    if (mode === '사진') photoInputRef.current?.click();
-    else if (mode === '짤') memeInputRef.current?.click();
-    else if (mode === '영상') setRetakeKey(k => k + 1);
+    if (mode === '사진') {
+      if (photoSourceRef.current === 'album') albumInputRef.current?.click();
+      else photoInputRef.current?.click();
+    } else if (mode === '영상') setRetakeKey(k => k + 1);
   }
 
   function handleCaptionSave(caption: string) {
-    onSave(MODE_TYPE[mode], capturedContent!, caption || undefined, pendingVideoKeyRef.current ?? undefined);
+    onSave(photoType, capturedContent!, caption || undefined, pendingVideoKeyRef.current ?? undefined);
     pendingVideoKeyRef.current = null;
   }
 
@@ -467,7 +471,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       return (
         <CaptionStep
           content={capturedContent}
-          type={MODE_TYPE[mode]}
+          type={photoType}
           onSave={handleCaptionSave}
           onRetake={mode !== '음성' ? retake : undefined}
         />
@@ -489,32 +493,27 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       />
     );
 
-    // 짤 — 앨범 미선택 상태
-    if (mode === '짤') return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
-        <div
-          onClick={() => memeInputRef.current?.click()}
-          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}
-        >
-          <div style={{ fontSize: 44 }}>😆</div>
-          <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7 }}>
-            지금 기분을 나타내는 짤을<br />앨범에서 골라보세요
-          </div>
-        </div>
-      </div>
-    );
-
-    // 사진 — 카메라 미실행 상태
+    // 사진 — 촬영 / 앨범 선택
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 22px 30px' }}>
         <div
-          onClick={() => photoInputRef.current?.click()}
-          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}
+          onClick={() => { photoSourceRef.current = 'camera'; photoInputRef.current?.click(); }}
+          style={{ flex: 1.4, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, cursor: 'pointer' }}
         >
-          <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
+          <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 16, height: 16, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
           </div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>지금 촬영</div>
+        </div>
+        <div
+          onClick={() => { photoSourceRef.current = 'album'; albumInputRef.current?.click(); }}
+          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}
+        >
+          <div style={{ fontSize: 32 }}>🖼️</div>
+          <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
+            앨범에서 선택
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>저장해둔 사진이나 짤도 좋아요</div>
+          </div>
         </div>
       </div>
     );
@@ -523,8 +522,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
-      {/* 짤은 capture 속성 없이 — iOS에서 사진 보관함 선택지가 뜬다 */}
-      <input ref={memeInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
+      {/* 앨범 선택은 capture 속성 없이 — iOS에서 사진 보관함이 열린다 */}
+      <input ref={albumInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
 
       <div style={{ padding: '58px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>

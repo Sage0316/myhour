@@ -404,7 +404,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
           {settings.captureMode === 'fixed' && (
             <SettingRow label="기본 기록 방식" value={defaultTypeLabel} last open={openRow === 'defaultType'} onToggle={() => toggle('defaultType')}>
-              {(['photo', 'video', 'meme', 'audio', 'text'] as const).map(t => (
+              {(['photo', 'video', 'audio', 'text'] as const).map(t => (
                 <Option key={t} label={TYPE_LABELS[t]} selected={settings.defaultType === t} onSelect={() => set('defaultType', t)} />
               ))}
             </SettingRow>

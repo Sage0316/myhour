@@ -27,7 +27,13 @@ function MediaIcon({ type, bg }: { type: IconType; bg: string }) {
   };
   if (type === 'video') return <div style={base}><div style={{ width: 0, height: 0, borderLeft: '8px solid #1A1A1A', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', marginLeft: 2 }} /></div>;
   if (type === 'photo') return <div style={base}><div style={{ width: 10, height: 10, border: '2px solid #1A1A1A', borderRadius: '50%' }} /></div>;
-  if (type === 'meme') return <div style={base}><div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', lineHeight: 1 }}>ㅋ</div></div>;
+  if (type === 'meme') return (
+    <div style={base}>
+      <div style={{ width: 13, height: 11, border: '2px solid #1A1A1A', borderRadius: 2, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div style={{ width: 0, height: 0, borderLeft: '3.5px solid transparent', borderRight: '3.5px solid transparent', borderBottom: '4px solid #1A1A1A' }} />
+      </div>
+    </div>
+  );
   if (type === 'audio') return (
     <div style={{ ...base, alignItems: 'flex-end', gap: 2, paddingBottom: 7 }}>
       <div style={{ width: 2, height: 7, background: '#1A1A1A' }} />

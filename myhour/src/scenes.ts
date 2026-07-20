@@ -554,7 +554,7 @@ export function drawMemeScene(
   const tilt = (rnd() * 2.5 + 1.8) * (rnd() < 0.5 ? -1 : 1); // -4.3°~-1.8° 또는 1.8°~4.3°
   const ease = Math.min(1, t / 0.25);
   const rise = (1 - ease) * 14;
-  const caption = record.caption?.trim() || '오늘의 짤';
+  const caption = record.caption?.trim() || '오늘의 한 장';
 
   ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H);
 
