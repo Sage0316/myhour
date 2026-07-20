@@ -351,7 +351,8 @@ export function drawDiaryScene(
   ctx.fillStyle = '#FFFFFF';
   roundRectPath(ctx, cardX, cardY, cardW, cardH, 6);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(26,26,26,0.55)';
+  // 진한 회색 — 낙서 원(0.18)보다는 진하고 블랙에 가깝지 않게
+  ctx.strokeStyle = 'rgba(26,26,26,0.4)';
   ctx.lineWidth = 2.5;
   roundRectPath(ctx, cardX, cardY, cardW, cardH, 6);
   ctx.stroke();
