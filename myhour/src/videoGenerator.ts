@@ -47,6 +47,37 @@ function computeEnvelope(buf: AudioBuffer, buckets = 44): number[] {
   return env.map(v => (max > 0 ? v / max : 0));
 }
 
+// BGM 시작점 뽑기 — 무음 구간(일부 곡은 인트로/아웃트로가 조용함)을 피해
+// 실제로 소리가 나는 0.5초 버킷 중에서 랜덤으로 고른다
+function pickAudibleOffset(buf: AudioBuffer): number {
+  const ch = buf.getChannelData(0);
+  const bucketSec = 0.5;
+  const per = Math.floor(buf.sampleRate * bucketSec);
+  const nBuckets = Math.floor(ch.length / per);
+  if (nBuckets < 2) return 0;
+
+  const levels: number[] = [];
+  let peak = 0;
+  for (let i = 0; i < nBuckets; i++) {
+    let sum = 0, count = 0;
+    const start = i * per;
+    for (let j = 0; j < per; j += 64) { sum += Math.abs(ch[start + j]); count++; }
+    const v = sum / count;
+    levels.push(v);
+    if (v > peak) peak = v;
+  }
+
+  // 피크의 20% 이상이면 "소리가 있다"고 본다. 시작하자마자 조용해지지 않게
+  // 다음 버킷도 소리가 있는 지점만 후보로.
+  const threshold = peak * 0.2;
+  const candidates: number[] = [];
+  for (let i = 0; i < nBuckets - 1; i++) {
+    if (levels[i] >= threshold && levels[i + 1] >= threshold) candidates.push(i);
+  }
+  if (candidates.length === 0) return Math.random() * Math.max(0, buf.duration - 5);
+  return candidates[Math.floor(Math.random() * candidates.length)] * bucketSec;
+}
+
 async function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise(resolve => {
     const img = new Image();
@@ -271,8 +302,9 @@ export async function generateVideo(
       bgmGain.gain.linearRampToValueAtTime(BGM_LEVEL, audioCtx.currentTime + 1);
       bgmSource.connect(bgmGain);
       bgmGain.connect(audioDest);
-      // 곡의 랜덤 지점에서 시작 — 같은 곡이라도 매번 다른 구간이 깔린다 (루프라 끝나면 처음으로)
-      const startOffset = Math.random() * Math.max(0, audioBuf.duration - 5);
+      // 곡의 랜덤 지점에서 시작 — 같은 곡이라도 매번 다른 구간이 깔린다 (루프라 끝나면 처음으로).
+      // 무음 구간에 떨어지면 음악이 한참 뒤에야 들어오므로 소리가 있는 지점만 고른다.
+      const startOffset = pickAudibleOffset(audioBuf);
       bgmSource.start(0, startOffset);
     } catch {
       bgmGain = null; bgmSource = null;
