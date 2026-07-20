@@ -45,7 +45,8 @@ cd /tmp/deploy && git add -A && git commit -q -m "Deploy" && git push -q origin 
 - 미리보기 루프: `npm run dev -- --port 5199` 후 /myhour/preview.html (장면 스크린샷), /myhour/gentest.html (생성 통합테스트, window.__blob으로 오디오 검증). Playwright는 playwright-core + executablePath '/opt/pw-browsers/chromium'
 - 설정 맨 아래 빌드 버전 표시 (vite define __BUILD_VERSION__) — "고쳤는데 안 돼요"는 먼저 버전 확인
 - SW는 same-origin navigate만 처리 (외부 API 요청 건드리면 안 됨). 배포 반영은 CDN 캐시 때문에 최대 10분 + 앱 재시작 필요
-- 무료 음원 추가는 GitHub의 0lhi/FreePD(퍼블릭 도메인) 미러에서. 시청 페이지: /myhour/bgm.html
+- 무료 음원 추가는 GitHub의 0lhi/FreePD(퍼블릭 도메인) 미러에서 — raw.githubusercontent.com은 네트워크 정책에서 접근 가능(2026-07 기준). freepd.com 본 사이트는 폐쇄됨. 시청 페이지: /myhour/bgm.html
+- **BGM 라이선스 감사 (2026-07-20)**: 18곡 중 15곡을 0lhi/FreePD(CC0 1.0) 미러와 md5 대조로 확정 — 상업 사용 무제한. 원곡명: ukulele=Happy Whistling Ukulele, ukulele-song=Ukulele Song, landras-dream=Landra's Dream, piano=Lovely Piano Song, nostalgic=Nostalgic Piano, piano-magic=Piano Magic Motive, magic-garden=Magic in the Garden, just-like-that=And Just Like That, tournesol=Champ de tournesol, lagoon=The Lagoon (+ 원곡명 그대로 5곡). **미확정 3곡: bright/calm/emotional** — 태그 없음, 320kbps CBR로 인코딩은 같은 계열이나 미러의 Upbeat/Romance/Scoring/Misc/Epic/Electronic/World/Comedy 폴더 크기 스캔에서 미발견 (Zoned·Horror 전수조사 못함, 트림/재인코딩됐을 가능성도 있음). 앱스토어 출시 전 이 3곡만 미러에서 검증된 곡으로 교체하는 것을 권장
 - 사용자 데이터는 전부 폰 안 — 홈 화면 아이콘 삭제 = 데이터 소실. 백업/가져오기는 설정에 있음
 
 ## 푸시 알림 (배포 완료 — 2026-07-19)
