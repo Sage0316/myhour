@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context';
 import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, saveVideoToIDB, addToArchive, archiveVideoKey, trimRecords, deleteRecordMedia } from '../store';
 import type { MoodItem } from '../store';
@@ -23,6 +23,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const autoMood = guessMood(records);
   const [selectedMood, setSelectedMood] = useState<MoodItem>(autoMood);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
+  const userPickedMoodRef = useRef(false); // 사용자가 직접 고른 뒤엔 AI 추천이 덮어쓰지 않는다
   const [selectedEmoji, setSelectedEmoji] = useState(0);
   const [calmness, setCalmness] = useState(72);
   const [generating, setGenerating] = useState(false);
@@ -49,6 +50,11 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
       .then(out => {
         setDirector(out);
         setAnalyzing(false);
+        // AI가 고른 무드 칩 자동 선택 (사용자가 먼저 골랐으면 유지)
+        if (out.moodChip && !userPickedMoodRef.current) {
+          const m = MOOD_LIST.find(x => x.mood === out.moodChip);
+          if (m) setSelectedMood(m);
+        }
         try { localStorage.setItem(`myhour_director_${sessionDate}`, JSON.stringify(out)); } catch { /* ignore */ }
       })
       .catch(e => { setAnalyzeError(e instanceof Error ? e.message : 'AI 분석 실패'); setAnalyzing(false); });
@@ -141,7 +147,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           {showMoodPicker && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {MOOD_LIST.map(m => (
-                <button key={m.mood} onClick={() => { setSelectedMood(m); setShowMoodPicker(false); }} style={{
+                <button key={m.mood} onClick={() => { userPickedMoodRef.current = true; setSelectedMood(m); setShowMoodPicker(false); }} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px', borderRadius: 50, background: m.color,
                   fontSize: 12, fontWeight: selectedMood.mood === m.mood ? 600 : 400,

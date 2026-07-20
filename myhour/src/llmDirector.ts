@@ -1,4 +1,5 @@
 import type { MyRecord } from './store';
+import { MOOD_LIST } from './store';
 
 const API_KEY_STORAGE = 'myhour_anthropic_key';
 
@@ -41,6 +42,7 @@ export interface DirectorOutput {
   title: string;
   closing: string;
   mood: string;
+  moodChip?: string; // MOOD_LIST 중 하나 — 마감 화면 무드 칩 자동 선택용
   emojis: string;
   bgMusic: string;
   bgmTrack: BgmTrack;
@@ -80,6 +82,7 @@ ${lines}
   "title": "오늘의 제목 (12자 이내, 명사구 선호)",
   "closing": "기록 속 한 장면을 집어서 담담하게 끝내는 한 문장 (35자 이내)",
   "mood": "오늘의 분위기 한 줄 (20자 이내)",
+  "moodChip": "오늘 전체 무드. 반드시 다음 중 하나: ${MOOD_LIST.map(m => m.mood).join(' | ')}",
   "emojis": "오늘 무드에 맞는 이모지 3-4개",
   "bgMusic": "어울리는 배경음악 분위기 (예: 잔잔한 피아노, lo-fi 힙합)",
   "bgmTrack": "실제 사용할 BGM. 반드시 다음 중 하나: calm(잔잔한 lo-fi) | bright(경쾌한 멜로디) | emotional(감성적인 빌드업) | piano(잔잔한 피아노) | ukulele(경쾌한 휘파람 우쿨렐레) | nostalgic(따뜻한 노스탤지어 피아노)",
@@ -122,6 +125,7 @@ export async function analyzeDay(
   if (!match) throw new Error('AI 응답을 파싱할 수 없어요');
   const out = JSON.parse(match[0]) as DirectorOutput;
   if (!(out.bgmTrack in BGM_TRACKS)) out.bgmTrack = 'calm';
+  if (out.moodChip && !MOOD_LIST.some(m => m.mood === out.moodChip)) out.moodChip = undefined;
   out.captions = Array.isArray(out.captions)
     ? out.captions.map(c => String(c).trim().slice(0, 20))
     : [];
