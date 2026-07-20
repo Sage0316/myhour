@@ -3,7 +3,7 @@ import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, load
 import {
   W, H, PAPER,
   drawCover, drawVideoCover,
-  fallbackEmojisFor, splitEmojis, ensureDiaryFont,
+  fallbackEmojisFor, splitEmojis, ensureDiaryFont, drawCaptionLine,
   drawTitleScene, drawDiaryScene, drawPhotoScene, drawMemeScene, drawAudioScene, drawVideoOverlay, drawClosingScene,
 } from './scenes';
 
@@ -405,9 +405,8 @@ export async function generateVideo(
             ctx.fillStyle = 'rgba(26,26,26,0.4)';
             ctx.fillText(record.slotTime, 44, H - (record.caption ? 100 : 56));
             if (record.caption) {
-              ctx.font = `600 26px system-ui, sans-serif`;
               ctx.fillStyle = 'rgba(26,26,26,0.85)';
-              ctx.fillText(record.caption, 44, H - 60);
+              drawCaptionLine(ctx, record.caption, 44, H - 60, W - 88);
             }
           }
         }, tick);

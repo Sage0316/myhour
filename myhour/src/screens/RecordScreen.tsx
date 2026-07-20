@@ -204,6 +204,9 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, key: string
   );
 }
 
+// 그림일기 줄노트에 들어가는 최대치 (7줄 × ~13자) — 넘으면 영상에서 잘린다
+const TEXT_MAX = 90;
+
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
   return (
@@ -211,14 +214,14 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
       <div style={{ flex: 1, borderRadius: 20, background: 'rgba(255,255,255,0.06)', padding: 18 }}>
         <textarea
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => setText(e.target.value.slice(0, TEXT_MAX))}
           placeholder="지금 이 순간을 짧게 남겨보세요"
           autoFocus
           style={{ width: '100%', height: '100%', background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 16, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{text.length}자</div>
+        <div style={{ ...MONO, fontSize: 11, color: text.length >= TEXT_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{TEXT_MAX}자</div>
         <button
           onClick={() => text.trim() && onSave(text.trim())}
           disabled={!text.trim()}
@@ -350,6 +353,9 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
   );
 }
 
+// 사진/영상 자막은 영상에서 한 줄이라 이 이상은 화면을 벗어난다
+const CAPTION_MAX = 20;
+
 function CaptionStep({ content, type, onSave, onRetake }: {
   content: string;
   type: RecordType;
@@ -392,18 +398,19 @@ function CaptionStep({ content, type, onSave, onRetake }: {
       <div style={{ flex: 1, borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 16, minHeight: 100 }}>
         <textarea
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}
           placeholder={type === 'meme' ? '딱 이 기분이었음 ㅋㅋ' : '점심 도시락, 오후 산책...'}
           autoFocus
           style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 15, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
       </div>
 
-      {type === 'meme' && (
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0, paddingLeft: 4 }}>
-          이 문구가 하루 요약 영상에 손글씨로 들어가요
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, paddingLeft: 4 }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+          {type === 'meme' ? '이 문구가 하루 요약 영상에 손글씨로 들어가요' : ''}
         </div>
-      )}
+        <div style={{ ...MONO, fontSize: 11, color: text.length >= CAPTION_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{CAPTION_MAX}자</div>
+      </div>
 
       {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
       <div style={{ flexShrink: 0 }}>

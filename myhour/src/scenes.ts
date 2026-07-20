@@ -642,6 +642,17 @@ export function drawMemeScene(
   ctx.globalAlpha = 1;
 }
 
+// 자막 한 줄 — 폭을 넘치면 폰트를 줄인다 (하한 18px, 그래도 넘치면 그대로 둔다)
+export function drawCaptionLine(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number) {
+  let size = 26;
+  ctx.font = `600 ${size}px system-ui, sans-serif`;
+  while (size > 18 && ctx.measureText(text).width > maxW) {
+    size -= 1;
+    ctx.font = `600 ${size}px system-ui, sans-serif`;
+  }
+  ctx.fillText(text, x, y);
+}
+
 export function drawPhotoScene(
   ctx: CanvasRenderingContext2D,
   record: MyRecord,
@@ -667,9 +678,8 @@ export function drawPhotoScene(
   ctx.fillStyle = img ? 'rgba(255,255,255,0.7)' : 'rgba(26,26,26,0.4)';
   ctx.fillText(record.slotTime, 44, H - (record.caption ? 100 : 56));
   if (record.caption) {
-    ctx.font = `600 26px system-ui, sans-serif`;
     ctx.fillStyle = img ? '#fff' : 'rgba(26,26,26,0.85)';
-    ctx.fillText(record.caption, 44, H - 60);
+    drawCaptionLine(ctx, record.caption, 44, H - 60, W - 88);
   }
   drawEmojis(ctx, emojiPlan, t, !!img);
 }
@@ -747,9 +757,8 @@ export function drawVideoOverlay(ctx: CanvasRenderingContext2D, record: MyRecord
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.fillText(record.slotTime, 44, H - (record.caption ? 100 : 56));
   if (record.caption) {
-    ctx.font = `600 26px system-ui, sans-serif`;
     ctx.fillStyle = '#fff';
-    ctx.fillText(record.caption, 44, H - 60);
+    drawCaptionLine(ctx, record.caption, 44, H - 60, W - 88);
   }
 }
 
