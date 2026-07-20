@@ -9,7 +9,7 @@ export const H = 960;
 export const PAPER = '#FAF9F7';
 export const INK = '#1A1A1A';
 
-// 그림일기용 손글씨 폰트 (나눔손글씨 펜, OFL). 로드 실패 시 시스템 폰트로 폴백.
+// 그림일기용 손글씨 폰트 (개구/Gaegu, OFL — 크레파스 느낌). 로드 실패 시 시스템 폰트로 폴백.
 const HAND = "'DiaryHand', system-ui, sans-serif";
 let handFontLoading: Promise<void> | null = null;
 
@@ -17,7 +17,7 @@ export function ensureDiaryFont(): Promise<void> {
   if (!handFontLoading) {
     handFontLoading = (async () => {
       try {
-        const url = `${import.meta.env.BASE_URL}fonts/NanumPenScript-Regular.ttf`;
+        const url = `${import.meta.env.BASE_URL}fonts/Gaegu-Regular.ttf`;
         const face = new FontFace('DiaryHand', `url(${url})`);
         await face.load();
         document.fonts.add(face);

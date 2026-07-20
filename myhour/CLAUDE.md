@@ -34,7 +34,8 @@ cd /tmp/deploy && git add -A && git commit -q -m "Deploy" && git push -q origin 
 3. 아카이브에서 과거 기록 및 영상 보기/다운로드
 
 ## 주요 구조 (2026-07-19 기준)
-- `src/scenes.ts`: 영상 장면 렌더러. 글=그림일기 틀(테두리+낙서 원 안에 내용 이모지+줄노트, 나눔손글씨 폰트 public/fonts, ensureDiaryFont), 사진=풀스크린+무드 이모지 스캐터, 음성=실제 녹음 파형이 무드 색으로 차오름(computeEnvelope), 짤(meme)=폴라로이드/스크랩북 2종이 id 기준 랜덤(사용자 캡션이 손글씨로, 테이프·밑줄은 무드색), 마무리=블랙 카드
+- `src/scenes.ts`: 영상 장면 렌더러. 글=그림일기 틀(진한 회색 테두리+낙서 원 안에 내용 이모지+줄노트), 사진=풀스크린+무드 이모지 스캐터, 음성=실제 녹음 파형이 무드 색으로 차오름(computeEnvelope), 짤(meme)=폴라로이드/스크랩북 2종이 id 기준 랜덤(사용자 캡션이 손글씨로, 테이프·밑줄은 무드색), 마무리=블랙 카드
+- 손글씨 폰트: **개구(Gaegu, OFL)** public/fonts, ensureDiaryFont. 2026-07 크레파스 느낌으로 교체 (이전: 나눔손글씨 펜). 최종 후보였던 감자꽃(Gamja Flower)도 좋았음 — 나중에 폰트 바꿀 일 있으면 참고. 폰트는 fonts.googleapis.com css2 API에서 ttf URL 얻어 fonts.gstatic.com에서 받으면 됨 (이 세션 네트워크에서 열려 있었음)
 - 앨범(meme) 타입: RecordType 'meme'(라벨 '앨범', 색 #F9E9A6). 별도 탭이 아니라 **사진 모드 안에서 "지금 촬영/앨범에서 선택" 두 갈래** — 촬영=photo(풀스크린 장면), 앨범 선택=meme(폴라로이드/스크랩북 장면, 캡션이 손글씨). 앨범 input은 capture 속성 없음(카메라 강제 방지). 정리 정책은 사진과 동일. **주의: seededRnd(LCG)는 이웃 시드의 첫 값이 거의 같아서 Date.now() 기반 id로 분기하려면 rnd() 두 번 버리고 써야 함** (drawMemeScene 참조)
 - `src/llmDirector.ts`: **claude-sonnet-5** 1회 호출(thinking disabled 필수)로 제목·마무리·무드·이모지·장면 자막·BGM 무드·그림일기 이모지 수신. API 키는 localStorage, 브라우저 직접 호출(anthropic-dangerous-direct-browser-access 헤더)
 - `src/videoGenerator.ts`: 1080×1920 렌더링. BGM 무드 6종×3곡(public/bgm, 전곡 CC0, 랜덤 선곡+랜덤 시작 지점) + 음성/클립 소리 믹싱(BGM 더킹, 컷 페이드아웃). 영상·음성 장면은 3~5초(MEDIA_MAX)
