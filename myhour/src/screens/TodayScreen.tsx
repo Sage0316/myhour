@@ -47,7 +47,7 @@ function RecordTile({ record, onLongPress }: { record: MyRecord; onLongPress: ()
     >
       {/* Thumbnail */}
       <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {(record.type === 'photo' || record.type === 'video') && hasMedia ? (
+        {(record.type === 'photo' || record.type === 'video' || record.type === 'meme') && hasMedia ? (
           <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : record.type === 'text' ? (
           <div style={{ padding: '14px 12px', fontSize: 12, lineHeight: 1.55, color: 'rgba(26,26,26,0.75)', overflow: 'hidden', maxHeight: '100%' }}>

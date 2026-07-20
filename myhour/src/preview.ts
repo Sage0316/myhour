@@ -2,13 +2,33 @@
 import type { MyRecord } from './store';
 import {
   W, H, ensureDiaryFont,
-  drawTitleScene, drawDiaryScene, drawPhotoScene, drawAudioScene, drawClosingScene,
+  drawTitleScene, drawDiaryScene, drawPhotoScene, drawMemeScene, drawAudioScene, drawClosingScene,
 } from './scenes';
 
 const EMOJIS = ['🌙', '☁️', '✨', '🍵'];
 
 function rec(id: string, type: MyRecord['type'], content: string, caption?: string): MyRecord {
   return { id, slotTime: '14:37', type, content, caption, createdAt: Date.now() } as MyRecord;
+}
+
+// 가짜 짤 (그라데이션 + 큰 글자 — 밈 느낌)
+function fakeMeme(): Promise<HTMLImageElement> {
+  const c = document.createElement('canvas');
+  c.width = 800; c.height = 800;
+  const x = c.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, 0, 800);
+  g.addColorStop(0, '#FFD86B'); g.addColorStop(1, '#FF9A5C');
+  x.fillStyle = g; x.fillRect(0, 0, 800, 800);
+  x.font = '300px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('😹', 400, 430);
+  x.font = '900 80px system-ui'; x.lineWidth = 14; x.strokeStyle = '#000'; x.fillStyle = '#fff';
+  x.strokeText('퇴근 10분 전', 400, 100); x.fillText('퇴근 10분 전', 400, 100);
+  x.strokeText('나의 표정', 400, 700); x.fillText('나의 표정', 400, 700);
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.src = c.toDataURL();
+  });
 }
 
 // 가짜 사진 (그라데이션 + 도형)
@@ -61,6 +81,14 @@ async function main() {
   drawPhotoScene(cell('photo · 캡션 없음'), rec('e5', 'photo', 'data:'), photo, EMOJIS, t);
 
   drawAudioScene(cell('audio'), rec('f6', 'audio', '', '오늘의 목소리 메모'), t);
+
+  // 짤 — id로 폴라로이드/스크랩북이 갈린다 (여러 id를 시도해 두 스타일 다 확인)
+  const meme = await fakeMeme();
+  drawMemeScene(cell('meme · 1'), rec('m1', 'meme', 'data:', '딱 이 기분이었음 ㅋㅋ'), meme, t, '#D9743F');
+  drawMemeScene(cell('meme · 2'), rec('m2', 'meme', 'data:', '오늘의 나 요약'), meme, t, '#3FA37B');
+  drawMemeScene(cell('meme · 3'), rec('m3', 'meme', 'data:', '회의 세 개 연속으로 하고 나온 직후의 나의 표정이 딱 이랬다'), meme, t, '#7C5CC4');
+  drawMemeScene(cell('meme · 캡션 없음'), rec('m4', 'meme', 'data:'), meme, t, '#C4567A');
+  drawMemeScene(cell('meme · 원본 정리됨'), rec('m5', 'meme', ''), null, t, '#D9743F');
 
   drawClosingScene(cell('closing'), { closing: '결국 다 먹었다. 그걸로 됐다.', dateStr: '7.18 금요일' }, t);
 }

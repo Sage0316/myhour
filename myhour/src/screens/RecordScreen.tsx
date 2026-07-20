@@ -8,9 +8,9 @@ interface RecordScreenProps {
   onSave: (type: RecordType, content: string, caption?: string, videoKey?: string) => void;
 }
 
-type Mode = '영상' | '사진' | '음성' | '글';
-const MODES: Mode[] = ['영상', '사진', '음성', '글'];
-const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' };
+type Mode = '영상' | '사진' | '짤' | '음성' | '글';
+const MODES: Mode[] = ['영상', '사진', '짤', '음성', '글'];
+const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 짤: 'meme', 음성: 'audio', 글: 'text' };
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
 function compressImage(file: File): Promise<string> {
@@ -356,7 +356,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
   onRetake?: () => void;
 }) {
   const [text, setText] = useState('');
-  const isMedia = type === 'photo' || type === 'video';
+  const isMedia = type === 'photo' || type === 'video' || type === 'meme';
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 14, minHeight: 0, overflowY: 'auto' }}>
@@ -376,7 +376,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
               onClick={onRetake}
               style={{ position: 'absolute', top: 10, right: 10, padding: '5px 12px', borderRadius: 50, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
             >
-              다시 찍기
+              {type === 'meme' ? '다시 고르기' : '다시 찍기'}
             </button>
           )}
         </div>
@@ -392,11 +392,17 @@ function CaptionStep({ content, type, onSave, onRetake }: {
         <textarea
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder="점심 도시락, 오후 산책..."
+          placeholder={type === 'meme' ? '딱 이 기분이었음 ㅋㅋ' : '점심 도시락, 오후 산책...'}
           autoFocus
           style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 15, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
       </div>
+
+      {type === 'meme' && (
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0, paddingLeft: 4 }}>
+          이 문구가 하루 요약 영상에 손글씨로 들어가요
+        </div>
+      )}
 
       {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
       <div style={{ flexShrink: 0 }}>
@@ -414,7 +420,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
 export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const { currentSlot: slot, settings } = useApp();
   const defaultMode: Mode = settings.captureMode === 'fixed'
-    ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '글')
+    ? ((Object.entries(MODE_TYPE).find(([, v]) => v === settings.defaultType)?.[0] as Mode) ?? '글')
     : '글';
 
   const [mode, setMode] = useState<Mode>(defaultMode);
@@ -422,6 +428,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const [capturedContent, setCapturedContent] = useState<string | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const memeInputRef = useRef<HTMLInputElement>(null);
   const pendingVideoKeyRef = useRef<string | null>(null);
   const [retakeKey, setRetakeKey] = useState(0);
 
@@ -440,11 +447,13 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     setCapturedContent(null);
     pendingVideoKeyRef.current = null;
     if (m === '사진') photoInputRef.current?.click();
+    if (m === '짤') memeInputRef.current?.click();
   }
 
   function retake() {
     setCapturedContent(null);
     if (mode === '사진') photoInputRef.current?.click();
+    else if (mode === '짤') memeInputRef.current?.click();
     else if (mode === '영상') setRetakeKey(k => k + 1);
   }
 
@@ -480,6 +489,21 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       />
     );
 
+    // 짤 — 앨범 미선택 상태
+    if (mode === '짤') return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
+        <div
+          onClick={() => memeInputRef.current?.click()}
+          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}
+        >
+          <div style={{ fontSize: 44 }}>😆</div>
+          <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7 }}>
+            지금 기분을 나타내는 짤을<br />앨범에서 골라보세요
+          </div>
+        </div>
+      </div>
+    );
+
     // 사진 — 카메라 미실행 상태
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
@@ -499,6 +523,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
+      {/* 짤은 capture 속성 없이 — iOS에서 사진 보관함 선택지가 뜬다 */}
+      <input ref={memeInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
 
       <div style={{ padding: '58px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>

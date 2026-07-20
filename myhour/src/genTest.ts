@@ -7,6 +7,20 @@ const log = (m: string) => {
   console.log(m);
 };
 
+// 작은 짤 이미지 (그라데이션 + 글자) — 짤 장면 대역 테스트용
+function makeMemeDataUrl(): string {
+  const c = document.createElement('canvas');
+  c.width = 400; c.height = 400;
+  const x = c.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, 0, 400);
+  g.addColorStop(0, '#FFD86B'); g.addColorStop(1, '#FF9A5C');
+  x.fillStyle = g; x.fillRect(0, 0, 400, 400);
+  x.font = '900 44px system-ui'; x.textAlign = 'center';
+  x.lineWidth = 8; x.strokeStyle = '#000'; x.fillStyle = '#fff';
+  x.strokeText('퇴근 10분 전', 200, 210); x.fillText('퇴근 10분 전', 200, 210);
+  return c.toDataURL('image/jpeg', 0.8);
+}
+
 // 1.5초짜리 440Hz 사인파 WAV를 만들어 음성 메모 대역 테스트에 쓴다
 function makeWavDataUrl(seconds = 1.5, freq = 440): string {
   const rate = 22050;
@@ -29,6 +43,7 @@ const records: MyRecord[] = [
   { id: 'r1', slotTime: '09:10', type: 'text', content: '아침에 커피 두 잔 마셨다', createdAt: 1 } as MyRecord,
   { id: 'r2', slotTime: '13:40', type: 'audio', content: makeWavDataUrl(4.2), caption: '목소리 메모', createdAt: 2 } as MyRecord,
   { id: 'r3', slotTime: '19:22', type: 'text', content: '퇴근하고 떡볶이 먹음', createdAt: 3 } as MyRecord,
+  { id: 'r4', slotTime: '17:55', type: 'meme', content: makeMemeDataUrl(), caption: '딱 이 기분이었음 ㅋㅋ', createdAt: 4 } as MyRecord,
 ];
 
 async function main() {
@@ -46,8 +61,8 @@ async function main() {
       closing: '결국 다 먹었다.',
       emojis: '🌙☁️✨',
       mood: '잔잔함',
-      captions: ['', '오늘의 목소리', ''],
-      diaryEmojis: ['☕', '', '🍢'],
+      captions: ['', '오늘의 목소리', '', ''],
+      diaryEmojis: ['☕', '', '🍢', ''],
       bgmUrl: `${import.meta.env.BASE_URL}bgm/calm.mp3`,
     });
     (window as unknown as { __blob?: Blob }).__blob = blob;

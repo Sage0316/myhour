@@ -4,7 +4,7 @@ import {
   W, H, PAPER,
   drawCover, drawVideoCover,
   fallbackEmojisFor, splitEmojis, ensureDiaryFont,
-  drawTitleScene, drawDiaryScene, drawPhotoScene, drawAudioScene, drawVideoOverlay, drawClosingScene,
+  drawTitleScene, drawDiaryScene, drawPhotoScene, drawMemeScene, drawAudioScene, drawVideoOverlay, drawClosingScene,
 } from './scenes';
 
 const FPS = 24;
@@ -190,7 +190,7 @@ export async function generateVideo(
   ]);
 
   await Promise.all(records.map(async r => {
-    if (r.type === 'photo') {
+    if (r.type === 'photo' || r.type === 'meme') {
       if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
     } else if (r.type === 'video') {
       if (r.videoKey) {
@@ -385,6 +385,12 @@ export async function generateVideo(
       const img = imgMap.get(record.id) ?? null;
       await renderSegment(RECORD_DUR, (t) => {
         drawPhotoScene(ctx, record, img, emojiSet, t);
+      }, tick);
+
+    } else if (record.type === 'meme') {
+      const img = imgMap.get(record.id) ?? null;
+      await renderSegment(RECORD_DUR, (t) => {
+        drawMemeScene(ctx, record, img, t, moodColor);
       }, tick);
 
     } else if (record.type === 'text') {

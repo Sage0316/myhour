@@ -26,7 +26,7 @@ function RecordThumb({ record }: { record: MyRecord }) {
   const bg = TYPE_COLORS[record.type];
   const hasMedia = record.content.startsWith('data:');
 
-  if (record.type === 'photo' && hasMedia) {
+  if ((record.type === 'photo' || record.type === 'meme') && hasMedia) {
     return (
       <img
         src={record.content}
@@ -113,7 +113,7 @@ function DetailRow({ record }: { record: MyRecord }) {
       {record.type === 'text' && (
         <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{record.content}</div>
       )}
-      {record.type === 'photo' && (
+      {(record.type === 'photo' || record.type === 'meme') && (
         record.content.startsWith('data:')
           ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block' }} />
           : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
@@ -180,7 +180,7 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.date]);
 
-  const lead = entry.records.find(r => r.type === 'photo' && r.content.startsWith('data:'))
+  const lead = entry.records.find(r => (r.type === 'photo' || r.type === 'meme') && r.content.startsWith('data:'))
     ?? entry.records.find(r => r.type === 'video' && r.content.startsWith('data:'))
     ?? entry.records.find(r => r.type === 'text')
     ?? entry.records[0];

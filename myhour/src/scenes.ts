@@ -479,6 +479,166 @@ export function drawDiaryScene(
   }
 }
 
+// ─── 짤 장면 헬퍼 ────────────────────────────────────────────────────────────
+
+// 이미지를 사각형 안에 cover-crop으로 채운다
+function drawImageCoverRect(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+  const ia = img.naturalWidth / img.naturalHeight;
+  const ca = w / h;
+  let sw: number, sh: number;
+  if (ia > ca) { sh = h; sw = sh * ia; }
+  else { sw = w; sh = sw / ia; }
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.drawImage(img, x + (w - sw) / 2, y + (h - sh) / 2, sw, sh);
+  ctx.restore();
+}
+
+// 마스킹 테이프 조각
+function drawTape(ctx: CanvasRenderingContext2D, x: number, y: number, rotDeg: number, color: string, w = 124) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotDeg * Math.PI / 180);
+  ctx.fillStyle = hexAlpha(color, 0.72);
+  ctx.fillRect(-w / 2, -17, w, 34);
+  ctx.restore();
+}
+
+function drawSparkle(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = 'rgba(26,26,26,0.28)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  for (const ang of [0, Math.PI / 2, Math.PI / 4, -Math.PI / 4]) {
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ang) * 5, Math.sin(ang) * 5);
+    ctx.lineTo(Math.cos(ang) * 13, Math.sin(ang) * 13);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// 손글씨 한 줄 — 길면 폰트를 줄이고 그래도 넘치면 말줄임
+function drawHandLine(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, maxW: number, baseSize: number) {
+  let size = baseSize;
+  ctx.font = `${size}px ${HAND}`;
+  while (size > 22 && ctx.measureText(text).width > maxW) {
+    size -= 2;
+    ctx.font = `${size}px ${HAND}`;
+  }
+  let line = text;
+  while (line.length > 1 && ctx.measureText(line + '…').width > maxW) line = line.slice(0, -1);
+  if (line !== text) line += '…';
+  ctx.textAlign = 'center';
+  ctx.fillText(line, cx, y);
+  ctx.textAlign = 'left';
+  return ctx.measureText(line).width;
+}
+
+// 짤 장면 — 사용자가 고른 밈 이미지. 손글씨 문구는 사용자가 입력한 캡션.
+// 기록 id 기준으로 폴라로이드/스크랩북 두 스타일 중 하나가 랜덤으로 걸린다.
+export function drawMemeScene(
+  ctx: CanvasRenderingContext2D,
+  record: MyRecord,
+  img: HTMLImageElement | null,
+  t: number,
+  moodColor = '#D9743F',
+) {
+  const rnd = seededRnd(record.id);
+  // LCG는 첫 값이 이웃 시드끼리 거의 같다 — id가 Date.now() 기반이라 같은 날 기록이
+  // 전부 같은 스타일로 몰리지 않게 두 번 돌려서 섞은 뒤 뽑는다
+  rnd(); rnd();
+  const accent = TYPE_COLORS['meme'];
+  const variantPolaroid = rnd() < 0.5;
+  const tilt = (rnd() * 2.5 + 1.8) * (rnd() < 0.5 ? -1 : 1); // -4.3°~-1.8° 또는 1.8°~4.3°
+  const ease = Math.min(1, t / 0.25);
+  const rise = (1 - ease) * 14;
+  const caption = record.caption?.trim() || '오늘의 짤';
+
+  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H);
+
+  // 구석 워시 (기록마다 위치가 다름)
+  const washX = rnd() < 0.5 ? W * 0.88 : W * 0.1;
+  const washY = rnd() < 0.5 ? H * 0.14 : H * 0.86;
+  const wash = ctx.createRadialGradient(washX, washY, 0, washX, washY, 430);
+  wash.addColorStop(0, hexAlpha(accent, 0.6));
+  wash.addColorStop(1, hexAlpha(accent, 0));
+  ctx.fillStyle = wash; ctx.fillRect(0, 0, W, H);
+
+  // 시간 필
+  ctx.font = `bold 13px "Courier New", monospace`;
+  const tw = ctx.measureText(record.slotTime).width;
+  roundRectPath(ctx, 44, 76, tw + 28, 34, 17);
+  ctx.fillStyle = hexAlpha(accent, 0.9); ctx.fill();
+  ctx.fillStyle = 'rgba(26,26,26,0.6)';
+  ctx.fillText(record.slotTime, 58, 98);
+
+  const drawMeme = (x: number, y: number, w: number, h: number) => {
+    if (img) { drawImageCoverRect(ctx, img, x, y, w, h); return; }
+    // 원본이 정리됐거나 로드 실패 — 파스텔 블록으로 대신
+    ctx.fillStyle = hexAlpha(accent, 0.45);
+    ctx.fillRect(x, y, w, h);
+    ctx.font = `64px system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(26,26,26,0.5)';
+    ctx.fillText('😆', x + w / 2, y + h / 2);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  };
+
+  ctx.globalAlpha = ease;
+
+  if (variantPolaroid) {
+    // A. 폴라로이드 — 기울어진 흰 프레임, 위에 테이프, 하단에 손글씨
+    const pw = 420, ph = 520;
+    const px = (W - pw) / 2, py = H * 0.5 - ph / 2 + rise;
+    ctx.save();
+    ctx.translate(W / 2, py + ph / 2);
+    ctx.rotate(tilt * Math.PI / 180);
+    ctx.translate(-W / 2, -(py + ph / 2));
+    ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
+    ctx.fillStyle = '#fff';
+    roundRectPath(ctx, px, py, pw, ph, 4); ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    drawMeme(px + 20, py + 20, pw - 40, pw - 40);
+    ctx.fillStyle = 'rgba(26,26,26,0.8)';
+    drawHandLine(ctx, caption, W / 2, py + pw + 62, pw - 60, 36);
+    drawTape(ctx, W / 2, py, 2, moodColor, 140);
+    ctx.restore();
+    drawSparkle(ctx, px + pw + 8, py - 6 + Math.sin(t * Math.PI * 2) * 4);
+  } else {
+    // B. 스크랩북 — 흰 테두리 짤을 모서리 테이프로 붙이고, 아래 손글씨 + 물결 밑줄
+    const iw = 440, ih = 440;
+    const ix = (W - iw) / 2, iy = H * 0.47 - ih / 2 + rise;
+    ctx.save();
+    ctx.translate(W / 2, iy + ih / 2);
+    ctx.rotate(tilt * 0.4 * Math.PI / 180);
+    ctx.translate(-W / 2, -(iy + ih / 2));
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.15)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(ix - 6, iy - 6, iw + 12, ih + 12);
+    ctx.restore();
+    drawMeme(ix, iy, iw, ih);
+    drawTape(ctx, ix, iy, -45, moodColor);
+    drawTape(ctx, ix + iw, iy + ih, -45, moodColor);
+    ctx.restore();
+    drawSparkle(ctx, ix + iw - 14, iy - 28 + Math.sin(t * Math.PI * 2) * 4);
+
+    ctx.fillStyle = 'rgba(26,26,26,0.85)';
+    const capY = iy + ih + 88;
+    const capW = drawHandLine(ctx, caption, W / 2, capY, W - 100, 38);
+    ctx.strokeStyle = hexAlpha(moodColor, 0.5);
+    ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - capW / 2, capY + 16);
+    ctx.quadraticCurveTo(W / 2, capY + 24, W / 2 + capW / 2, capY + 14);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
 export function drawPhotoScene(
   ctx: CanvasRenderingContext2D,
   record: MyRecord,

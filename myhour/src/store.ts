@@ -1,4 +1,4 @@
-export type RecordType = 'text' | 'video' | 'photo' | 'audio';
+export type RecordType = 'text' | 'video' | 'photo' | 'audio' | 'meme';
 
 export interface MyRecord {
   id: string;
@@ -232,6 +232,7 @@ export const TYPE_COLORS: Record<RecordType, string> = {
   video: '#F4C9B8',
   photo: '#CDEBDD',
   audio: '#E4DBF5',
+  meme: '#F9E9A6',
 };
 
 export const TYPE_LABELS: Record<RecordType, string> = {
@@ -239,6 +240,7 @@ export const TYPE_LABELS: Record<RecordType, string> = {
   video: '영상',
   photo: '사진',
   audio: '음성',
+  meme: '짤',
 };
 
 // ─── Mood / title ─────────────────────────────────────────────────────────────
