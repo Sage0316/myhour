@@ -12,7 +12,7 @@ export function saveApiKey(key: string) {
   else localStorage.removeItem(API_KEY_STORAGE);
 }
 
-export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic';
+export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic' | 'sad';
 
 export const BGM_TRACKS: Record<BgmTrack, string> = {
   calm: '잔잔한 lo-fi',
@@ -21,16 +21,18 @@ export const BGM_TRACKS: Record<BgmTrack, string> = {
   piano: '잔잔한 피아노',
   ukulele: '경쾌한 우쿨렐레',
   nostalgic: '따뜻한 노스탤지어',
+  sad: '차분한 슬픔·위로',
 };
 
 // 무드별 곡 풀 — AI는 무드만 고르고, 그 안에서 매번 랜덤으로 한 곡이 뽑힌다 (전곡 CC0)
 const BGM_FILES: Record<BgmTrack, string[]> = {
-  calm: ['calm.mp3', 'slice-of-life.mp3', 'lagoon.mp3'],
-  bright: ['bright.mp3', 'just-like-that.mp3', 'city-sunshine.mp3'],
-  emotional: ['emotional.mp3', 'shining-stars.mp3', 'magic-garden.mp3'],
+  calm: ['study-and-relax.mp3', 'slice-of-life.mp3', 'lagoon.mp3'],
+  bright: ['pickled-pink.mp3', 'just-like-that.mp3', 'city-sunshine.mp3'],
+  emotional: ['cornfield-chase.mp3', 'shining-stars.mp3', 'magic-garden.mp3'],
   piano: ['piano.mp3', 'landras-dream.mp3', 'piano-magic.mp3'],
   ukulele: ['ukulele.mp3', 'ukulele-song.mp3', 'funshine.mp3'],
   nostalgic: ['nostalgic.mp3', 'travelers-notebook.mp3', 'tournesol.mp3'],
+  sad: ['winter.mp3', 'isolation-waltz.mp3', 'cold-journey.mp3'],
 };
 
 export function pickBgmFile(track: BgmTrack): string {
@@ -85,7 +87,7 @@ ${lines}
   "moodChip": "오늘 전체 무드. 반드시 다음 중 하나: ${MOOD_LIST.map(m => m.mood).join(' | ')}",
   "emojis": "오늘 무드에 맞는 이모지 3-4개",
   "bgMusic": "어울리는 배경음악 분위기 (예: 잔잔한 피아노, lo-fi 힙합)",
-  "bgmTrack": "실제 사용할 BGM. 반드시 다음 중 하나: calm(잔잔한 lo-fi) | bright(경쾌한 멜로디) | emotional(감성적인 빌드업) | piano(잔잔한 피아노) | ukulele(경쾌한 휘파람 우쿨렐레) | nostalgic(따뜻한 노스탤지어 피아노)",
+  "bgmTrack": "실제 사용할 BGM. 반드시 다음 중 하나: ${Object.entries(BGM_TRACKS).map(([k, v]) => `${k}(${v})`).join(' | ')}",
   "captions": ["기록 순서대로 각 기록에 달 자막 ${records.length}개, 각 15자 이내. 글(text) 기록은 본문이 이미 화면에 크게 보이므로 본문을 반복하는 자막 금지 — 덧붙일 말이 없으면 빈 문자열 \\"\\""],
   "diaryEmojis": ["기록 순서대로 ${records.length}개. 각 글(text) 기록의 내용을 그림처럼 나타내는 이모지 딱 1개 (예: '떡볶이 먹음'→🍢, '야근함'→💼, '비 왔다'→🌧️). text가 아닌 기록은 빈 문자열 \\"\\""]
 }`;
