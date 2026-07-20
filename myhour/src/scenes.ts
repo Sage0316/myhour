@@ -102,6 +102,9 @@ const FALLBACK_EMOJIS: Record<string, string[]> = {
   '감성': ['🌙', '🕯️', '🎞️', '💭'],
   '웃김': ['😆', '🤪', '🎈', '😜'],
   '정신없음': ['🌪️', '😵‍💫', '⚡', '🏃'],
+  '슬픔': ['😢', '🌧️', '💧', '🫂'],
+  '짜증': ['😤', '💢', '🌩️', '😑'],
+  '지침': ['😮‍💨', '🪫', '🛌', '🫠'],
 };
 
 export function fallbackEmojisFor(mood: string): string[] {

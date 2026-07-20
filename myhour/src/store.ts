@@ -251,6 +251,9 @@ export const MOOD_LIST = [
   { mood: '감성',   color: '#E4DBF5', dot: '#7C5CC4' },
   { mood: '웃김',   color: '#F6D7C6', dot: '#D9743F' },
   { mood: '정신없음', color: '#FAD9E3', dot: '#C4567A' },
+  { mood: '슬픔',   color: '#CFE0F5', dot: '#5B84C4' },
+  { mood: '짜증',   color: '#F6C9C9', dot: '#C44B4B' },
+  { mood: '지침',   color: '#E3E0DA', dot: '#8A857C' },
 ] as const;
 
 export type MoodItem = (typeof MOOD_LIST)[number];
