@@ -159,6 +159,9 @@ async function handleDirector(request, env, json) {
       'Content-Type': 'application/json',
       'x-api-key': env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
+      // Workers의 기본 요청은 UA가 없거나 특이해서 Anthropic 쪽 Cloudflare 봇 방어에
+      // 걸릴 수 있다 — SDK와 비슷한 정상적인 UA를 붙여본다
+      'User-Agent': 'MYHOUR-push-server/1.0 (Cloudflare-Workers)',
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
