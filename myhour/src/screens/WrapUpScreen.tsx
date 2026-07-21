@@ -4,7 +4,7 @@ import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getD
 import type { MoodItem } from '../store';
 import { generateVideo } from '../videoGenerator';
 import { ensureDiaryFont } from '../scenes';
-import { analyzeDay, loadApiKey, BGM_TRACKS, pickBgmFile } from '../llmDirector';
+import { analyzeDay, loadApiKey, aiAvailable, BGM_TRACKS, pickBgmFile } from '../llmDirector';
 import type { DirectorOutput } from '../llmDirector';
 
 interface WrapUpScreenProps {
@@ -44,7 +44,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
   useEffect(() => {
     const apiKey = loadApiKey();
-    if (!apiKey || records.length === 0) return;
+    if (!aiAvailable(apiKey) || records.length === 0) return;
     setAnalyzing(true);
     analyzeDay(records, `${dateDay} ${dateWeekday}`, apiKey)
       .then(out => {

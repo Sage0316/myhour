@@ -16,3 +16,4 @@ VAPID_PUBLIC_KEY = "BHkes45_SwI_Bp-hKFFAPy1pAKx_2NjCXpQjucklSjNwrEEm--ZhR4cMdb1U
 
 # 비밀키는 커밋하지 말고 시크릿으로:
 #   npx wrangler secret put VAPID_PRIVATE_JWK   (scratchpad의 vapid-keys.json에서 privateJwk 값 붙여넣기)
+#   npx wrangler secret put ANTHROPIC_API_KEY   (AI 분석 무료 체험 프록시용 — /director 엔드포인트)

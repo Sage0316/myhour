@@ -1,5 +1,6 @@
 import type { MyRecord } from './store';
 import { MOOD_LIST } from './store';
+import { PUSH_SERVER_URL } from './push';
 
 const API_KEY_STORAGE = 'myhour_anthropic_key';
 
@@ -10,6 +11,11 @@ export function loadApiKey(): string {
 export function saveApiKey(key: string) {
   if (key) localStorage.setItem(API_KEY_STORAGE, key);
   else localStorage.removeItem(API_KEY_STORAGE);
+}
+
+// 개인 키가 없어도 워커의 무료 체험 프록시(/director, 하루 한도 있음)로 대신 분석할 수 있으면 true
+export function aiAvailable(apiKey: string): boolean {
+  return !!apiKey || !!PUSH_SERVER_URL;
 }
 
 export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic' | 'sad';
@@ -93,34 +99,55 @@ ${lines}
 }`;
 }
 
+// apiKey가 있으면 브라우저에서 Anthropic을 직접 호출하고, 없으면 워커의 무료 체험
+// 프록시(/director)로 대신 요청한다 — API 키가 없는 친구도 AI 분석을 써볼 수 있다.
+async function fetchDirectorResponse(
+  prompt: string,
+  apiKey: string,
+): Promise<{ content?: Array<{ type?: string; text?: string }> }> {
+  if (apiKey) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5',
+        max_tokens: 700,
+        // JSON 생성이라 thinking은 명시적으로 꺼서 응답 파싱과 토큰 낭비를 방지
+        thinking: { type: 'disabled' },
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
+      throw new Error(err?.error?.message ?? `API 오류 (${res.status})`);
+    }
+    return res.json();
+  }
+
+  if (!PUSH_SERVER_URL) throw new Error('AI 분석을 사용할 수 없어요 (설정에서 API 키를 넣어주세요)');
+  const res = await fetch(`${PUSH_SERVER_URL}/director`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err?.error ?? `AI 분석 서버 오류 (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function analyzeDay(
   records: MyRecord[],
   dateStr: string,
   apiKey: string,
 ): Promise<DirectorOutput> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-5',
-      max_tokens: 700,
-      // JSON 생성이라 thinking은 명시적으로 꺼서 응답 파싱과 토큰 낭비를 방지
-      thinking: { type: 'disabled' },
-      messages: [{ role: 'user', content: buildPrompt(records, dateStr) }],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(err?.error?.message ?? `API 오류 (${res.status})`);
-  }
-
-  const data = await res.json() as { content?: Array<{ type?: string; text?: string }> };
+  const data = await fetchDirectorResponse(buildPrompt(records, dateStr), apiKey);
   // thinking 블록이 섞여도 안전하게 text 블록만 찾는다
   const text = data.content?.find(b => b.type === 'text')?.text ?? '';
   const match = text.match(/\{[\s\S]*\}/);

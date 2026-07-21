@@ -128,6 +128,55 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+// AI 분석 프록시 — API 키 없는 사용자(친구 테스트용)도 쓸 수 있게 서버의 키로 대신 호출한다.
+// 남용 방지로 하루 총량/기기(IP)별 한도를 KV(SUBS 재사용)에 카운트한다.
+const DIRECTOR_TOTAL_DAILY_CAP = 80;
+const DIRECTOR_IP_DAILY_CAP = 15;
+const DIRECTOR_TTL_SEC = 60 * 60 * 26; // 하루 조금 넘게 — 자정 근처 요청도 안전하게 걸치게
+
+async function handleDirector(request, env, json) {
+  const origin = request.headers.get('Origin');
+  if (origin !== 'https://sage0316.github.io') return json({ error: '허용되지 않은 출처' }, 403);
+  if (!env.ANTHROPIC_API_KEY) return json({ error: 'AI 분석이 아직 설정되지 않았어요' }, 503);
+
+  const body = await request.json().catch(() => null);
+  const prompt = body?.prompt;
+  if (!prompt || typeof prompt !== 'string' || prompt.length > 8000) return json({ error: '잘못된 요청' }, 400);
+
+  const day = new Date().toISOString().slice(0, 10);
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const totalKey = `rl_total_${day}`;
+  const ipKey = `rl_ip_${day}_${ip}`;
+  const [totalRaw, ipRaw] = await Promise.all([env.SUBS.get(totalKey), env.SUBS.get(ipKey)]);
+  const total = parseInt(totalRaw || '0', 10);
+  const ipCount = parseInt(ipRaw || '0', 10);
+  if (total >= DIRECTOR_TOTAL_DAILY_CAP) return json({ error: '오늘 전체 사용량을 다 썼어요. 내일 다시 시도해주세요.' }, 429);
+  if (ipCount >= DIRECTOR_IP_DAILY_CAP) return json({ error: '오늘 이 기기의 사용량을 다 썼어요. 내일 다시 시도해주세요.' }, 429);
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5',
+      max_tokens: 700,
+      thinking: { type: 'disabled' },
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.ok) {
+    await Promise.all([
+      env.SUBS.put(totalKey, String(total + 1), { expirationTtl: DIRECTOR_TTL_SEC }),
+      env.SUBS.put(ipKey, String(ipCount + 1), { expirationTtl: DIRECTOR_TTL_SEC }),
+    ]);
+  }
+  return json(data, res.status);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -159,6 +208,8 @@ export default {
       if (endpoint) await env.SUBS.delete(await subKey(endpoint));
       return json({ ok: true });
     }
+
+    if (url.pathname === '/director') return handleDirector(request, env, json);
 
     if (url.pathname === '/test') {
       // 구독 직후 확인용: 그 구독자에게 즉시 테스트 푸시

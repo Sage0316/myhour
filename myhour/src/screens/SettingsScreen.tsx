@@ -179,6 +179,7 @@ function ApiKeySection() {
       <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', lineHeight: 1.6 }}>
           Anthropic API 키를 입력하면 하루 마감 시 AI가 제목, 무드, BGM을 자동으로 분석해줘요.
+          키가 없어도 하루 마감 화면에서 바로 무료로 체험할 수 있어요 (사용량 한도 있음).
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
