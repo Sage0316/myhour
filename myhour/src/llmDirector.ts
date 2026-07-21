@@ -99,6 +99,16 @@ ${lines}
 }`;
 }
 
+// 에러 응답의 error 필드가 문자열이 아닌 중첩 객체로 와도 "[object Object]"로 새지 않게 방어
+function errMessage(err: unknown, fallback: string): string {
+  const e = (err as { error?: unknown } | null)?.error;
+  if (typeof e === 'string' && e) return e;
+  if (e && typeof e === 'object' && typeof (e as { message?: unknown }).message === 'string') {
+    return (e as { message: string }).message;
+  }
+  return fallback;
+}
+
 // apiKey가 있으면 브라우저에서 Anthropic을 직접 호출하고, 없으면 워커의 무료 체험
 // 프록시(/director)로 대신 요청한다 — API 키가 없는 친구도 AI 분석을 써볼 수 있다.
 async function fetchDirectorResponse(
@@ -123,8 +133,8 @@ async function fetchDirectorResponse(
       }),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
-      throw new Error(err?.error?.message ?? `API 오류 (${res.status})`);
+      const err = await res.json().catch(() => null);
+      throw new Error(errMessage(err, `API 오류 (${res.status})`));
     }
     return res.json();
   }
@@ -136,8 +146,8 @@ async function fetchDirectorResponse(
     body: JSON.stringify({ prompt }),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { error?: string };
-    throw new Error(err?.error ?? `AI 분석 서버 오류 (${res.status})`);
+    const err = await res.json().catch(() => null);
+    throw new Error(errMessage(err, `AI 분석 서버 오류 (${res.status})`));
   }
   return res.json();
 }

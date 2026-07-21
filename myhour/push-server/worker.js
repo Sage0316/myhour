@@ -168,13 +168,17 @@ async function handleDirector(request, env, json) {
     }),
   });
   const data = await res.json().catch(() => ({}));
-  if (res.ok) {
-    await Promise.all([
-      env.SUBS.put(totalKey, String(total + 1), { expirationTtl: DIRECTOR_TTL_SEC }),
-      env.SUBS.put(ipKey, String(ipCount + 1), { expirationTtl: DIRECTOR_TTL_SEC }),
-    ]);
+  if (!res.ok) {
+    // Anthropic 에러는 {error:{type,message}} 형태로 중첩돼 있다 — 클라이언트는 {error: string}만
+    // 기대하므로 여기서 평탄화한다 (아니면 클라이언트에서 객체를 문자열로 강제 변환해 "[object Object]"가 뜬다)
+    const msg = data?.error?.message || data?.message || `Anthropic 오류 (${res.status})`;
+    return json({ error: msg }, res.status);
   }
-  return json(data, res.status);
+  await Promise.all([
+    env.SUBS.put(totalKey, String(total + 1), { expirationTtl: DIRECTOR_TTL_SEC }),
+    env.SUBS.put(ipKey, String(ipCount + 1), { expirationTtl: DIRECTOR_TTL_SEC }),
+  ]);
+  return json(data, 200);
 }
 
 export default {
