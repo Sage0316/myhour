@@ -257,13 +257,18 @@ export async function generateVideo(
 
   if (typeof MediaRecorder === 'undefined') throw new Error('이 브라우저는 영상 생성을 지원하지 않아요');
 
+  // mp4를 최우선으로 — iOS는 MediaRecorder로 webm '녹화'는 지원해도 사진 앱은 webm을
+  // 아예 영상으로 인식하지 못해 에어드랍/공유해도 파일 앱에만 들어가고 사진 앱엔 저장되지 않는다.
+  // mp4(h264)는 iOS·Android·데스크톱 어디서든 사진 앱/갤러리에 정상적으로 들어간다.
   const mimeType = [
+    'video/mp4;codecs=avc1,mp4a',
+    'video/mp4;codecs=h264,aac',
+    'video/mp4',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm;codecs=vp9',
     'video/webm;codecs=vp8',
     'video/webm',
-    'video/mp4',
   ].find(t => MediaRecorder.isTypeSupported(t));
 
   if (!mimeType) throw new Error('이 브라우저는 영상 생성을 지원하지 않아요\n(Chrome 또는 Android에서 시도해 보세요)');
