@@ -85,12 +85,12 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
   function handleDownload(e: React.MouseEvent) {
     e.stopPropagation();
     if (!blob) return;
-    // 홈 화면에 설치된 PWA(독립 실행 모드)에서는 <a download>가 안 먹는 게 알려진 iOS 버그라
-    // download 속성 없이 그냥 열면 iOS가 이 영상을 처리 못 해 시스템 공유 시트로 넘겨준다
+    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
+    a.download = `${filename}.${ext}`;
     a.click();
-    setSaveMsg('그래도 안 되면 홈 화면 앱 말고 일반 Safari에서 열어서 시도해보세요.');
+    setSaveMsg('다운로드됐어요. 파일 앱(다운로드 폴더)에서 열어 공유 → "동영상 저장"을 누르면 사진 앱에 들어가요.');
   }
 
   return (
