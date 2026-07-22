@@ -4,6 +4,13 @@
 하루를 기록하고 영상으로 마무리하는 iOS 스타일 PWA. React + TypeScript + Vite.
 배포: https://sage0316.github.io/myhour/
 
+**표시 이름은 "하꾸"(2026-07-22 확정), 내부 작업명은 그대로 MYHOUR/myhour.**
+저장소명·리포·URL(`/myhour/`)·워커명(`myhour-push`)·localStorage 키(`myhour_*`)는 전부 변경 비용이라 그대로 두고,
+**사용자에게 실제로 보이는 텍스트만** "하꾸"로 교체함: `index.html`(title, apple-mobile-web-app-title),
+`manifest.json`(name/short_name — 홈 화면 아이콘 이름), `App.tsx`(데스크톱 미리보기 프레임 라벨),
+`push.ts`/`SettingsScreen.tsx`(에러 문구), `scenes.ts`(영상 인트로 카드 "하 꾸" 워터마크 + 마무리 카드 자막),
+`push-server/worker.js`/`public/sw.js`(푸시 알림 제목). 새 코드 작성 시 사용자 노출 문자열에 "MYHOUR" 쓰지 말 것 — "하꾸"로.
+
 ## 기술 스택
 - Vite 8 + React + TypeScript
 - GitHub Pages 배포 (`base: '/myhour/'`)

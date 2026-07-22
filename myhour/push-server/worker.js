@@ -228,7 +228,7 @@ export default {
       if (!raw) return json({ error: 'not found' }, 404);
       const { sub } = JSON.parse(raw);
       const status = await sendPush(sub, JSON.stringify({
-        title: 'MYHOUR', body: '알림 연결 완료! 이렇게 기록 시간을 알려드릴게요 ✨',
+        title: '하꾸', body: '알림 연결 완료! 이렇게 기록 시간을 알려드릴게요 ✨',
       }), env);
       return json({ ok: status < 300, status });
     }
@@ -255,7 +255,7 @@ export default {
           if (since < 0 || localMin > rec.end) continue;
           if (since % rec.interval >= 30) continue; // 크론 주기(30분) 안에 든 슬롯만
           const status = await sendPush(rec.sub, JSON.stringify({
-            title: 'MYHOUR', body: '지금 이 순간을 기록해볼까요? 📝',
+            title: '하꾸', body: '지금 이 순간을 기록해볼까요? 📝',
           }), env);
           if (status === 404 || status === 410) await env.SUBS.delete(name); // 만료된 구독 정리
         }

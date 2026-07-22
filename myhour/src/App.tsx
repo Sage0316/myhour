@@ -78,11 +78,11 @@ function AppContent() {
     );
   }
 
-  const mainLabel = modal === 'record' ? 'MYHOUR · 기록하기'
-    : modal === 'wrapup' ? 'MYHOUR · 하루 마감'
-    : activeTab === 'home' ? 'MYHOUR · 홈'
-    : activeTab === 'today' ? 'MYHOUR · 오늘'
-    : activeTab === 'archive' ? 'MYHOUR · 아카이브' : 'MYHOUR · 설정';
+  const mainLabel = modal === 'record' ? '하꾸 · 기록하기'
+    : modal === 'wrapup' ? '하꾸 · 하루 마감'
+    : activeTab === 'home' ? '하꾸 · 홈'
+    : activeTab === 'today' ? '하꾸 · 오늘'
+    : activeTab === 'archive' ? '하꾸 · 아카이브' : '하꾸 · 설정';
 
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 0 48px' }}>

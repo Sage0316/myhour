@@ -4,7 +4,7 @@ const CACHE = 'myhour-v4';
 self.addEventListener('push', e => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch { /* 페이로드 없으면 기본 문구 */ }
-  e.waitUntil(self.registration.showNotification(data.title || 'MYHOUR', {
+  e.waitUntil(self.registration.showNotification(data.title || '하꾸', {
     body: data.body || '지금 이 순간을 기록해볼까요? 📝',
     icon: '/myhour/icon-192.png',
     badge: '/myhour/icon-192.png',

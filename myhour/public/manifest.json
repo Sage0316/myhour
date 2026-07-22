@@ -1,6 +1,6 @@
 {
-  "name": "MYHOUR",
-  "short_name": "MYHOUR",
+  "name": "하꾸",
+  "short_name": "하꾸",
   "description": "하루를 기록하고 영상으로 마무리해요",
   "start_url": "/myhour/",
   "scope": "/myhour/",

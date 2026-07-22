@@ -32,7 +32,7 @@ export async function getPushEnabled(): Promise<boolean> {
 export async function enablePush(settings: AppSettings): Promise<void> {
   if (!isPushSupported()) throw new Error('이 기기는 푸시 알림을 지원하지 않아요.\n(iOS 16.4 이상 + 홈 화면 설치 필요)');
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') throw new Error('알림 권한이 거부됐어요.\n설정 > MYHOUR > 알림에서 허용해주세요.');
+  if (perm !== 'granted') throw new Error('알림 권한이 거부됐어요.\n설정 > 하꾸 > 알림에서 허용해주세요.');
 
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.subscribe({

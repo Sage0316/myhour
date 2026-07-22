@@ -260,7 +260,7 @@ function DataSection() {
       try {
         const payload = JSON.parse(ev.target?.result as string);
         if (payload.version !== 1 || !payload.data || !payload.settings) {
-          throw new Error('올바른 MYHOUR 백업 파일이 아니에요');
+          throw new Error('올바른 하꾸 백업 파일이 아니에요');
         }
         const importedData: AppData = JSON.parse(payload.data);
         const currentDate = getSessionDate(loadSettings().startTime);
@@ -431,7 +431,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         <ApiKeySection />
 
         <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(26,26,26,0.3)', fontFamily: "'JetBrains Mono', monospace", padding: '8px 0' }}>
-          MYHOUR {__BUILD_VERSION__}
+          하꾸 {__BUILD_VERSION__}
         </div>
 
         <div style={{ height: 20 }} />
