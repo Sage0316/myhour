@@ -163,6 +163,8 @@ async function handleDirector(request, env, json) {
       'Content-Type': 'application/json',
       'x-api-key': env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
+      // 게이트웨이 자체 인증 — Anthropic 키와 별개로 AI Gateway가 요구하는 토큰
+      'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}`,
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
