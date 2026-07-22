@@ -65,7 +65,37 @@ function RecordThumb({ record }: { record: MyRecord }) {
   );
 }
 
-function VideoFullscreen({ url, onClose }: { url: string; onClose: () => void }) {
+function VideoFullscreen({ url, filename, onClose }: { url: string; filename: string; onClose: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // 공유 시트(iOS "동영상 저장") 우선, 안 되면 다운로드 링크로 폴백
+  async function handleSave(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (saving) return;
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const blob = await fetch(url).then(r => r.blob());
+      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/webm' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = file.name;
+        a.click();
+        setSaveMsg('다운로드됐어요');
+      }
+    } catch (err) {
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        setSaveMsg('저장에 실패했어요. 영상을 길게 눌러 저장해보세요.');
+      }
+    }
+    setSaving(false);
+  }
+
   return (
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -91,6 +121,29 @@ function VideoFullscreen({ url, onClose }: { url: string; onClose: () => void })
           cursor: 'pointer', lineHeight: 1,
         }}
       >✕</button>
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        style={{
+          position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20,
+          height: 40, padding: '0 18px', borderRadius: 50,
+          background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          color: '#fff', fontSize: 14, fontWeight: 500,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: saving ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif',
+        }}
+      >{saving ? '저장 중…' : '저장'}</button>
+      {saveMsg && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 28px)', left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 13, padding: '10px 16px', borderRadius: 12,
+            maxWidth: '80%', textAlign: 'center', lineHeight: 1.4,
+          }}
+        >{saveMsg}</div>
+      )}
     </div>
   );
 }
@@ -210,7 +263,7 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
   return (
     <>
       {fullscreen && videoUrl && (
-        <VideoFullscreen url={videoUrl} onClose={() => setFullscreen(false)} />
+        <VideoFullscreen url={videoUrl} filename={`하꾸-${entry.date}`} onClose={() => setFullscreen(false)} />
       )}
       {showDetail && (
         <DayDetailSheet entry={entry} onClose={() => setShowDetail(false)} />
