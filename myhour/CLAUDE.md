@@ -4,6 +4,8 @@
 하루를 기록하고 영상으로 마무리하는 iOS 스타일 PWA. React + TypeScript + Vite.
 배포: https://sage0316.github.io/myhour/
 
+**로고(2026-07-22 확정)**: `public/brand/hakku-wordmark.svg`(흰 배경) / `hakku-wordmark-transparent.svg`(투명 배경). 순수 검정(#000000, 절대 `#1A1A1A` 같은 따뜻한 회색 쓰지 말 것 — 크림 배경과 동시대비로 갈색/똥색처럼 보임) 두꺼운 사각 블록을 이어붙여 "HAKKU"를 만든 워드마크, 획마다 삐뚤빼뚤 지터(고정 시드라 항상 같은 모양). 아직 홈 화면 앱 아이콘(`favicon.svg`/`icon-192.png`/`icon-512.png`)엔 미적용 — 기존 아이콘은 이 브랜드와 무관한 보라색 추상 마크(예전 템플릿 잔재로 추정), 나중에 이 워드마크 기반으로 정사각형 아이콘 마크도 만들어야 함.
+
 **표시 이름은 "하꾸"(2026-07-22 확정), 내부 작업명은 그대로 MYHOUR/myhour.**
 저장소명·리포·URL(`/myhour/`)·워커명(`myhour-push`)·localStorage 키(`myhour_*`)는 전부 변경 비용이라 그대로 두고,
 **사용자에게 실제로 보이는 텍스트만** "하꾸"로 교체함: `index.html`(title, apple-mobile-web-app-title),
