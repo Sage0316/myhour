@@ -365,6 +365,26 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
             }}>영상 생성하기</button>
           )}
 
+          {genState === 'done' && (
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                // 영상 완성 시 사진/음성/클립 원본은 이미 정리되므로, 그런 기록이 있으면
+                // 다시 만들 때 그 자리가 빈 카드로 나온다는 걸 미리 경고한다
+                const hasMedia = entry.records.some(r => r.type !== 'text');
+                const msg = hasMedia
+                  ? '영상을 다시 만들까요?\n사진·음성·영상 원본은 이미 정리돼서, 다시 만들면 그 자리는 빈 카드로 나와요.'
+                  : '영상을 다시 만들까요?';
+                if (confirm(msg)) handleGenerate();
+              }}
+              style={{
+                marginTop: 6, background: 'none', border: 'none', padding: 0,
+                fontSize: 10, color: 'rgba(26,26,26,0.35)', textDecoration: 'underline',
+                cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              }}
+            >다시 만들기</button>
+          )}
+
           {genError && (
             <div style={{ marginTop: 6, fontSize: 10, color: '#E5533C', lineHeight: 1.4 }}>{genError}</div>
           )}
