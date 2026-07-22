@@ -66,33 +66,31 @@ function RecordThumb({ record }: { record: MyRecord }) {
 }
 
 function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: Blob | null; filename: string; onClose: () => void }) {
-  const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const noCallout: React.CSSProperties = { WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' };
 
-  // 공유 시트(iOS "동영상 저장") 우선, 안 되면 다운로드 링크로 폴백.
-  // iOS Safari는 탭 시점의 "사용자 제스처" 자격이 비동기 대기 한 번만 있어도 끊겨서
-  // navigator.share가 조용히 실패한다 — 그래서 blob을 미리 준비해두고 await 없이 곧장 부른다.
-  function handleSave(e: React.MouseEvent) {
+  // 영상 프레임에 손글씨가 그려져 있어서 iOS Live Text가 길게 누르기를 늘 가로채고,
+  // navigator.share(files)도 iOS에서 canShare가 true를 줘놓고 실제로는 잘 실패하는
+  // 알려진 문제라 — 항상 되는 순수 다운로드를 기본으로 삼고, 공유는 되면 좋은 보너스로만 둔다.
+  function handleShare(e: React.MouseEvent) {
     e.stopPropagation();
-    if (saving || !blob) return;
-    setSaveMsg(null);
+    if (!blob) return;
     const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
     const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/webm' });
     if (navigator.canShare?.({ files: [file] })) {
-      navigator.share({ files: [file] }).catch(err => {
-        if (!(err instanceof Error && err.name === 'AbortError')) {
-          setSaveMsg('공유에 실패했어요. 영상을 길게 눌러 저장해보세요.');
-        }
-      });
-    } else {
-      setSaving(true);
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = file.name;
-      a.click();
-      setSaveMsg('다운로드됐어요');
-      setSaving(false);
+      navigator.share({ files: [file] }).catch(() => { /* 실패해도 다운로드 버튼이 항상 있으니 조용히 무시 */ });
     }
+  }
+
+  function handleDownload(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!blob) return;
+    // 홈 화면에 설치된 PWA(독립 실행 모드)에서는 <a download>가 안 먹는 게 알려진 iOS 버그라
+    // download 속성 없이 그냥 열면 iOS가 이 영상을 처리 못 해 시스템 공유 시트로 넘겨준다
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    setSaveMsg('그래도 안 되면 홈 화면 앱 말고 일반 Safari에서 열어서 시도해보세요.');
   }
 
   return (
@@ -105,7 +103,7 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
         controls
         autoPlay
         playsInline
-        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
+        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', ...noCallout }}
         onClick={e => e.stopPropagation()}
       />
       <button
@@ -117,32 +115,43 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
           border: '1px solid rgba(255,255,255,0.3)',
           color: '#fff', fontSize: 16, fontWeight: 500,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', lineHeight: 1,
-          WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none',
+          cursor: 'pointer', lineHeight: 1, ...noCallout,
         }}
       >✕</button>
-      <button
-        onClick={handleSave}
-        disabled={saving || !blob}
-        style={{
-          position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20,
-          height: 40, padding: '0 18px', borderRadius: 50,
-          background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255,255,255,0.3)',
-          color: '#fff', fontSize: 14, fontWeight: 500,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: saving ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif',
-          WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none',
-        }}
-      >{saving ? '저장 중…' : '저장'}</button>
+      <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20, display: 'flex', gap: 8 }}>
+        <button
+          onClick={handleDownload}
+          disabled={!blob}
+          style={{
+            height: 40, padding: '0 16px', borderRadius: 50,
+            background: 'rgba(255,255,255,0.9)', border: 'none',
+            color: '#1A1A1A', fontSize: 14, fontWeight: 600,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: blob ? 'pointer' : 'default', opacity: blob ? 1 : 0.5, fontFamily: 'Inter, sans-serif', ...noCallout,
+          }}
+        >다운로드</button>
+        {typeof navigator !== 'undefined' && !!navigator.share && (
+          <button
+            onClick={handleShare}
+            disabled={!blob}
+            style={{
+              height: 40, padding: '0 16px', borderRadius: 50,
+              background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: '#fff', fontSize: 14, fontWeight: 500,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: blob ? 'pointer' : 'default', fontFamily: 'Inter, sans-serif', ...noCallout,
+            }}
+          >공유</button>
+        )}
+      </div>
       {saveMsg && (
         <div
           onClick={e => e.stopPropagation()}
           style={{
             position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 28px)', left: '50%', transform: 'translateX(-50%)',
             background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 13, padding: '10px 16px', borderRadius: 12,
-            maxWidth: '80%', textAlign: 'center', lineHeight: 1.4,
-            WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none',
+            maxWidth: '84%', textAlign: 'center', lineHeight: 1.4, ...noCallout,
           }}
         >{saveMsg}</div>
       )}
