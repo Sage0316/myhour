@@ -153,15 +153,16 @@ async function handleDirector(request, env, json) {
   if (total >= DIRECTOR_TOTAL_DAILY_CAP) return json({ error: '오늘 전체 사용량을 다 썼어요. 내일 다시 시도해주세요.' }, 429);
   if (ipCount >= DIRECTOR_IP_DAILY_CAP) return json({ error: '오늘 이 기기의 사용량을 다 썼어요. 내일 다시 시도해주세요.' }, 429);
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  // Workers→api.anthropic.com 직접 호출은 Cloudflare 대 Cloudflare 트래픽으로 인식돼
+  // "Request not allowed"(403)로 막혔다. Cloudflare AI Gateway(Anthropic 공식 연동 경로)를
+  // 대신 거치면 요청/응답 형식은 완전히 동일하게 유지하면서 그 차단을 피해간다.
+  const AI_GATEWAY_URL = 'https://gateway.ai.cloudflare.com/v1/f68efd92d83fa98ee254ffd8c8a0ab6e/sage/anthropic/v1/messages';
+  const res = await fetch(AI_GATEWAY_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
-      // Workers의 기본 요청은 UA가 없거나 특이해서 Anthropic 쪽 Cloudflare 봇 방어에
-      // 걸릴 수 있다 — SDK와 비슷한 정상적인 UA를 붙여본다
-      'User-Agent': 'MYHOUR-push-server/1.0 (Cloudflare-Workers)',
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
