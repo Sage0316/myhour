@@ -14,6 +14,7 @@ interface WrapUpScreenProps {
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 const EMOJIS = ['😌', '🤪', '🥹', '😵', '😤'];
+const TITLE_MAX = 24; // AI/자동 제목은 더 짧지만, 직접 수정할 땐 좀 더 여유 있게
 
 export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const { records, settings } = useApp();
@@ -36,8 +37,21 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
   const fallbackTitle = generateTitle(records);
   const fallbackClosing = generateClosing(records);
-  const title = director?.title ?? fallbackTitle;
+  const [titleOverride, setTitleOverride] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const title = titleOverride ?? director?.title ?? fallbackTitle;
   const closing = director?.closing ?? fallbackClosing;
+
+  function startEditTitle() {
+    setTitleDraft(title);
+    setEditingTitle(true);
+  }
+  function saveTitle() {
+    const t = titleDraft.trim();
+    setTitleOverride(t || null); // 비우고 저장하면 자동 제목으로 되돌아간다
+    setEditingTitle(false);
+  }
 
   // 손글씨 폰트를 미리 데워둬서, 영상 만들기 탭 시점엔 이미 캐시돼 있게
   useEffect(() => { ensureDiaryFont(); }, []);
@@ -168,7 +182,30 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
+                {editingTitle ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      value={titleDraft}
+                      onChange={e => setTitleDraft(e.target.value.slice(0, TITLE_MAX))}
+                      onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setEditingTitle(false); }}
+                      autoFocus
+                      style={{
+                        flex: 1, minWidth: 0, fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px',
+                        border: '1px solid rgba(26,26,26,0.2)', borderRadius: 8, padding: '6px 10px',
+                        outline: 'none', fontFamily: 'Inter, sans-serif', color: '#1A1A1A',
+                      }}
+                    />
+                    <button
+                      onClick={saveTitle}
+                      style={{ flexShrink: 0, fontSize: 13, fontWeight: 600, color: '#fff', background: '#1A1A1A', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                    >저장</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
+                    <span onClick={startEditTitle} style={{ fontSize: 11, color: '#7C5CC4', textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}>수정</span>
+                  </div>
+                )}
                 <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', marginTop: 7, lineHeight: 1.5 }}>"{closing}"</div>
               </>
             )}
