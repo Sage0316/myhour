@@ -4,7 +4,7 @@
 하루를 기록하고 영상으로 마무리하는 iOS 스타일 PWA. React + TypeScript + Vite.
 배포: https://sage0316.github.io/myhour/
 
-**로고(2026-07-22 확정)**: `public/brand/hakku-wordmark.svg`(흰 배경) / `hakku-wordmark-transparent.svg`(투명 배경). 순수 검정(#000000, 절대 `#1A1A1A` 같은 따뜻한 회색 쓰지 말 것 — 크림 배경과 동시대비로 갈색/똥색처럼 보임) 두꺼운 사각 블록을 이어붙여 "HAKKU"를 만든 워드마크, 획마다 삐뚤빼뚤 지터(고정 시드라 항상 같은 모양). 아직 홈 화면 앱 아이콘(`favicon.svg`/`icon-192.png`/`icon-512.png`)엔 미적용 — 기존 아이콘은 이 브랜드와 무관한 보라색 추상 마크(예전 템플릿 잔재로 추정), 나중에 이 워드마크 기반으로 정사각형 아이콘 마크도 만들어야 함.
+**로고(2026-07-22 확정)**: `public/brand/hakku-wordmark.svg`(흰 배경, 가로 한 줄 "HAKKU") / `hakku-wordmark-transparent.svg`(투명 배경) / `hakku-icon-mark.svg`(정사각형, "HA"/"KKU" 두 줄 — 앱 아이콘용). 순수 검정(#000000, 절대 `#1A1A1A` 같은 따뜻한 회색 쓰지 말 것 — 크림 배경과 동시대비로 갈색/똥색처럼 보임) 두꺼운 사각 블록을 이어붙여 만든 워드마크, 획마다 삐뚤빼뚤 지터(고정 시드라 항상 같은 모양). 정사각형 아이콘 버전만 글자당 한 획씩 **하늘색(#3FA0E0, "하꾸=하늘" 연상)** 포인트 — 가로 워드마크는 포인트 컬러 없이 순수 검정 단색. **주황(#D9743F)은 시그니처 컬러 아님** — scenes.ts의 drawMemeScene 기본 인자값일 뿐, 사용자가 정한 적 없음. 홈 화면 앱 아이콘(`favicon.svg`/`icon-192.png`/`icon-512.png`/`apple-touch-icon.png`) 전부 이 정사각형 마크로 교체 완료 — 이전엔 브랜드와 무관한 보라색 추상 마크(예전 템플릿 잔재)였음. maskable 안전영역(중심 반경 40%) 고려해 콘텐츠를 캔버스의 60%로 넉넉히 여백.
 
 **표시 이름은 "하꾸"(2026-07-22 확정), 내부 작업명은 그대로 MYHOUR/myhour.**
 저장소명·리포·URL(`/myhour/`)·워커명(`myhour-push`)·localStorage 키(`myhour_*`)는 전부 변경 비용이라 그대로 두고,
