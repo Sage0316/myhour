@@ -45,7 +45,7 @@ export async function deleteVideoFromIDB(key: string): Promise<void> {
   } catch { /* ignore */ }
 }
 
-export async function loadVideoFromIDB(key: string): Promise<string | null> {
+export async function loadVideoBlobFromIDB(key: string): Promise<Blob | null> {
   try {
     const db = await openVideoDB();
     const blob: Blob | undefined = await new Promise((res, rej) => {
@@ -54,10 +54,15 @@ export async function loadVideoFromIDB(key: string): Promise<string | null> {
       req.onsuccess = () => res(req.result);
       req.onerror = () => rej(req.error);
     });
-    return blob ? URL.createObjectURL(blob) : null;
+    return blob ?? null;
   } catch {
     return null;
   }
+}
+
+export async function loadVideoFromIDB(key: string): Promise<string | null> {
+  const blob = await loadVideoBlobFromIDB(key);
+  return blob ? URL.createObjectURL(blob) : null;
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────

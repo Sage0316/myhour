@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated } from '../store';
+import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { generateVideo } from '../videoGenerator';
 import TabBar from '../components/TabBar';
@@ -65,35 +65,34 @@ function RecordThumb({ record }: { record: MyRecord }) {
   );
 }
 
-function VideoFullscreen({ url, filename, onClose }: { url: string; filename: string; onClose: () => void }) {
+function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: Blob | null; filename: string; onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
-  // 공유 시트(iOS "동영상 저장") 우선, 안 되면 다운로드 링크로 폴백
-  async function handleSave(e: React.MouseEvent) {
+  // 공유 시트(iOS "동영상 저장") 우선, 안 되면 다운로드 링크로 폴백.
+  // iOS Safari는 탭 시점의 "사용자 제스처" 자격이 비동기 대기 한 번만 있어도 끊겨서
+  // navigator.share가 조용히 실패한다 — 그래서 blob을 미리 준비해두고 await 없이 곧장 부른다.
+  function handleSave(e: React.MouseEvent) {
     e.stopPropagation();
-    if (saving) return;
-    setSaving(true);
+    if (saving || !blob) return;
     setSaveMsg(null);
-    try {
-      const blob = await fetch(url).then(r => r.blob());
-      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
-      const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/webm' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] });
-      } else {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = file.name;
-        a.click();
-        setSaveMsg('다운로드됐어요');
-      }
-    } catch (err) {
-      if (!(err instanceof Error && err.name === 'AbortError')) {
-        setSaveMsg('저장에 실패했어요. 영상을 길게 눌러 저장해보세요.');
-      }
+    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+    const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/webm' });
+    if (navigator.canShare?.({ files: [file] })) {
+      navigator.share({ files: [file] }).catch(err => {
+        if (!(err instanceof Error && err.name === 'AbortError')) {
+          setSaveMsg('공유에 실패했어요. 영상을 길게 눌러 저장해보세요.');
+        }
+      });
+    } else {
+      setSaving(true);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = file.name;
+      a.click();
+      setSaveMsg('다운로드됐어요');
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   return (
@@ -119,11 +118,12 @@ function VideoFullscreen({ url, filename, onClose }: { url: string; filename: st
           color: '#fff', fontSize: 16, fontWeight: 500,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', lineHeight: 1,
+          WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none',
         }}
       >✕</button>
       <button
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || !blob}
         style={{
           position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20,
           height: 40, padding: '0 18px', borderRadius: 50,
@@ -132,6 +132,7 @@ function VideoFullscreen({ url, filename, onClose }: { url: string; filename: st
           color: '#fff', fontSize: 14, fontWeight: 500,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: saving ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif',
+          WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none',
         }}
       >{saving ? '저장 중…' : '저장'}</button>
       {saveMsg && (
@@ -141,6 +142,7 @@ function VideoFullscreen({ url, filename, onClose }: { url: string; filename: st
             position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 28px)', left: '50%', transform: 'translateX(-50%)',
             background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 13, padding: '10px 16px', borderRadius: 12,
             maxWidth: '80%', textAlign: 'center', lineHeight: 1.4,
+            WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none',
           }}
         >{saveMsg}</div>
       )}
@@ -222,13 +224,14 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadVideoFromIDB(archiveVideoKey(entry)).then(url => {
-      if (url) { setVideoUrl(url); setGenState('done'); }
+    loadVideoBlobFromIDB(archiveVideoKey(entry)).then(blob => {
+      if (blob) { setVideoUrl(URL.createObjectURL(blob)); setVideoBlob(blob); setGenState('done'); }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.date]);
@@ -250,8 +253,8 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
       const blob = await generateVideo(entry.records, dateStr, (pct) => setProgress(pct));
       await saveVideoToIDB(archiveVideoKey(entry), blob);
       markArchiveGenerated(entry);
-      const url = URL.createObjectURL(blob);
-      setVideoUrl(url);
+      setVideoUrl(URL.createObjectURL(blob));
+      setVideoBlob(blob);
       setGenState('done');
       setFullscreen(true);
     } catch (e) {
@@ -263,7 +266,7 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
   return (
     <>
       {fullscreen && videoUrl && (
-        <VideoFullscreen url={videoUrl} filename={`하꾸-${entry.date}`} onClose={() => setFullscreen(false)} />
+        <VideoFullscreen url={videoUrl} blob={videoBlob} filename={`하꾸-${entry.date}`} onClose={() => setFullscreen(false)} />
       )}
       {showDetail && (
         <DayDetailSheet entry={entry} onClose={() => setShowDetail(false)} />

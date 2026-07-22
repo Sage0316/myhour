@@ -523,21 +523,45 @@ function drawSparkle(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.restore();
 }
 
-// 손글씨 한 줄 — 길면 폰트를 줄이고 그래도 넘치면 말줄임
-function drawHandLine(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, maxW: number, baseSize: number) {
+// 손글씨 캡션 — 한 줄에 안 들어가면 최대 2줄까지 자동 줄바꿈 (그래도 안 맞으면 폰트를 더 줄이고,
+// 그마저도 안 되면 마지막 수단으로 둘째 줄만 말줄임). 폭 안에서 잘리던 이전 방식과 달리
+// 20자 한도 안의 캡션은 사실상 항상 온전히 보인다.
+function drawHandCaption(
+  ctx: CanvasRenderingContext2D, text: string, cx: number, centerY: number, maxW: number, baseSize: number,
+): { width: number; lastBaselineY: number } {
   let size = baseSize;
   ctx.font = `${size}px ${HAND}`;
-  while (size > 22 && ctx.measureText(text).width > maxW) {
-    size -= 2;
-    ctx.font = `${size}px ${HAND}`;
+  const fits = () => ctx.measureText(text).width <= maxW;
+  while (size > 24 && !fits()) { size -= 2; ctx.font = `${size}px ${HAND}`; }
+
+  let lines: string[];
+  if (fits()) {
+    lines = [text];
+  } else {
+    lines = wrapLines(ctx, text, maxW);
+    while (lines.length > 2 && size > 18) {
+      size -= 2; ctx.font = `${size}px ${HAND}`;
+      lines = wrapLines(ctx, text, maxW);
+    }
+    if (lines.length > 2) {
+      let last = lines[1];
+      while (last.length > 1 && ctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+      lines = [lines[0], last + '…'];
+    }
   }
-  let line = text;
-  while (line.length > 1 && ctx.measureText(line + '…').width > maxW) line = line.slice(0, -1);
-  if (line !== text) line += '…';
+
+  const lh = size * 1.18;
+  const totalH = lh * lines.length;
+  let y = centerY - totalH / 2 + lh * 0.78;
+  let maxLineW = 0;
   ctx.textAlign = 'center';
-  ctx.fillText(line, cx, y);
+  for (const l of lines) {
+    ctx.fillText(l, cx, y);
+    maxLineW = Math.max(maxLineW, ctx.measureText(l).width);
+    y += lh;
+  }
   ctx.textAlign = 'left';
-  return ctx.measureText(line).width;
+  return { width: maxLineW, lastBaselineY: y - lh };
 }
 
 // 짤 장면 — 사용자가 고른 밈 이미지. 손글씨 문구는 사용자가 입력한 캡션.
@@ -606,7 +630,9 @@ export function drawMemeScene(
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     drawMeme(px + 20, py + 20, pw - 40, pw - 40);
     ctx.fillStyle = 'rgba(26,26,26,0.8)';
-    drawHandLine(ctx, caption, W / 2, py + pw + 62, pw - 60, 36);
+    // 사진(px+20 ~ px+20+(pw-40)) 아래부터 카드 바닥까지가 캡션 영역 — 그 세로 구간의 중심에 맞춘다
+    const capZoneTop = py + 20 + (pw - 40);
+    drawHandCaption(ctx, caption, W / 2, (capZoneTop + (py + ph)) / 2, pw - 50, 34);
     drawTape(ctx, W / 2, py, 2, moodColor, 140);
     ctx.restore();
     drawSparkle(ctx, px + pw + 8, py - 6 + Math.sin(t * Math.PI * 2) * 4);
@@ -630,13 +656,12 @@ export function drawMemeScene(
     drawSparkle(ctx, ix + iw - 14, iy - 28 + Math.sin(t * Math.PI * 2) * 4);
 
     ctx.fillStyle = 'rgba(26,26,26,0.85)';
-    const capY = iy + ih + 88;
-    const capW = drawHandLine(ctx, caption, W / 2, capY, W - 100, 38);
+    const { width: capW, lastBaselineY } = drawHandCaption(ctx, caption, W / 2, iy + ih + 100, W - 100, 36);
     ctx.strokeStyle = hexAlpha(moodColor, 0.5);
     ctx.lineWidth = 3; ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(W / 2 - capW / 2, capY + 16);
-    ctx.quadraticCurveTo(W / 2, capY + 24, W / 2 + capW / 2, capY + 14);
+    ctx.moveTo(W / 2 - capW / 2, lastBaselineY + 16);
+    ctx.quadraticCurveTo(W / 2, lastBaselineY + 24, W / 2 + capW / 2, lastBaselineY + 14);
     ctx.stroke();
   }
 
