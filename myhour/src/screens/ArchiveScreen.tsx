@@ -66,31 +66,18 @@ function RecordThumb({ record }: { record: MyRecord }) {
 }
 
 function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: Blob | null; filename: string; onClose: () => void }) {
-  const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const noCallout: React.CSSProperties = { WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' };
 
-  // 영상 프레임에 손글씨가 그려져 있어서 iOS Live Text가 길게 누르기를 늘 가로채고,
-  // navigator.share(files)도 iOS에서 canShare가 true를 줘놓고 실제로는 잘 실패하는
-  // 알려진 문제라 — 항상 되는 순수 다운로드를 기본으로 삼고, 공유는 되면 좋은 보너스로만 둔다.
-  function handleShare(e: React.MouseEvent) {
+  // mp4로 만든 뒤엔 navigator.share(files)가 iOS에서 한 번에 시스템 공유 시트(동영상 저장 포함)를
+  // 띄워준다 — 이전엔 webm이라 공유 자체가 안 되는 형식이었던 게 진짜 원인이었다.
+  function handleSave(e: React.MouseEvent) {
     e.stopPropagation();
     if (!blob) return;
     const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
     const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/webm' });
     if (navigator.canShare?.({ files: [file] })) {
-      navigator.share({ files: [file] }).catch(() => { /* 실패해도 다운로드 버튼이 항상 있으니 조용히 무시 */ });
+      navigator.share({ files: [file] }).catch(() => { /* 사용자가 공유 시트를 취소한 경우 등 — 조용히 무시 */ });
     }
-  }
-
-  function handleDownload(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (!blob) return;
-    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${filename}.${ext}`;
-    a.click();
-    setSaveMsg('다운로드됐어요. 파일 앱(다운로드 폴더)에서 열어 공유 → "동영상 저장"을 누르면 사진 앱에 들어가요.');
   }
 
   return (
@@ -118,9 +105,9 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
           cursor: 'pointer', lineHeight: 1, ...noCallout,
         }}
       >✕</button>
-      <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20, display: 'flex', gap: 8 }}>
+      <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20 }}>
         <button
-          onClick={handleDownload}
+          onClick={handleSave}
           disabled={!blob}
           style={{
             height: 40, padding: '0 16px', borderRadius: 50,
@@ -130,31 +117,7 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
             cursor: blob ? 'pointer' : 'default', opacity: blob ? 1 : 0.5, fontFamily: 'Inter, sans-serif', ...noCallout,
           }}
         >다운로드</button>
-        {typeof navigator !== 'undefined' && !!navigator.share && (
-          <button
-            onClick={handleShare}
-            disabled={!blob}
-            style={{
-              height: 40, padding: '0 16px', borderRadius: 50,
-              background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              color: '#fff', fontSize: 14, fontWeight: 500,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: blob ? 'pointer' : 'default', fontFamily: 'Inter, sans-serif', ...noCallout,
-            }}
-          >공유</button>
-        )}
       </div>
-      {saveMsg && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 28px)', left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 13, padding: '10px 16px', borderRadius: 12,
-            maxWidth: '84%', textAlign: 'center', lineHeight: 1.4, ...noCallout,
-          }}
-        >{saveMsg}</div>
-      )}
     </div>
   );
 }
