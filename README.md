@@ -1,25 +1,30 @@
-# CODING AGENTS: READ THIS FIRST
+# 하꾸 (Hakku)
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+하꾸는 하루의 순간을 짧게 기록하고 세로형 다이어리 영상으로 꾸미는 로컬 우선 PWA입니다. 기존 프로젝트명 `myhour`는 URL과 마이그레이션 호환성을 위해 일부 내부 경로에 남아 있습니다.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+## 실행
 
-## What you should do — IMPORTANT
+Node.js 24와 pnpm 11.9.0을 사용합니다.
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+```bash
+cd myhour
+pnpm install --frozen-lockfile
+pnpm dev
+```
 
-**Read `project/Daily Film.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+품질 검사는 `pnpm check`, 브라우저 검사는 최초 Chromium 설치 후 `pnpm test:e2e`로 실행합니다. 선택 기능은 [`.env.example`](myhour/.env.example)을 참고하세요.
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+## 구조
 
-## About the design files
+- `myhour/src/domain`, `repositories`, `persistence`: 스키마·로컬 데이터·IndexedDB
+- `myhour/src/media`, `services`: 캡처·정리·영상 생성·마감 유스케이스
+- `myhour/src/backup`: 해시 매니페스트 기반 전체 백업/복원
+- `myhour/ai-server`: 공급자 키를 격리하는 AI Worker
+- `myhour/push-server`: 인증된 Web Push Worker
+- `aidlc-docs`: AI-DLC 요구사항·설계·작업 단위·검증 기록
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+외부 배포는 자동 실행되지 않습니다. GitHub Pages 워크플로는 수동 실행만 지원합니다.
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+## 데이터 원칙
 
-## Bundle contents
-
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `Daily moment video editor` project files (HTML prototypes, assets, components)
+기록과 미디어는 기본적으로 기기 안에 저장됩니다. AI 기능에 동의한 경우에만 텍스트와 캡션이 AI Worker로 전송되며 사진·영상·음성 원본은 전송하지 않습니다. 자세한 내용은 [PRIVACY.md](PRIVACY.md)를 참고하세요.

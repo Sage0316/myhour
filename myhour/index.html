@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>MYHOUR</title>
+    <title>하꾸 - 하루 꾸미기</title>
+    <meta name="description" content="하루의 순간을 기록하고 나만의 영상으로 꾸며요." />
 
     <!-- PWA -->
     <link rel="manifest" href="%BASE_URL%manifest.json" />
@@ -12,7 +13,7 @@
     <!-- iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="MYHOUR" />
+    <meta name="apple-mobile-web-app-title" content="하꾸" />
     <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
 
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
@@ -26,7 +27,7 @@
         if (root && root.childElementCount > 0) return; // 앱이 이미 떠 있으면 무시
         document.body.innerHTML =
           '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;padding:30px;text-align:center;font-family:system-ui,sans-serif">' +
-          '<div style="font-size:15px;font-weight:600">앱을 불러오지 못했어요</div>' +
+          '<div style="font-size:15px;font-weight:600">하꾸를 불러오지 못했어요</div>' +
           '<div style="font-size:12px;color:#888;word-break:break-all;max-width:100%">' + msg + '</div>' +
           '<button onclick="location.reload()" style="height:44px;padding:0 28px;border-radius:50px;background:#1A1A1A;color:#fff;border:none;font-size:14px">다시 시도</button>' +
           '</div>';

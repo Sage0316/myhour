@@ -1,0 +1,51 @@
+name: Roll back GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful main-branch CI run ID containing the hakku-dist artifact
+        required: true
+        type: string
+      confirmation:
+        description: Type ROLLBACK to confirm production replacement
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    if: inputs.confirmation == 'ROLLBACK'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate run ID
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+      - name: Download immutable build artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name hakku-dist --dir rollback-dist
+      - name: Verify SHA-256 manifest
+        working-directory: rollback-dist
+        run: sha256sum --check SHA256SUMS
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: rollback-dist
+      - name: Deploy verified prior artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

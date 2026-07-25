@@ -1,21 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useApp } from '../context';
-import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, saveVideoToIDB, addToArchive, archiveVideoKey, trimRecords, deleteRecordMedia } from '../store';
+import { useState, useEffect, useRef } from 'react';
+import { useApp } from '../appContext';
+import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate } from '../store';
 import type { MoodItem } from '../store';
-import { generateVideo } from '../videoGenerator';
 import { ensureDiaryFont } from '../scenes';
-import { analyzeDay, loadApiKey, BGM_TRACKS, pickBgmFile } from '../llmDirector';
+import { analyzeDay, hasAIConsent, isAIConfigured, BGM_CATALOG, BGM_TRACKS, bgmAssetUrl, pickBgmFile } from '../llmDirector';
 import type { DirectorOutput } from '../llmDirector';
+import { videoGenerationService } from '../services/video-generation-service';
+import { wrapUpService } from '../services/wrap-up-service';
+import { useDialogFocus } from '../accessibility/useDialogFocus';
 
 interface WrapUpScreenProps {
   onClose: () => void;
-  onSave: (videoUrl?: string) => void;
+  onSave: (archiveId: string) => void;
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 const EMOJIS = ['😌', '🤪', '🥹', '😵', '😤'];
 
 export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   const { records, settings } = useApp();
   const sessionDate = getSessionDate(settings.startTime);
   const { dateShort, dateDay, dateWeekday } = getDateStrings(sessionDate);
@@ -24,10 +27,12 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [selectedMood, setSelectedMood] = useState<MoodItem>(autoMood);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState(0);
+  const [selectedBgmFile, setSelectedBgmFile] = useState('');
   const [calmness, setCalmness] = useState(72);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
+  const generationAbortRef = useRef<AbortController | null>(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [director, setDirector] = useState<DirectorOutput | null>(null);
@@ -42,17 +47,24 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   useEffect(() => { ensureDiaryFont(); }, []);
 
   useEffect(() => {
-    const apiKey = loadApiKey();
-    if (!apiKey || records.length === 0) return;
+    if (!hasAIConsent() || !isAIConfigured() || records.length === 0) return;
+    const controller = new AbortController();
     setAnalyzing(true);
-    analyzeDay(records, `${dateDay} ${dateWeekday}`, apiKey)
+    analyzeDay(records, `${dateDay} ${dateWeekday}`, controller.signal)
       .then(out => {
         setDirector(out);
         setAnalyzing(false);
-        try { localStorage.setItem(`myhour_director_${sessionDate}`, JSON.stringify(out)); } catch { /* ignore */ }
+        try { localStorage.setItem(`hakku_director_v1_${sessionDate}`, JSON.stringify(out)); } catch { /* ignore */ }
       })
-      .catch(e => { setAnalyzeError(e instanceof Error ? e.message : 'AI 분석 실패'); setAnalyzing(false); });
-  }, []);
+      .catch(e => {
+        if (controller.signal.aborted) return;
+        setAnalyzeError(e instanceof Error ? e.message : 'AI 분석 실패');
+        setAnalyzing(false);
+      });
+    return () => controller.abort();
+  }, [dateDay, dateWeekday, records, sessionDate]);
+
+  useEffect(() => () => generationAbortRef.current?.abort(), []);
 
   const clipColors = records.length > 0
     ? records.slice(0, 5).map(r => TYPE_COLORS[r.type])
@@ -63,48 +75,51 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     setGenerating(true);
     setProgress(0);
     setGenError(null);
+    const abortController = new AbortController();
+    generationAbortRef.current = abortController;
     try {
-      const bgmTrack = director?.bgmTrack ?? 'calm';
-      const bgmUrl = `${import.meta.env.BASE_URL}bgm/${pickBgmFile(bgmTrack)}`;
+      const bgmTrack = director?.bgmTrack ?? (calmness >= 60 ? 'calm' : 'bright');
+      const bgmFile = selectedBgmFile || pickBgmFile(bgmTrack);
+      const bgmUrl = bgmAssetUrl(bgmFile);
       const warnings: string[] = [];
-      const blob = await generateVideo(records, `${dateDay} ${dateWeekday}`, p => setProgress(p), {
+      const blob = await videoGenerationService.generate(records, `${dateDay} ${dateWeekday}`, p => setProgress(p), {
         title, closing, bgmUrl,
-        emojis: director?.emojis,
+        emojis: director?.emojis ?? EMOJIS[selectedEmoji],
         mood: selectedMood.mood,
         captions: director?.captions,
         diaryEmojis: director?.diaryEmojis,
-      }, msg => warnings.push(msg));
+      }, msg => warnings.push(msg), abortController.signal);
       if (warnings.length > 0) alert('영상은 생성됐지만 문제가 있었어요:\n\n' + warnings.join('\n'));
-      const entryId = Date.now().toString();
-      await saveVideoToIDB(archiveVideoKey({ id: entryId, date: sessionDate }), blob);
-      // 영상이 완성됐으니 원본 미디어는 정리하고 글 텍스트만 남긴다
-      addToArchive({ id: entryId, date: sessionDate, records: trimRecords(records), isWrapped: true, trimmed: true });
-      deleteRecordMedia(records);
-      onSave(URL.createObjectURL(blob));
+      const result = await wrapUpService.complete(sessionDate, records, blob);
+      onSave(result.archiveId);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '영상 생성에 실패했어요';
+      const msg = e instanceof DOMException && e.name === 'AbortError'
+        ? '영상 생성을 취소했어요. 원본 기록은 그대로 보존됐어요.'
+        : e instanceof Error ? e.message : '영상 생성에 실패했어요';
       setGenError(msg);
       setGenerating(false);
+    } finally {
+      generationAbortRef.current = null;
     }
   }
 
   function handleSkipVideo() {
     try {
-      addToArchive({ id: Date.now().toString(), date: sessionDate, records, isWrapped: false });
-      onSave();
+      const result = wrapUpService.skip(sessionDate, records);
+      onSave(result.archiveId);
     } catch {
       setGenError('저장에 실패했어요. 저장 공간이 부족할 수 있어요.');
     }
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="하루 마감" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
       <div style={{ flex: 1, padding: '58px 22px 0', display: 'flex', flexDirection: 'column', gap: 13, overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>
             Wrap up · {dateShort}
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} aria-label="하루 마감 닫기" style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>✕</button>
         </div>
 
         <div style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.5px', lineHeight: 1.25 }}>
@@ -134,7 +149,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: selectedMood.dot, display: 'inline-block' }} />
                 {selectedMood.mood}
               </span>
-              <span onClick={() => setShowMoodPicker(v => !v)} style={{ fontSize: 12, color: '#7C5CC4', textDecoration: 'underline', cursor: 'pointer' }}>바꾸기</span>
+              <button type="button" onClick={() => setShowMoodPicker(v => !v)} aria-expanded={showMoodPicker} style={{ fontSize: 12, color: '#7C5CC4', textDecoration: 'underline', cursor: 'pointer', border: 0, background: 'transparent' }}>바꾸기</button>
             </div>
           </div>
 
@@ -193,6 +208,22 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>더 정확하게 · 선택</div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>
+              BGM
+              <select
+                value={selectedBgmFile}
+                onChange={event => setSelectedBgmFile(event.target.value)}
+                style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid rgba(26,26,26,0.12)', background: '#fff', padding: '0 10px', color: '#1A1A1A', fontFamily: 'Inter, sans-serif' }}
+              >
+                <option value="">무드에 맞춰 자동 추천</option>
+                {BGM_CATALOG.map(item => (
+                  <option key={item.file} value={item.file}>
+                    {BGM_TRACKS[item.track]} · {item.label}
+                  </option>
+                ))}
+              </select>
+              <span style={{ fontSize: 10, color: 'rgba(26,26,26,0.38)' }}>선택한 곡은 영상 생성 시에만 불러와요.</span>
+            </label>
             <div style={{ display: 'flex', gap: 7 }}>
               {EMOJIS.map((emoji, i) => (
                 <button key={i} onClick={() => setSelectedEmoji(i)} style={{
@@ -222,18 +253,28 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
             <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 2, background: '#7C5CC4', width: `${progress * 100}%`, transition: 'width 0.3s ease' }} />
             </div>
+            <button
+              type="button"
+              onClick={() => generationAbortRef.current?.abort()}
+              style={{ border: '1px solid rgba(255,255,255,0.45)', borderRadius: 50, background: 'transparent', color: '#fff', padding: '7px 16px', cursor: 'pointer' }}
+            >
+              생성 취소
+            </button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div
+            <button
+              type="button"
               onClick={handleGenerate}
-              style={{ minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: records.length === 0 ? 'default' : 'pointer', opacity: records.length === 0 ? 0.5 : 1 }}
+              disabled={records.length === 0}
+              aria-label="오늘 기록으로 영상 생성하기"
+              style={{ width: '100%', minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: records.length === 0 ? 'default' : 'pointer', opacity: records.length === 0 ? 0.5 : 1, border: 0 }}
             >
               <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 0, height: 0, borderLeft: '13px solid #1E2240', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
               </div>
               <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>탭하여 영상 생성</div>
-            </div>
+            </button>
             {genError && (
               <div style={{ fontSize: 12, color: '#E5533C', lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
             )}

@@ -1,17 +1,10 @@
-# MYHOUR 푸시 서버 배포 순서
+# 하꾸 Push Worker
 
-Cloudflare Workers 무료 플랜으로 동작. 이 디렉토리에서:
+Cloudflare Workers와 KV로 설치별 알림 구독 및 30분 크론을 처리합니다.
 
-1. `npx wrangler login` (또는 `CLOUDFLARE_API_TOKEN` 환경변수)
-2. `npx wrangler kv namespace create SUBS` → 출력된 id를 wrangler.toml의 `REPLACE_WITH_KV_ID`에 넣기
-3. `npx wrangler secret put VAPID_PRIVATE_JWK` → vapid-keys.json의 `privateJwk` 객체를 JSON 문자열로 붙여넣기
-4. `npx wrangler deploy` → 출력된 워커 URL (예: https://myhour-push.<계정>.workers.dev)
-5. 앱의 `src/push.ts`에서 `PUSH_SERVER_URL`을 그 URL로 바꾸고 앱 재배포
+1. `wrangler kv namespace create SUBS`의 ID를 `wrangler.toml`에 설정합니다.
+2. 고유 rate-limit namespace ID와 허용 Origin·Push endpoint 호스트·VAPID 공개키를 설정합니다.
+3. `VAPID_PRIVATE_JWK`, `INSTALL_TOKEN_SECRET`을 Worker secret으로 등록합니다.
+4. 앱 빌드에 `VITE_PUSH_SERVER_URL`, `VITE_VAPID_PUBLIC_KEY`를 지정합니다.
 
-## 확인
-- `curl https://<워커URL>/health` → `{"ok":true}`
-- 앱 설정에서 알림 켜기 → 즉시 테스트 푸시가 와야 정상
-
-## 주의
-- VAPID 비밀키(vapid-keys.json)는 절대 저장소에 커밋하지 말 것
-- 크론은 30분 단위 — 앱의 기록 간격(30/60/120분)과 맞물려 동작
+설치별 서명 토큰, 구독 소유권 검증, 요청 크기·입력 스키마·Origin·Push 공급자 제한, 전달 슬롯 멱등성을 적용합니다. `PUSH_RATE_LIMITER`는 토큰 발급을 연결 IP 기준, 인증 요청을 설치 ID 기준으로 분당 제한합니다. 비밀키는 저장소에 커밋하지 마세요.

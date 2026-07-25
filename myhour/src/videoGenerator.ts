@@ -6,6 +6,7 @@ import {
   fallbackEmojisFor, splitEmojis, ensureDiaryFont,
   drawTitleScene, drawDiaryScene, drawPhotoScene, drawAudioScene, drawVideoOverlay, drawClosingScene,
 } from './scenes';
+import { loadMediaBlob } from './persistence/mediaRepository';
 
 const FPS = 24;
 
@@ -58,10 +59,25 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
 
 type DrawFn = (t: number, frame: number) => void;
 
-async function renderSegment(duration: number, draw: DrawFn, onFrame?: () => void) {
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException('영상 생성을 취소했어요.', 'AbortError');
+}
+
+async function yieldToBrowser(signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
+  const taskScheduler = (globalThis as unknown as {
+    scheduler?: { yield?: () => Promise<void> };
+  }).scheduler;
+  if (taskScheduler?.yield) await taskScheduler.yield();
+  else await new Promise<void>(resolve => setTimeout(resolve, 0));
+  throwIfAborted(signal);
+}
+
+async function renderSegment(duration: number, draw: DrawFn, onFrame?: () => void, signal?: AbortSignal) {
   const frames = Math.round(duration * FPS);
   const frameMs = 1000 / FPS;
   for (let f = 0; f < frames; f++) {
+    throwIfAborted(signal);
     draw(f / frames, f);
     onFrame?.();
     await new Promise<void>(r => setTimeout(r, frameMs));
@@ -75,6 +91,7 @@ async function renderVideoClip(
   duration: number,
   record: MyRecord,
   tick: () => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const vid = document.createElement('video');
   vid.muted = true;
@@ -102,7 +119,7 @@ async function renderVideoClip(
       ctx.lineTo(W / 2 + 20, H / 2);
       ctx.lineTo(W / 2 - 12, H / 2 + 18);
       ctx.closePath(); ctx.fill();
-    }, tick);
+    }, tick, signal);
     return;
   }
 
@@ -112,6 +129,7 @@ async function renderVideoClip(
   const totalFrames = Math.round(duration * FPS);
 
   for (let f = 0; f < totalFrames; f++) {
+    throwIfAborted(signal);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
 
@@ -139,9 +157,11 @@ export async function generateVideo(
   onProgress?: (pct: number) => void,
   overrides?: { title?: string; closing?: string; bgmUrl?: string; emojis?: string; mood?: string; captions?: string[]; diaryEmojis?: string[] },
   onWarn?: (msg: string) => void,
+  signal?: AbortSignal,
 ): Promise<Blob> {
-  // 레이아웃 좌표계는 540×960을 유지하되 실제 픽셀은 2배(1080×1920)로 렌더링
-  const SCALE = 2;
+  throwIfAborted(signal);
+  // 레이아웃 좌표계는 유지하고 공개 베타 기본 출력은 720×1280으로 제한한다.
+  const SCALE = 4 / 3;
   const canvas = document.createElement('canvas');
   canvas.width = W * SCALE;
   canvas.height = H * SCALE;
@@ -169,7 +189,7 @@ export async function generateVideo(
 
   // Preload images for photos; blob URLs for videos; decoded buffers for voice memos
   const imgMap = new Map<string, HTMLImageElement | null>();
-  const blobUrlMap = new Map<string, string>(); // videoId → blob URL
+  const blobUrlMap = new Map<string, string>(); // recordId → media URL
   const voiceBufMap = new Map<string, AudioBuffer>();
   const clipDurMap = new Map<string, number>(); // videoId → 클립 길이(초)
 
@@ -191,10 +211,20 @@ export async function generateVideo(
 
   await Promise.all(records.map(async r => {
     if (r.type === 'photo') {
+      const mediaKey = r.mediaId ?? r.videoKey;
+      if (mediaKey) {
+        const url = await loadVideoFromIDB(mediaKey);
+        if (url) {
+          blobUrlMap.set(r.id, url);
+          imgMap.set(r.id, await loadImage(url));
+          return;
+        }
+      }
       if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
     } else if (r.type === 'video') {
-      if (r.videoKey) {
-        const url = await loadVideoFromIDB(r.videoKey);
+      const mediaKey = r.mediaId ?? r.videoKey;
+      if (mediaKey) {
+        const url = await loadVideoFromIDB(mediaKey);
         if (url) {
           blobUrlMap.set(r.id, url);
           const d = await loadClipDuration(url);
@@ -206,15 +236,25 @@ export async function generateVideo(
       if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
     } else if (r.type === 'audio') {
       if (!audioCtx) { onWarn?.(`음성(${r.slotTime}): 오디오 컨텍스트 없음`); return; }
-      if (!r.content.startsWith('data:')) { onWarn?.(`음성(${r.slotTime}): 데이터 형식 이상 (${r.content.slice(0, 20)})`); return; }
       try {
-        voiceBufMap.set(r.id, await decodeWithTimeout(dataUrlToArrayBuffer(r.content)));
+        const mediaKey = r.mediaId ?? r.videoKey;
+        const raw = mediaKey
+          ? await loadMediaBlob(mediaKey).then(blob => blob?.arrayBuffer() ?? null)
+          : r.content.startsWith('data:')
+            ? dataUrlToArrayBuffer(r.content)
+            : null;
+        if (!raw) {
+          onWarn?.(`음성(${r.slotTime}): 저장된 미디어를 찾을 수 없음`);
+          return;
+        }
+        voiceBufMap.set(r.id, await decodeWithTimeout(raw));
       } catch (e) {
-        const mime = r.content.slice(5, r.content.indexOf(';'));
+        const mime = r.mediaType ?? (r.content.startsWith('data:') ? r.content.slice(5, r.content.indexOf(';')) : 'unknown');
         onWarn?.(`음성(${r.slotTime}) 디코딩 실패 [${mime}]: ${e instanceof Error ? (e.name + ' ' + e.message) : String(e)}`);
       }
     }
   }));
+  await yieldToBrowser(signal);
 
   const title = overrides?.title ?? generateTitle(records);
   const closing = overrides?.closing ?? generateClosing(records);
@@ -259,6 +299,7 @@ export async function generateVideo(
         if (!r.ok) throw new Error(`bgm ${r.status}`);
         return r.arrayBuffer();
       });
+      await yieldToBrowser(signal);
       const audioBuf = await Promise.race([
         decodeAudioCompat(audioCtx, raw),
         new Promise<never>((_, rej) => setTimeout(() => rej(new Error('bgm decode timeout')), 8000)),
@@ -279,11 +320,13 @@ export async function generateVideo(
     }
   }
 
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 7_000_000 });
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_500_000 });
   const chunks: Blob[] = [];
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   recorder.start(200);
-  await new Promise<void>(r => setTimeout(r, 100));
+  try {
+    await new Promise<void>(r => setTimeout(r, 100));
+    throwIfAborted(signal);
 
   const TITLE_DUR = 2;
   const RECORD_DUR = 3;
@@ -306,12 +349,13 @@ export async function generateVideo(
 
   await renderSegment(TITLE_DUR, (t) => {
     drawTitleScene(ctx, { title, dateStr, count: records.length, types: records.map(r => r.type) }, t);
-  }, tick);
+  }, tick, signal);
 
   // Each record — AI 자막은 사용자가 캡션을 직접 쓰지 않은 기록에만 들어가고,
   // 글 기록에서는 본문과 겹치는 자막이면 아예 뺀다
   const norm = (s: string) => s.replace(/[\s.,!?~'"“”‘’…]/g, '');
   for (let ri = 0; ri < records.length; ri++) {
+    await yieldToBrowser(signal);
     let aiCaption = overrides?.captions?.[ri]?.trim();
     if (aiCaption && records[ri].type === 'text') {
       const a = norm(aiCaption), b = norm(records[ri].content);
@@ -349,7 +393,7 @@ export async function generateVideo(
             clipSrc.start();
           } catch { clipSrc = null; }
         }
-        await renderVideoClip(ctx, blobUrl, dur, record, tick);
+        await renderVideoClip(ctx, blobUrl, dur, record, tick, signal);
         try { clipSrc?.stop(); } catch { /* already ended */ }
         if (clipSrc && bgmGain && audioCtx) {
           bgmGain.gain.setValueAtTime(bgmGain.gain.value, audioCtx.currentTime);
@@ -378,20 +422,20 @@ export async function generateVideo(
               ctx.fillText(record.caption, 44, H - 60);
             }
           }
-        }, tick);
+        }, tick, signal);
       }
 
     } else if (record.type === 'photo') {
       const img = imgMap.get(record.id) ?? null;
       await renderSegment(RECORD_DUR, (t) => {
         drawPhotoScene(ctx, record, img, emojiSet, t);
-      }, tick);
+      }, tick, signal);
 
     } else if (record.type === 'text') {
       const contentEmoji = overrides?.diaryEmojis?.[ri]?.trim() || null;
       await renderSegment(RECORD_DUR, (t) => {
         drawDiaryScene(ctx, record, emojiSet, t, contentEmoji);
-      }, tick);
+      }, tick, signal);
 
     } else if (record.type === 'audio') {
       const dur = segDurations[ri];
@@ -424,7 +468,7 @@ export async function generateVideo(
         // 진행률은 실제 재생 위치 기준 — 녹음이 장면보다 길면 잘리는 지점까지만 차오른다
         const progress = buf ? Math.min((t * dur) / buf.duration, 1) : t;
         drawAudioScene(ctx, record, t, envelope, progress, moodColor);
-      }, tick);
+      }, tick, signal);
       try { voiceSrc?.stop(); } catch { /* already ended */ }
       if (bgmGain && audioCtx) {
         bgmGain.gain.setValueAtTime(bgmGain.gain.value, audioCtx.currentTime);
@@ -435,7 +479,7 @@ export async function generateVideo(
 
   await renderSegment(CLOSE_DUR, (t) => {
     drawClosingScene(ctx, { closing, dateStr }, t);
-  }, tick);
+  }, tick, signal);
 
   // Fade the BGM out over the last moments, then stop recording
   if (audioCtx && bgmGain) {
@@ -448,11 +492,13 @@ export async function generateVideo(
   recorder.stop();
   await new Promise<void>(res => { recorder.onstop = () => res(); });
 
-  bgmSource?.stop();
-  audioCtx?.close().catch(() => {});
-
-  // Cleanup blob URLs
-  for (const url of blobUrlMap.values()) URL.revokeObjectURL(url);
-
-  return new Blob(chunks, { type: mimeType });
+    return new Blob(chunks, { type: mimeType });
+  } finally {
+    if (recorder.state !== 'inactive') {
+      try { recorder.stop(); } catch { /* already stopping */ }
+    }
+    try { bgmSource?.stop(); } catch { /* already stopped */ }
+    audioCtx?.close().catch(() => {});
+    for (const url of blobUrlMap.values()) URL.revokeObjectURL(url);
+  }
 }

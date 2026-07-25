@@ -3,11 +3,13 @@ import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVi
 import type { MyRecord, ArchiveEntry } from '../store';
 import { generateVideo } from '../videoGenerator';
 import TabBar from '../components/TabBar';
+import { useDialogFocus } from '../accessibility/useDialogFocus';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
 interface ArchiveScreenProps {
   onTabChange: (tab: Tab) => void;
+  initialArchiveId?: string | null;
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
@@ -66,8 +68,14 @@ function RecordThumb({ record }: { record: MyRecord }) {
 }
 
 function VideoFullscreen({ url, onClose }: { url: string; onClose: () => void }) {
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="생성된 하루 영상"
+      tabIndex={-1}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={onClose}
     >
@@ -99,9 +107,22 @@ function VideoFullscreen({ url, onClose }: { url: string; onClose: () => void })
 function DetailRow({ record }: { record: MyRecord }) {
   const [clipUrl, setClipUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (record.type === 'video' && record.videoKey) {
-      loadVideoFromIDB(record.videoKey).then(setClipUrl);
-    }
+    const mediaKey = record.mediaId ?? record.videoKey;
+    if (!mediaKey) return;
+    let active = true;
+    let createdUrl: string | null = null;
+    loadVideoFromIDB(mediaKey).then(url => {
+      if (!active) {
+        if (url) URL.revokeObjectURL(url);
+        return;
+      }
+      createdUrl = url;
+      setClipUrl(url);
+    });
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
   }, [record]);
 
   return (
@@ -114,21 +135,21 @@ function DetailRow({ record }: { record: MyRecord }) {
         <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{record.content}</div>
       )}
       {record.type === 'photo' && (
-        record.content.startsWith('data:')
-          ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block' }} />
-          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+        clipUrl || record.content.startsWith('data:')
+          ? <img src={clipUrl ?? record.content} alt={record.caption ?? `${record.slotTime} 사진 기록`} style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
       )}
       {record.type === 'audio' && (
-        record.content.startsWith('data:')
-          ? <audio src={record.content} controls style={{ width: '100%', height: 36 }} />
-          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+        clipUrl || record.content.startsWith('data:')
+          ? <audio src={clipUrl ?? record.content} controls style={{ width: '100%', height: 36 }} />
+          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
       )}
       {record.type === 'video' && (
         clipUrl
           ? <video src={clipUrl} controls playsInline style={{ width: '100%', borderRadius: 10, display: 'block' }} />
           : record.content.startsWith('data:')
             ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
-            : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+            : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
       )}
       {record.caption && (
         <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>{record.caption}</div>
@@ -139,8 +160,14 @@ function DetailRow({ record }: { record: MyRecord }) {
 
 function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () => void }) {
   const sorted = [...entry.records].sort((a, b) => a.createdAt - b.createdAt);
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${dateLabel(entry.date)}의 기록`}
+      tabIndex={-1}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
       onClick={onClose}
     >
@@ -152,7 +179,10 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(26,26,26,0.15)', margin: '0 auto 14px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 16, fontWeight: 600 }}>{dateLabel(entry.date)}의 기록</div>
-            <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{entry.records.length}개</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{entry.records.length}개</div>
+              <button type="button" onClick={onClose} aria-label="기록 상세 닫기" style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)' }}>✕</button>
+            </div>
           </div>
         </div>
         <div style={{ overflowY: 'auto', padding: '12px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -163,14 +193,14 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
   );
 }
 
-function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () => void }) {
+function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveEntry; onDelete: () => void; initialOpen?: boolean }) {
   const mood = guessMood(entry.records);
   const title = generateTitle(entry.records);
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
+  const [showDetail, setShowDetail] = useState(initialOpen);
   const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -253,14 +283,16 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
           )}
 
           {genState === 'done' && videoUrl && (
-            <div
+            <button
+              type="button"
+              aria-label="생성된 영상 전체 화면으로 보기"
               onClick={() => setFullscreen(true)}
-              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.22)', cursor: 'pointer' }}
+              style={{ position: 'absolute', inset: 0, width: '100%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.22)', cursor: 'pointer' }}
             >
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 0, height: 0, borderLeft: '13px solid #1A1A1A', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
               </div>
-            </div>
+            </button>
           )}
 
           {genState === 'generating' && (
@@ -273,7 +305,13 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
           )}
         </div>
 
-        <div onClick={() => setShowDetail(true)} style={{ cursor: 'pointer' }}>
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowDetail(true)}
+            aria-label={`${dateLabel(entry.date)} 기록 보기`}
+            style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter, sans-serif' }}
+          >
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.5)' }}>{dateLabel(entry.date)}</span>
             <span style={{
@@ -291,9 +329,10 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
           </div>
 
           <div style={{ fontSize: 10, color: 'rgba(26,26,26,0.35)', marginTop: 3 }}>기록 보기 ›</div>
+          </button>
 
           {genState === 'idle' && !entry.trimmed && (
-            <button onClick={e => { e.stopPropagation(); handleGenerate(); }} style={{
+            <button onClick={handleGenerate} style={{
               marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
               background: '#1A1A1A', color: '#fff', border: 'none',
               fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
@@ -309,7 +348,7 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
   );
 }
 
-export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onTabChange, initialArchiveId }: ArchiveScreenProps) {
   const [entries, setEntries] = useState<ArchiveEntry[]>(() => { sweepArchive(); return loadArchive(); });
 
   function handleDelete(entry: ArchiveEntry) {
@@ -380,8 +419,8 @@ export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
         display: 'grid', gridTemplateColumns: '1fr 1fr',
         gap: 14, alignContent: 'start',
       }}>
-        {filtered.map((entry, i) => (
-          <ArchiveCard key={entry.id ?? `${entry.date}-${i}`} entry={entry} onDelete={() => handleDelete(entry)} />
+        {filtered.map(entry => (
+          <ArchiveCard key={entry.id} entry={entry} initialOpen={entry.id === initialArchiveId} onDelete={() => handleDelete(entry)} />
         ))}
       </div>
 

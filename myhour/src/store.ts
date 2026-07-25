@@ -1,78 +1,38 @@
-export type RecordType = 'text' | 'video' | 'photo' | 'audio';
+import {
+  settingsSchema,
+  type JournalAppData,
+  type JournalArchiveEntry,
+  type JournalRecord,
+  type JournalSettings,
+  type RecordType as DomainRecordType,
+} from './domain/model';
+import {
+  deleteMediaBlob,
+  loadMediaUrl,
+  saveMediaBlob,
+} from './persistence/mediaRepository';
+import { journalRepository } from './repositories/journalRepository';
 
-export interface MyRecord {
-  id: string;
-  slotTime: string;
-  type: RecordType;
-  content: string;
-  caption?: string;
-  createdAt: number;
-  videoKey?: string; // IndexedDB key for the actual video file
-}
+export type RecordType = DomainRecordType;
+export type MyRecord = JournalRecord;
 
 // ─── IndexedDB video storage (localStorage can't handle large video files) ──
 
-function openVideoDB(): Promise<IDBDatabase> {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open('myhour_videos_v1', 1);
-    req.onupgradeneeded = e => { (e.target as IDBOpenDBRequest).result.createObjectStore('videos'); };
-    req.onsuccess = e => res((e.target as IDBOpenDBRequest).result);
-    req.onerror = () => rej(req.error);
-  });
-}
-
 export async function saveVideoToIDB(key: string, file: File | Blob): Promise<void> {
-  try {
-    const db = await openVideoDB();
-    await new Promise<void>((res, rej) => {
-      const tx = db.transaction('videos', 'readwrite');
-      tx.objectStore('videos').put(file, key);
-      tx.oncomplete = () => res();
-      tx.onerror = () => rej(tx.error);
-    });
-  } catch { /* ignore */ }
+  await saveMediaBlob(key, file);
 }
 
 export async function deleteVideoFromIDB(key: string): Promise<void> {
-  try {
-    const db = await openVideoDB();
-    await new Promise<void>((res, rej) => {
-      const tx = db.transaction('videos', 'readwrite');
-      tx.objectStore('videos').delete(key);
-      tx.oncomplete = () => res();
-      tx.onerror = () => rej(tx.error);
-    });
-  } catch { /* ignore */ }
+  await deleteMediaBlob(key);
 }
 
 export async function loadVideoFromIDB(key: string): Promise<string | null> {
-  try {
-    const db = await openVideoDB();
-    const blob: Blob | undefined = await new Promise((res, rej) => {
-      const tx = db.transaction('videos', 'readonly');
-      const req = tx.objectStore('videos').get(key);
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
-    return blob ? URL.createObjectURL(blob) : null;
-  } catch {
-    return null;
-  }
+  return loadMediaUrl(key);
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
-export interface AppSettings {
-  startTime: string;                         // "09:00"
-  endMode: 'open' | 'fixed';
-  endTime: string;                           // "21:00" (only used when endMode === 'fixed')
-  interval: 30 | 60 | 120;                  // minutes
-  notifyTiming: 'before' | 'exact' | 'both';
-  captureMode: 'choose' | 'fixed';
-  defaultType: RecordType;
-  outputRatio: '9:16' | '1:1';
-  bgMusic: string;
-}
+export type AppSettings = JournalSettings;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   startTime: '09:00',
@@ -92,14 +52,16 @@ export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const parsed = settingsSchema.safeParse({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
+    return parsed.success ? parsed.data : { ...DEFAULT_SETTINGS };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
 }
 
 export function saveSettings(s: AppSettings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  const parsed = settingsSchema.parse(s);
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
 }
 
 // ─── Slot utilities ───────────────────────────────────────────────────────────
@@ -280,50 +242,31 @@ export function generateClosing(records: MyRecord[]): string {
 
 // ─── App data (records + wrap state) ────────────────────────────────────────
 
-export interface AppData {
-  records: MyRecord[];
-  isWrapped: boolean;
-  date: string;
-}
-
-const DATA_KEY = 'myhour_v1';
+export type AppData = JournalAppData;
 
 export function loadAppData(startTime: string = DEFAULT_SETTINGS.startTime): AppData {
   const date = getSessionDate(startTime);
-  try {
-    const raw = localStorage.getItem(DATA_KEY);
-    if (!raw) return { records: [], isWrapped: false, date };
-    const data: AppData = JSON.parse(raw);
-    if (data.date !== date) return { records: [], isWrapped: false, date };
-    return data;
-  } catch {
-    return { records: [], isWrapped: false, date };
+  const data = journalRepository.loadCurrent(date);
+  if (data.date !== date) {
+    return { schemaVersion: 2, records: [], isWrapped: false, date };
   }
+  return data;
 }
 
 export function saveAppData(data: AppData) {
-  localStorage.setItem(DATA_KEY, JSON.stringify(data));
+  journalRepository.saveCurrent(data);
 }
 
 // ─── Archive ─────────────────────────────────────────────────────────────────
 
-export interface ArchiveEntry {
-  id?: string;            // 항목 고유 ID — 같은 날짜에 여러 번 마감해도 누적된다 (구버전 항목엔 없음)
-  date: string;
-  records: MyRecord[];
-  isWrapped: boolean;
-  trimmed?: boolean;      // 원본 미디어가 정리된 항목 (영상 완성 or 3일 경과)
-}
+export type ArchiveEntry = JournalArchiveEntry;
 
 // ─── 원본 정리 정책: 완성된 영상이 상품, 원본은 재료 ─────────────────────────
 // 영상이 만들어졌거나 3일이 지난 항목은 무거운 원본(사진/음성/클립)을 비우고
 // 글 텍스트·시간·캡션만 남긴다.
 
 function stripRecordMedia(r: MyRecord): MyRecord {
-  if (r.type === 'text') return r;
-  const { videoKey: _vk, ...rest } = r;
-  void _vk;
-  return { ...rest, content: '' };
+  return { ...r };
 }
 
 export function trimRecords(records: MyRecord[]): MyRecord[] {
@@ -331,57 +274,36 @@ export function trimRecords(records: MyRecord[]): MyRecord[] {
 }
 
 export function deleteRecordMedia(records: MyRecord[]) {
-  for (const r of records) if (r.videoKey) void deleteVideoFromIDB(r.videoKey);
+  for (const record of records) {
+    const mediaKey = record.mediaId ?? record.videoKey;
+    if (mediaKey) void deleteVideoFromIDB(mediaKey);
+  }
 }
 
-const TRIM_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
-
 export function sweepArchive() {
-  const entries = loadArchive();
-  let changed = false;
-  const now = Date.now();
-  for (let i = 0; i < entries.length; i++) {
-    const e = entries[i];
-    if (e.trimmed) continue;
-    const created = e.id && /^\d+$/.test(e.id) ? Number(e.id) : new Date(`${e.date}T00:00:00`).getTime();
-    if (e.isWrapped || now - created > TRIM_AFTER_MS) {
-      deleteRecordMedia(e.records);
-      entries[i] = { ...e, records: trimRecords(e.records), trimmed: true };
-      changed = true;
-    }
-  }
-  if (changed) saveArchive(entries);
+  // 하꾸는 사용자의 원본을 자동 삭제하지 않는다. 저장공간 정리는 명시적인 사용자 작업으로만 수행한다.
 }
 
 // 아카이브에서 뒤늦게 영상을 만들었을 때: 항목을 완성 상태로 바꾸고 원본 정리
 export function markArchiveGenerated(entry: ArchiveEntry) {
   const entries = loadArchive();
-  const idx = entries.findIndex(e => (entry.id ? e.id === entry.id : e.id === undefined && e.date === entry.date));
+  const idx = entries.findIndex(item => item.id === entry.id);
   if (idx < 0) return;
-  deleteRecordMedia(entries[idx].records);
-  entries[idx] = { ...entries[idx], isWrapped: true, trimmed: true, records: trimRecords(entries[idx].records) };
+  entries[idx] = { ...entries[idx], isWrapped: true, trimmed: false };
   saveArchive(entries);
 }
 
 // 영상 IDB 키: 신규 항목은 고유 ID, 구버전 항목은 날짜 키를 그대로 쓴다
 export function archiveVideoKey(entry: Pick<ArchiveEntry, 'id' | 'date'>): string {
-  return `wrapped_${entry.id ?? entry.date}`;
+  return `wrapped_${entry.id}`;
 }
 
-const ARCHIVE_KEY = 'myhour_archive_v1';
-
 export function loadArchive(): ArchiveEntry[] {
-  try {
-    const raw = localStorage.getItem(ARCHIVE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
+  return journalRepository.loadArchive(getSessionDate(loadSettings().startTime));
 }
 
 export function saveArchive(entries: ArchiveEntry[]) {
-  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(entries));
+  journalRepository.saveArchive(entries);
 }
 
 export function addToArchive(entry: ArchiveEntry) {
@@ -391,9 +313,7 @@ export function addToArchive(entry: ArchiveEntry) {
 }
 
 export function removeFromArchive(entry: ArchiveEntry) {
-  const entries = loadArchive().filter(e =>
-    entry.id ? e.id !== entry.id : !(e.id === undefined && e.date === entry.date),
-  );
+  const entries = loadArchive().filter(item => item.id !== entry.id);
   saveArchive(entries);
 }
 

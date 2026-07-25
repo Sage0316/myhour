@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { useApp } from '../context';
+import { useApp } from '../appContext';
 import {
   getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS,
-  guessMood, generateTitle, generateClosing,
 } from '../store';
 import type { MyRecord, RecordType } from '../store';
 import TabBar from '../components/TabBar';
@@ -125,10 +123,10 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
       </div>
 
       <div style={{ padding: '10px 0 12px', display: 'flex', gap: 9 }}>
-        <button onClick={onRecord} style={{ flex: 1, height: 48, borderRadius: 50, background: '#F0F0EE', color: '#1A1A1A', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+        <button data-modal-trigger="record" onClick={onRecord} style={{ flex: 1, height: 48, borderRadius: 50, background: '#F0F0EE', color: '#1A1A1A', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
           + 기록하기
         </button>
-        <button onClick={onWrapUp} style={{ flex: 1.5, height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+        <button data-modal-trigger="wrapup" onClick={onWrapUp} style={{ flex: 1.5, height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
           하루 마감
         </button>
       </div>
@@ -136,150 +134,10 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
   );
 }
 
-function TimelineSheet({ onClose }: { onClose: () => void }) {
-  const { records, slots } = useApp();
-  const slotMap = new Map(records.map(r => [r.slotTime, r]));
-
-  return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}
-      onClick={onClose}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: '100%', background: '#F7F7F5', borderRadius: '24px 24px 0 0', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
-      >
-        {/* Handle + header */}
-        <div style={{ padding: '14px 22px 12px', borderBottom: '1px solid rgba(26,26,26,0.07)', flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(26,26,26,0.15)', margin: '0 auto 14px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>오늘의 타임라인</div>
-            <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{records.length}개 기록</div>
-          </div>
-        </div>
-
-        {/* Timeline list */}
-        <div style={{ overflowY: 'auto', padding: '8px 22px 32px', position: 'relative' }}>
-          <div style={{ position: 'absolute', left: 29, top: 0, bottom: 0, width: 2, background: 'rgba(26,26,26,0.1)' }} />
-          {slots.map(slot => {
-            const record = slotMap.get(slot);
-            return (
-              <div key={slot} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '7px 0' }}>
-                <div style={{ width: 14, display: 'flex', justifyContent: 'center', zIndex: 1, flexShrink: 0 }}>
-                  <div style={{
-                    width: 10, height: 10, borderRadius: '50%',
-                    background: record ? '#1A1A1A' : 'transparent',
-                    border: record ? 'none' : '2px solid rgba(26,26,26,0.2)',
-                  }} />
-                </div>
-                <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)', width: 38, flexShrink: 0 }}>{slot}</div>
-                {record ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                    <div style={{ width: 24, height: 24, borderRadius: 7, background: TYPE_COLORS[record.type], flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {record.caption || (record.type === 'text' ? record.content.slice(0, 20) : TYPE_LABELS[record.type] + ' 기록')}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>{TYPE_LABELS[record.type]}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.3)' }}>기록 안 함</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function loadDirector(sessionDate: string): { title?: string; closing?: string } | null {
-  try {
-    const raw = localStorage.getItem(`myhour_director_${sessionDate}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function HomeWrapped({ videoUrl }: { videoUrl?: string | null }) {
-  const { records, settings } = useApp();
-  const sessionDate = getSessionDate(settings.startTime);
-  const { dateDay, dateWeekday, dateShort } = getDateStrings(sessionDate);
-  const mood = guessMood(records);
-  const director = loadDirector(sessionDate);
-  const title = director?.title ?? generateTitle(records);
-  const closing = director?.closing ?? generateClosing(records);
-  const [showTimeline, setShowTimeline] = useState(false);
-
-  function handleDownload() {
-    if (!videoUrl) return;
-    const a = document.createElement('a');
-    a.href = videoUrl;
-    a.download = `myhour-${dateShort}.webm`;
-    a.click();
-  }
-
-  return (
-    <div style={{ flex: 1, padding: '60px 22px 0', display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(124,92,196,0.8)' }}>Today · Wrapped</div>
-          <div style={{ fontSize: 25, fontWeight: 600, letterSpacing: '-0.6px', marginTop: 5 }}>
-            {dateDay} <span style={{ fontWeight: 300 }}>{dateWeekday}</span>
-          </div>
-        </div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 50, background: mood.color, fontSize: 12, fontWeight: 500 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: mood.dot, display: 'inline-block' }} />
-          {mood.mood}
-        </div>
-      </div>
-
-      <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
-      <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', lineHeight: 1.5, marginTop: -8 }}>"{closing}"</div>
-
-      {videoUrl ? (
-        <video src={videoUrl} controls playsInline style={{ width: '100%', borderRadius: 18, display: 'block' }} />
-      ) : (
-        <div style={{ borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(158deg, #D5EADC 0%, #E2DBF0 52%, #EFE2D5 100%)', padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.55)', textAlign: 'center', lineHeight: 1.6 }}>
-            영상을 아직 생성하지 않았어요<br />
-            <span style={{ color: '#7C5CC4' }}>하루 마감 → 영상 만들기</span>에서 생성할 수 있어요
-          </div>
-        </div>
-      )}
-
-      <div
-        onClick={() => setShowTimeline(true)}
-        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16, cursor: 'pointer' }}
-      >
-        <div style={{ display: 'flex', gap: 5 }}>
-          {records.slice(0, 6).map(r => (
-            <div key={r.id} style={{ width: 7, height: 7, borderRadius: '50%', background: TYPE_COLORS[r.type] }} />
-          ))}
-        </div>
-        <div style={{ flex: 1, fontSize: 13, color: 'rgba(26,26,26,0.7)' }}>오늘 {records.length}개 기록</div>
-        <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.35)' }}>›</div>
-      </div>
-
-      {videoUrl && (
-        <div style={{ padding: '4px 0 20px' }}>
-          <button onClick={handleDownload} style={{ width: '100%', height: 50, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
-            영상 저장하기
-          </button>
-        </div>
-      )}
-
-      {showTimeline && <TimelineSheet onClose={() => setShowTimeline(false)} />}
-    </div>
-  );
-}
-
-export default function HomeScreen({ onTabChange, onRecord, onWrapUp, videoUrl }: HomeScreenProps & { videoUrl?: string | null }) {
-  const { isWrapped } = useApp();
+export default function HomeScreen({ onTabChange, onRecord, onWrapUp }: HomeScreenProps) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
-      {isWrapped ? <HomeWrapped videoUrl={videoUrl} /> : <HomeDay onRecord={onRecord} onWrapUp={onWrapUp} />}
+      <HomeDay onRecord={onRecord} onWrapUp={onWrapUp} />
       <TabBar active="home" onTabChange={onTabChange} />
     </div>
   );
