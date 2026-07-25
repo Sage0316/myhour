@@ -89,7 +89,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
         emojis: director?.emojis,
         mood: selectedMood.mood,
         captions: director?.captions,
-        diaryEmojis: director?.diaryEmojis,
+        recordEmojis: director?.recordEmojis,
       }, msg => warnings.push(msg));
       if (warnings.length > 0) alert('영상은 생성됐지만 문제가 있었어요:\n\n' + warnings.join('\n'));
       const entryId = Date.now().toString();

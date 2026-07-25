@@ -62,7 +62,7 @@ async function main() {
       emojis: '🌙☁️✨',
       mood: '잔잔함',
       captions: ['', '오늘의 목소리', '', ''],
-      diaryEmojis: ['☕', '', '🍢', ''],
+      recordEmojis: ['☕', '', '🍢', '😆'],
       bgmUrl: `${import.meta.env.BASE_URL}bgm/study-and-relax.mp3`,
     });
     (window as unknown as { __blob?: Blob }).__blob = blob;

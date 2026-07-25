@@ -55,7 +55,7 @@ export interface DirectorOutput {
   bgMusic: string;
   bgmTrack: BgmTrack;
   captions: string[];
-  diaryEmojis: string[];
+  recordEmojis: string[]; // 기록별 내용 이모지 (구버전 응답의 diaryEmojis도 여기로 받는다)
 }
 
 function buildPrompt(records: MyRecord[], dateStr: string): string {
@@ -76,7 +76,7 @@ ${lines}
 서사 규칙 (중요):
 - 하루의 흐름은 기록 순서 그대로다. 제목·closing·mood를 쓸 때 앞뒤 순서나 인과를 절대 뒤집지 말 것. (예: "몸이 안 좋았다 → 영화를 봤다" 순서라면, 영화를 본 뒤 몸이 안 좋아진 것처럼 쓰면 안 됨)
 - closing은 하루의 마지막 기록 이후의 상태에서 돌아보는 문장일 것.
-- captions와 diaryEmojis는 반드시 기록 번호 순서와 1:1로 대응시킬 것.
+- captions와 recordEmojis는 반드시 기록 번호 순서와 1:1로 대응시킬 것.
 
 문체 규칙 (중요):
 - 담백하고 건조하게. 일기 쓰듯이.
@@ -91,11 +91,11 @@ ${lines}
   "closing": "기록 속 한 장면을 집어서 담담하게 끝내는 한 문장 (35자 이내)",
   "mood": "오늘의 분위기 한 줄 (20자 이내)",
   "moodChip": "오늘 전체 무드. 반드시 다음 중 하나: ${MOOD_LIST.map(m => m.mood).join(' | ')}",
-  "emojis": "오늘 무드에 맞는 이모지 3-4개",
+  "emojis": "오늘의 기분·분위기를 나타내는 이모지 3-4개. 사물이 아니라 감정/분위기 계열로 (예: ✨🌙😮‍💨). 구체적 사물(💍📚)은 여기 쓰지 말 것 — 그건 recordEmojis용",
   "bgMusic": "어울리는 배경음악 분위기 (예: 잔잔한 피아노, lo-fi 힙합)",
   "bgmTrack": "실제 사용할 BGM. 반드시 다음 중 하나: ${Object.entries(BGM_TRACKS).map(([k, v]) => `${k}(${v})`).join(' | ')}",
   "captions": ["기록 순서대로 각 기록에 달 자막 ${records.length}개, 각 15자 이내. 글(text) 기록은 본문이 이미 화면에 크게 보이므로 본문을 반복하는 자막 금지 — 덧붙일 말이 없으면 빈 문자열 \\"\\""],
-  "diaryEmojis": ["기록 순서대로 ${records.length}개. 각 글(text) 기록의 내용을 그림처럼 나타내는 이모지 딱 1개 (예: '떡볶이 먹음'→🍢, '야근함'→💼, '비 왔다'→🌧️). text가 아닌 기록은 빈 문자열 \\"\\""]
+  "recordEmojis": ["기록 순서대로 ${records.length}개 — 타입 상관없이 모든 기록에 대해. 그 기록 하나의 내용을 그림처럼 나타내는 이모지 딱 1개 (글은 본문 기준, 사진·짤·음성은 캡션 기준. 예: '떡볶이 먹음'→🍢, '야근함'→💼, '금반지 찾으러'→💍). 내용만으로 뭘 넣을지 애매하면 아무거나 넣지 말고 빈 문자열 \\"\\" — 관계없는 이모지가 붙는 것보다 없는 게 낫다"]
 }`;
 }
 
@@ -168,8 +168,11 @@ export async function analyzeDay(
   out.captions = Array.isArray(out.captions)
     ? out.captions.map(c => String(c).trim().slice(0, 20))
     : [];
-  out.diaryEmojis = Array.isArray(out.diaryEmojis)
-    ? out.diaryEmojis.map(e => String(e).trim())
+  // recordEmojis가 새 필드명 — 구버전 프롬프트 응답(diaryEmojis)도 그대로 받아준다
+  const rawEmojis = (out as { recordEmojis?: unknown; diaryEmojis?: unknown }).recordEmojis
+    ?? (out as { diaryEmojis?: unknown }).diaryEmojis;
+  out.recordEmojis = Array.isArray(rawEmojis)
+    ? rawEmojis.map(e => String(e).trim())
     : [];
   return out;
 }

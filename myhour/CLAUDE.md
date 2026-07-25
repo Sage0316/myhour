@@ -39,6 +39,13 @@ cp -r /home/claude/repo/myhour/dist/. /tmp/deploy/
 cd /tmp/deploy && git add -A && git commit -q -m "Deploy" && git push -q origin gh-pages
 ```
 
+## 이모지 규칙 (2026-07-25 정리)
+**무드 이모지와 기록 이모지를 절대 섞지 말 것.** 예전엔 그날 무드 세트에서 매번 `rnd()`로 뽑아 각 장면에 붙여서, 신발 사진에 💍가 붙는 식으로 내용과 무관한 이모지가 나왔다.
+- **기록 이모지** (기록 1개 단위): AI `recordEmojis[i]`(모든 타입에 대해 요청) → 없으면 `pickContentEmoji()` 키워드 사전 → **그래도 없으면 붙이지 않는다** (그림일기 그림 칸만 중립 연필 🖊️). 쓰이는 곳: 그림일기 그림 칸, 사진 위 1개, 글 문장 끝
+- **무드 이모지** (하루 1개 단위): `overrides.emojis`의 첫 글자 또는 `fallbackEmojisFor(mood)[0]`. 그림일기 '오늘' 칸에만 쓴다
+- AI 프롬프트에서 `emojis`는 감정/분위기 계열만, 구체적 사물은 `recordEmojis`로 가도록 명시해 둠 (예전엔 AI가 `emojis`에 💍📚를 넣어 무드 칸이 이상해졌다)
+- 구버전 AI 응답 필드명 `diaryEmojis`도 `recordEmojis`로 받아준다 (llmDirector 파싱부)
+
 ## 주의: 슬롯 매칭
 `record.slotTime`엔 **정확한 시계 시각**("23:42")이 들어간다 — 슬롯 문자열("23:00")과 그대로 일치하지 않는다.
 오늘 탭 격자처럼 슬롯별로 배치할 땐 `groupRecordsBySlot()`을 써야 한다 (문자열 비교로 매칭하면 격자가 늘 "기록 안 함"으로 보이는 버그가 있었음, 2026-07-24 수정).
@@ -52,7 +59,7 @@ cd /tmp/deploy && git add -A && git commit -q -m "Deploy" && git push -q origin 
 - `src/scenes.ts`: 영상 장면 렌더러. 글=그림일기 틀(진한 회색 테두리+낙서 원 안에 내용 이모지+줄노트), 사진=풀스크린+무드 이모지 스캐터, 음성=실제 녹음 파형이 무드 색으로 차오름(computeEnvelope), 짤(meme)=폴라로이드/스크랩북 2종이 id 기준 랜덤(사용자 캡션이 손글씨로, 테이프·밑줄은 무드색), 마무리=블랙 카드
 - 손글씨 폰트: **개구(Gaegu, OFL)** public/fonts, ensureDiaryFont. 2026-07 크레파스 느낌으로 교체 (이전: 나눔손글씨 펜). 최종 후보였던 감자꽃(Gamja Flower)도 좋았음 — 나중에 폰트 바꿀 일 있으면 참고. 폰트는 fonts.googleapis.com css2 API에서 ttf URL 얻어 fonts.gstatic.com에서 받으면 됨 (이 세션 네트워크에서 열려 있었음)
 - 앨범(meme) 타입: RecordType 'meme'(라벨 '앨범', 색 #F9E9A6). 별도 탭이 아니라 **사진 모드 안에서 "지금 촬영/앨범에서 선택" 두 갈래** — 촬영=photo(풀스크린 장면), 앨범 선택=meme(폴라로이드/스크랩북 장면, 캡션이 손글씨). 앨범 input은 capture 속성 없음(카메라 강제 방지). 정리 정책은 사진과 동일. **주의: seededRnd(LCG)는 이웃 시드의 첫 값이 거의 같아서 Date.now() 기반 id로 분기하려면 rnd() 두 번 버리고 써야 함** (drawMemeScene 참조)
-- `src/llmDirector.ts`: **claude-sonnet-5** 1회 호출(thinking disabled 필수)로 제목·마무리·무드·이모지·장면 자막·BGM 무드·그림일기 이모지 수신. API 키가 있으면 localStorage에 저장해 브라우저 직접 호출(anthropic-dangerous-direct-browser-access 헤더), **없으면 자동으로 push-server의 `/director` 프록시로 대체 호출** (aiAvailable() 참조) — 친구 등 키 없는 사용자도 무료 체험 가능. 워커가 서버 키로 대신 호출하고 하루 총량 80회·기기(IP)당 15회로 제한(worker.js handleDirector)
+- `src/llmDirector.ts`: **claude-sonnet-5** 1회 호출(thinking disabled 필수)로 제목·마무리·무드·무드이모지·장면 자막·BGM 무드·기록별 이모지(recordEmojis) 수신. API 키가 있으면 localStorage에 저장해 브라우저 직접 호출(anthropic-dangerous-direct-browser-access 헤더), **없으면 자동으로 push-server의 `/director` 프록시로 대체 호출** (aiAvailable() 참조) — 친구 등 키 없는 사용자도 무료 체험 가능. 워커가 서버 키로 대신 호출하고 하루 총량 80회·기기(IP)당 15회로 제한(worker.js handleDirector)
 - `src/videoGenerator.ts`: 1080×1920 렌더링. **mimeType 우선순위는 mp4를 webm보다 먼저** (2026-07-22 변경) — iOS Safari가 MediaRecorder로 webm '녹화' 자체는 지원해도 사진 앱이 webm을 영상으로 인식 못 해서, 에어드랍/공유해도 파일 앱에만 들어가고 사진 앱엔 저장 안 되는 문제가 있었음. mp4(h264)는 어디서든 정상 저장됨. 절대 webm을 다시 앞으로 올리지 말 것 BGM 무드 6종×3곡(public/bgm, 전곡 CC0, 랜덤 선곡+랜덤 시작 지점) + 음성/클립 소리 믹싱(BGM 더킹, 컷 페이드아웃). 영상·음성 장면은 3~5초(MEDIA_MAX)
 - 음성 녹음은 16kHz WAV 직접 인코딩 (iOS mp4는 decodeAudioData 실패하는 버그 회피)
 - AudioContext는 탭 제스처 직후 생성 필수 (iOS suspended 버그), 폰트/디코딩엔 타임아웃, 생성 실패 시 onWarn으로 폰에 에러 표시

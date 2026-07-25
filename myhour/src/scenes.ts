@@ -115,17 +115,38 @@ export function fallbackEmojisFor(mood: string): string[] {
 // 구체적인 단어를 먼저 검사하고, "밥/점심/저녁" 같은 범용 시간대 단어는 맨 뒤로 미뤄서
 // "산책" 같은 더 구체적인 행동이 있으면 그쪽이 우선 채택되게 한다.
 const KEYWORD_EMOJI: [RegExp, string][] = [
+  // 음식·음료 (구체적인 것 먼저)
   [/떡볶이|엽떡|즉떡/, '🍢'], [/라면/, '🍜'], [/치킨/, '🍗'], [/피자/, '🍕'],
-  [/커피|카페|아메리카노/, '☕'], [/맥주|술|소주|와인/, '🍺'],
-  [/빵|베이커리/, '🥐'], [/디저트|케이크|아이스크림/, '🍰'],
-  [/산책|걷|한강/, '🚶'], [/운동|헬스|러닝|요가/, '💪'], [/잠|수면|낮잠|졸/, '😴'],
-  [/공부|시험|과제/, '📚'], [/회의|미팅|출근|업무|야근/, '💼'], [/퇴근/, '🚪'],
-  [/영화|넷플릭스|드라마/, '🎬'], [/음악|노래|콘서트/, '🎵'], [/책|독서/, '📖'],
-  [/비|우산|장마/, '🌧️'], [/눈/, '❄️'], [/더위|더워|여름/, '☀️'], [/추위|추워|겨울/, '🥶'],
-  [/친구|모임|약속/, '👯'], [/가족|엄마|아빠/, '👨‍👩‍👧'], [/강아지|댕댕이/, '🐶'], [/고양이|냥/, '🐱'],
-  [/여행|비행기|숙소/, '✈️'], [/쇼핑|장보기/, '🛍️'], [/청소|빨래|집안일/, '🧹'],
-  [/기쁘|행복|좋았/, '😊'], [/힘들|피곤|지침/, '😮‍💨'], [/화나|짜증/, '😤'], [/슬프|눈물/, '😢'],
-  [/밥|점심|저녁|아침|식사/, '🍚'],
+  [/초밥|스시|회\b/, '🍣'], [/파스타|스파게티/, '🍝'], [/햄버거|버거/, '🍔'],
+  [/삼겹|고기|구이|바베큐/, '🥩'], [/찌개|국밥|해장/, '🍲'], [/김밥/, '🍙'],
+  [/샐러드/, '🥗'], [/과일|사과|딸기|수박/, '🍓'],
+  [/커피|카페|아메리카노|라떼/, '☕'], [/맥주|술|소주|와인|하이볼/, '🍺'],
+  [/빵|베이커리|크로플/, '🥐'], [/디저트|케이크|아이스크림|마카롱/, '🍰'],
+  [/떡\b|한과/, '🍡'], [/차\b|녹차|티백/, '🍵'],
+  // 활동
+  [/산책|걷|한강/, '🚶'], [/운동|헬스|러닝|요가|필라테스|수영/, '💪'],
+  [/잠|수면|낮잠|졸/, '😴'], [/청소|빨래|집안일|설거지/, '🧹'],
+  [/공부|시험|과제|스터디/, '📚'], [/회의|미팅|출근|업무|야근|일했/, '💼'], [/퇴근/, '🚪'],
+  [/영화|넷플릭스|드라마|극장/, '🎬'], [/음악|노래|콘서트|플레이리스트/, '🎵'],
+  [/책|독서|서점|교보/, '📖'], [/게임|롤\b|오락/, '🎮'], [/그림|드로잉|스케치/, '🎨'],
+  [/사진|촬영|찍/, '📷'], [/여행|비행기|숙소|기차|공항/, '✈️'],
+  [/쇼핑|장보기|마트|택배/, '🛍️'], [/병원|치과|약국|진료/, '🏥'],
+  [/미용실|머리|파마|염색/, '💇'], [/은행|송금|카드값|월급/, '💳'],
+  [/반지|목걸이|귀걸이|주얼리/, '💍'], [/꽃|화분|식물/, '🌷'],
+  [/운전|차\b|주차/, '🚗'], [/지하철|버스|출퇴근길/, '🚇'],
+  [/카톡|전화|통화|연락/, '📞'], [/생일|축하|파티/, '🎉'],
+  // 사람·관계
+  [/친구|모임|약속/, '👯'], [/가족|엄마|아빠|부모님/, '👨‍👩‍👧'],
+  [/강아지|댕댕이|산책시/, '🐶'], [/고양이|냥/, '🐱'],
+  // 날씨
+  [/비\b|우산|장마/, '🌧️'], [/눈\b|함박눈/, '❄️'], [/더위|더워|여름|폭염/, '☀️'],
+  [/추위|추워|겨울|한파/, '🥶'], [/바람|태풍/, '🌬️'],
+  // 감정 (구체적 사물이 없을 때의 마지막 보루)
+  [/기쁘|행복|좋았|신난/, '😊'], [/힘들|피곤|지침|지쳤/, '😮‍💨'],
+  [/화나|짜증|빡/, '😤'], [/슬프|눈물|울었/, '😢'],
+  [/설레|기대/, '🥰'], [/불안|걱정|초조/, '😰'], [/뿌듯|해냈|성공/, '🙌'],
+  // 범용 식사 표현은 맨 뒤 — 위의 구체적인 음식이 먼저 잡히게
+  [/밥|점심|저녁|아침|식사|먹었/, '🍚'],
 ];
 
 export function pickContentEmoji(content: string): string | null {
@@ -250,12 +271,12 @@ export function drawTitleScene(
   ctx.globalAlpha = 1;
 }
 
-// 글 장면 — 길이에 따라 글자 크기가 변하고, 이모지는 문장 끝에 붙는다
+// 글 장면 — 길이에 따라 글자 크기가 변하고, 내용 이모지가 있으면 문장 끝에 붙는다
 export function drawTextScene(
   ctx: CanvasRenderingContext2D,
   record: MyRecord,
-  emojiSet: string[],
   t: number,
+  contentEmoji?: string | null,
 ) {
   ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H);
   const rnd = seededRnd(record.id);
@@ -303,14 +324,16 @@ export function drawTextScene(
   let cy = firstBaseline + rise;
   for (const l of lines) { ctx.fillText(l, 48, cy); cy += lh; }
 
-  // 문장 끝에 이모지 하나 — 손으로 찍은 느낌
-  if (emojiSet.length > 0) {
+  // 문장 끝에 이모지 하나 — 이 기록의 내용에서 나온 것만. 없으면 아무것도 붙이지 않는다
+  // (예전엔 그날 무드 세트에서 무작위로 뽑아서 내용과 무관한 이모지가 붙었다)
+  const endEmoji = contentEmoji?.trim() || pickContentEmoji(record.content);
+  if (endEmoji) {
     const lastLine = lines[lines.length - 1];
     const lastW = ctx.measureText(lastLine).width;
     const es = Math.min(size * 1.1, 54);
     const ex = Math.min(48 + lastW + es * 0.75, W - 44);
     const ey = (cy - lh) - size * 0.32 + rise;
-    const emoji = emojiSet[Math.floor(rnd() * emojiSet.length)];
+    const emoji = endEmoji;
     ctx.save();
     ctx.translate(ex, ey);
     ctx.rotate((rnd() * 24 - 12) * Math.PI / 180);
@@ -331,20 +354,19 @@ export function drawTextScene(
 }
 
 // 그림일기 장면 — 테두리 프레임, 그림 칸엔 그 기록 내용을 나타내는 이모지,
-// 날씨 칸엔 오늘의 무드 이모지. moodEmojis는 폴백용 풀, contentEmoji가 있으면 우선.
+// 날씨 칸엔 그날의 무드 이모지(moodEmoji, 하루에 하나로 고정).
+// 그림 칸은 내용에서 나온 이모지만 쓰고, 없으면 무작위 대신 중립적인 연필을 둔다.
 export function drawDiaryScene(
   ctx: CanvasRenderingContext2D,
   record: MyRecord,
-  moodEmojis: string[],
+  moodEmoji: string | null,
   t: number,
   contentEmoji?: string | null,
 ) {
   ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H);
   const rnd = seededRnd(record.id);
   const ease = Math.min(1, t / 0.25);
-  const drawingEmoji = contentEmoji ?? pickContentEmoji(record.content)
-    ?? (moodEmojis[Math.floor(rnd() * moodEmojis.length)] ?? '🖊️');
-  const moodEmoji = moodEmojis.length > 0 ? moodEmojis[Math.floor(rnd() * moodEmojis.length)] : null;
+  const drawingEmoji = contentEmoji?.trim() || pickContentEmoji(record.content) || '🖊️';
 
   // 카드 프레임
   const cardX = 40, cardY = 96, cardW = W - 80, cardH = H - 208;
@@ -679,14 +701,18 @@ export function drawCaptionLine(ctx: CanvasRenderingContext2D, text: string, x: 
   ctx.fillText(text, x, y);
 }
 
+// 사진 장면 — 사진 위에 얹는 이모지는 그 사진 캡션에서 나온 것만 쓴다.
+// 없으면 아무것도 얹지 않는다 (예전엔 그날 무드 세트에서 무작위로 2개를 뿌려서
+// 신발 사진에 💍가 붙는 식으로 내용과 무관한 이모지가 나왔다)
 export function drawPhotoScene(
   ctx: CanvasRenderingContext2D,
   record: MyRecord,
   img: HTMLImageElement | null,
-  emojiSet: string[],
   t: number,
+  contentEmoji?: string | null,
 ) {
-  const emojiPlan = planEmojis(emojiSet, record.id);
+  const emoji = contentEmoji?.trim() || pickContentEmoji(record.caption ?? '');
+  const emojiPlan = emoji ? planEmojis([emoji], record.id) : [];
   if (img) {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
     const scale = 1 + t * 0.04;

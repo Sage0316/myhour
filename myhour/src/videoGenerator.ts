@@ -168,7 +168,7 @@ export async function generateVideo(
   records: MyRecord[],
   dateStr: string,
   onProgress?: (pct: number) => void,
-  overrides?: { title?: string; closing?: string; bgmUrl?: string; emojis?: string; mood?: string; captions?: string[]; diaryEmojis?: string[] },
+  overrides?: { title?: string; closing?: string; bgmUrl?: string; emojis?: string; mood?: string; captions?: string[]; recordEmojis?: string[] },
   onWarn?: (msg: string) => void,
 ): Promise<Blob> {
   // 레이아웃 좌표계는 540×960을 유지하되 실제 픽셀은 2배(1080×1920)로 렌더링
@@ -269,9 +269,9 @@ export async function generateVideo(
   const closing = overrides?.closing ?? generateClosing(records);
   const moodName = overrides?.mood ?? guessMood(records).mood;
   const moodColor = MOOD_LIST.find(m => m.mood === moodName)?.dot ?? '#7C5CC4';
-  const emojiSet = overrides?.emojis
-    ? splitEmojis(overrides.emojis)
-    : fallbackEmojisFor(moodName);
+  // 그날의 무드 이모지 — 하루에 하나로 고정해서 그림일기 '오늘' 칸에만 쓴다.
+  // 기록별 이모지(recordEmojis)와 섞지 않는다: 무드는 하루 단위, 내용은 기록 단위.
+  const moodEmoji = (overrides?.emojis ? splitEmojis(overrides.emojis) : fallbackEmojisFor(moodName))[0] ?? null;
 
   if (typeof MediaRecorder === 'undefined') throw new Error('이 브라우저는 영상 생성을 지원하지 않아요');
 
@@ -375,6 +375,8 @@ export async function generateVideo(
     const record = !records[ri].caption && aiCaption
       ? { ...records[ri], caption: aiCaption }
       : records[ri];
+    // 이 기록 하나의 내용에서 나온 이모지 (없으면 각 장면이 알아서 생략한다)
+    const recordEmoji = overrides?.recordEmojis?.[ri]?.trim() || null;
 
     if (record.type === 'video') {
       const blobUrl = blobUrlMap.get(record.id);
@@ -438,7 +440,7 @@ export async function generateVideo(
     } else if (record.type === 'photo') {
       const img = imgMap.get(record.id) ?? null;
       await renderSegment(RECORD_DUR, (t) => {
-        drawPhotoScene(ctx, record, img, emojiSet, t);
+        drawPhotoScene(ctx, record, img, t, recordEmoji);
       }, tick);
 
     } else if (record.type === 'meme') {
@@ -448,9 +450,8 @@ export async function generateVideo(
       }, tick);
 
     } else if (record.type === 'text') {
-      const contentEmoji = overrides?.diaryEmojis?.[ri]?.trim() || null;
       await renderSegment(RECORD_DUR, (t) => {
-        drawDiaryScene(ctx, record, emojiSet, t, contentEmoji);
+        drawDiaryScene(ctx, record, moodEmoji, t, recordEmoji);
       }, tick);
 
     } else if (record.type === 'audio') {

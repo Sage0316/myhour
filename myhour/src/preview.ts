@@ -5,7 +5,7 @@ import {
   drawTitleScene, drawDiaryScene, drawPhotoScene, drawMemeScene, drawAudioScene, drawClosingScene,
 } from './scenes';
 
-const EMOJIS = ['🌙', '☁️', '✨', '🍵'];
+const MOOD_EMOJI = '🌙'; // 그날의 무드 이모지 하나 (그림일기 '오늘' 칸용)
 
 function rec(id: string, type: MyRecord['type'], content: string, caption?: string): MyRecord {
   return { id, slotTime: '14:37', type, content, caption, createdAt: Date.now() } as MyRecord;
@@ -69,16 +69,19 @@ async function main() {
   drawTitleScene(cell('title'), { title: '커피 두 잔의 날', dateStr: '7.18 금요일', count: 5, types: ['text', 'photo', 'video', 'text', 'audio'] }, t);
 
   // 키워드 사전 매칭 (AI 없이) — 내용을 그리는 이모지가 자동으로 붙는다
-  drawDiaryScene(cell('그림일기 · 떡볶이'), rec('z9', 'text', '퇴근하고 떡볶이 먹음'), EMOJIS, t);
-  drawDiaryScene(cell('그림일기 · 커피'), rec('c1', 'text', '아침에 커피 두 잔 마셨다'), EMOJIS, t);
-  drawDiaryScene(cell('그림일기 · 산책'), rec('c2', 'text', '점심에 새로 생긴 파스타집 갔는데 생각보다 별로였다. 그래도 산책은 좋았음'), EMOJIS, t);
-  // AI가 준 diaryEmoji를 직접 지정한 경우 (짧은 글에 특히 잘 맞음)
-  drawDiaryScene(cell('그림일기 · AI지정(다짐)'), rec('a1', 'text', '그래도 화이팅', '오늘의 다짐'), EMOJIS, t, '💪');
-  drawDiaryScene(cell('그림일기 · 긴 글'), rec('c3', 'text', '오늘은 아침부터 회의가 세 개나 있어서 정신이 하나도 없었다. 그래도 점심에 혼자 나가서 김치찌개 먹으면서 잠깐 숨 돌린 게 제일 좋았던 순간. 저녁엔 운동 가려고 했는데 결국 침대에 누워버렸다.'), EMOJIS, t);
+  drawDiaryScene(cell('그림일기 · 떡볶이'), rec('z9', 'text', '퇴근하고 떡볶이 먹음'), MOOD_EMOJI, t);
+  drawDiaryScene(cell('그림일기 · 커피'), rec('c1', 'text', '아침에 커피 두 잔 마셨다'), MOOD_EMOJI, t);
+  drawDiaryScene(cell('그림일기 · 산책'), rec('c2', 'text', '점심에 새로 생긴 파스타집 갔는데 생각보다 별로였다. 그래도 산책은 좋았음'), MOOD_EMOJI, t);
+  // AI가 준 기록 이모지를 직접 지정한 경우 (짧은 글에 특히 잘 맞음)
+  drawDiaryScene(cell('그림일기 · AI지정(다짐)'), rec('a1', 'text', '그래도 화이팅', '오늘의 다짐'), MOOD_EMOJI, t, '💪');
+  drawDiaryScene(cell('그림일기 · 긴 글'), rec('c3', 'text', '오늘은 아침부터 회의가 세 개나 있어서 정신이 하나도 없었다. 그래도 점심에 혼자 나가서 김치찌개 먹으면서 잠깐 숨 돌린 게 제일 좋았던 순간. 저녁엔 운동 가려고 했는데 결국 침대에 누워버렸다.'), MOOD_EMOJI, t);
+  // 키워드에도 안 걸리고 AI도 없을 때 — 무작위 이모지 대신 중립 연필이 나와야 한다
+  drawDiaryScene(cell('그림일기 · 매칭 없음(연필)'), rec('c4', 'text', '앱 계속 테스트 중 힘들다'), MOOD_EMOJI, t);
 
   const photo = await fakePhoto();
-  drawPhotoScene(cell('photo · 캡션 있음'), rec('d4', 'photo', 'data:', '한강 산책'), photo, EMOJIS, t);
-  drawPhotoScene(cell('photo · 캡션 없음'), rec('e5', 'photo', 'data:'), photo, EMOJIS, t);
+  drawPhotoScene(cell('photo · 캡션 이모지 매칭'), rec('d4', 'photo', 'data:', '한강 산책'), photo, t);
+  drawPhotoScene(cell('photo · AI 이모지 지정'), rec('d7', 'photo', 'data:', '금반지 찾으러'), photo, t, '💍');
+  drawPhotoScene(cell('photo · 이모지 없음(깔끔)'), rec('e5', 'photo', 'data:'), photo, t);
 
   drawAudioScene(cell('audio'), rec('f6', 'audio', '', '오늘의 목소리 메모'), t);
 
