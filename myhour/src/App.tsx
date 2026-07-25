@@ -6,7 +6,8 @@ import RecordScreen from './screens/RecordScreen';
 import ArchiveScreen from './screens/ArchiveScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
-import { AppProvider, useApp } from './context';
+import { AppProvider } from './context';
+import { useApp } from './appContext';
 import './App.css';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -30,6 +31,11 @@ function FrameWrapper({ label, children, dark }: { label: string; children: Reac
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [modal, setModal] = useState<ModalScreen>(null);
+  const [restoreFocusTo, setRestoreFocusTo] = useState<Exclude<ModalScreen, null> | null>(null);
+  const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(() => {
+    const match = window.location.hash.match(/^#archive=(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  });
   const { addRecord, reset } = useApp();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
 
@@ -39,9 +45,29 @@ function AppContent() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  function handleSave() {
+  useEffect(() => {
+    if (modal || !restoreFocusTo) return;
+    const frame = requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(`[data-modal-trigger="${restoreFocusTo}"]`)?.focus();
+      setRestoreFocusTo(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [modal, restoreFocusTo]);
+
+  function openModal(screen: Exclude<ModalScreen, null>) {
+    setRestoreFocusTo(screen);
+    setModal(screen);
+  }
+
+  function closeModal() {
+    setModal(null);
+  }
+
+  function handleSave(archiveId: string) {
     reset();
     setModal(null);
+    setSelectedArchiveId(archiveId);
+    window.history.replaceState(null, '', `#archive=${encodeURIComponent(archiveId)}`);
     setActiveTab('archive');
   }
 
@@ -50,23 +76,23 @@ function AppContent() {
       case 'home': return (
         <HomeScreen
           onTabChange={setActiveTab}
-          onRecord={() => setModal('record')}
-          onWrapUp={() => setModal('wrapup')}
+          onRecord={() => openModal('record')}
+          onWrapUp={() => openModal('wrapup')}
         />
       );
-      case 'today': return <TodayScreen onTabChange={setActiveTab} onWrapUp={() => setModal('wrapup')} />;
-      case 'archive': return <ArchiveScreen onTabChange={setActiveTab} />;
+      case 'today': return <TodayScreen onTabChange={setActiveTab} onWrapUp={() => openModal('wrapup')} />;
+      case 'archive': return <ArchiveScreen onTabChange={setActiveTab} initialArchiveId={selectedArchiveId} />;
       case 'settings': return <SettingsScreen onTabChange={setActiveTab} />;
     }
   }
 
   const activeScreen = modal === 'record' ? (
     <RecordScreen
-      onClose={() => setModal(null)}
-      onSave={(type, content, caption, videoKey) => { addRecord(type, content, caption, videoKey); setModal(null); }}
+      onClose={closeModal}
+      onSave={(type, content, caption, media) => { addRecord(type, content, caption, media); setModal(null); }}
     />
   ) : modal === 'wrapup' ? (
-    <WrapUpScreen onClose={() => setModal(null)} onSave={handleSave} />
+    <WrapUpScreen onClose={closeModal} onSave={handleSave} />
   ) : renderMain();
 
   if (isMobile) {
@@ -84,17 +110,11 @@ function AppContent() {
     : activeTab === 'archive' ? '하꾸 · 아카이브' : '하꾸 · 설정';
 
   return (
-    <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 0 48px' }}>
+    <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 0 48px' }}>
       <FrameWrapper label={mainLabel}>
         {activeScreen}
       </FrameWrapper>
-      <FrameWrapper label="지금 기록하기" dark>
-        <RecordScreen onClose={() => {}} onSave={() => {}} />
-      </FrameWrapper>
-      <FrameWrapper label="하루 마감 → 영상 생성">
-        <WrapUpScreen onClose={() => {}} onSave={() => {}} />
-      </FrameWrapper>
-    </div>
+    </main>
   );
 }
 

@@ -1,5 +1,7 @@
-import { useApp } from '../context';
-import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS } from '../store';
+import { useApp } from '../appContext';
+import {
+  getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS,
+} from '../store';
 import type { MyRecord, RecordType } from '../store';
 import TabBar from '../components/TabBar';
 
@@ -23,13 +25,6 @@ function MediaIcon({ type, bg }: { type: IconType; bg: string }) {
   };
   if (type === 'video') return <div style={base}><div style={{ width: 0, height: 0, borderLeft: '8px solid #1A1A1A', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', marginLeft: 2 }} /></div>;
   if (type === 'photo') return <div style={base}><div style={{ width: 10, height: 10, border: '2px solid #1A1A1A', borderRadius: '50%' }} /></div>;
-  if (type === 'meme') return (
-    <div style={base}>
-      <div style={{ width: 13, height: 11, border: '2px solid #1A1A1A', borderRadius: 2, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-        <div style={{ width: 0, height: 0, borderLeft: '3.5px solid transparent', borderRight: '3.5px solid transparent', borderBottom: '4px solid #1A1A1A' }} />
-      </div>
-    </div>
-  );
   if (type === 'audio') return (
     <div style={{ ...base, alignItems: 'flex-end', gap: 2, paddingBottom: 7 }}>
       <div style={{ width: 2, height: 7, background: '#1A1A1A' }} />
@@ -128,10 +123,10 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
       </div>
 
       <div style={{ padding: '10px 0 12px', display: 'flex', gap: 9 }}>
-        <button onClick={onRecord} style={{ flex: 1, height: 48, borderRadius: 50, background: '#F0F0EE', color: '#1A1A1A', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+        <button data-modal-trigger="record" onClick={onRecord} style={{ flex: 1, height: 48, borderRadius: 50, background: '#F0F0EE', color: '#1A1A1A', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
           + 기록하기
         </button>
-        <button onClick={onWrapUp} style={{ flex: 1.5, height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+        <button data-modal-trigger="wrapup" onClick={onWrapUp} style={{ flex: 1.5, height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
           하루 마감
         </button>
       </div>

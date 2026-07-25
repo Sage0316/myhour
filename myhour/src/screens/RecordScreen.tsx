@@ -1,32 +1,54 @@
 import { useState, useRef, useEffect } from 'react';
 import type { RecordType } from '../store';
-import { saveVideoToIDB } from '../store';
-import { useApp } from '../context';
+import { deleteVideoFromIDB, saveVideoToIDB } from '../store';
+import { useApp, type RecordMedia } from '../appContext';
+import { createStableId } from '../domain/model';
+import { assertCaptureCapacity } from '../media/capabilities';
+import { useDialogFocus } from '../accessibility/useDialogFocus';
 
 interface RecordScreenProps {
   onClose: () => void;
-  onSave: (type: RecordType, content: string, caption?: string, videoKey?: string) => void;
+  onSave: (type: RecordType, content: string, caption?: string, media?: RecordMedia) => void;
 }
 
 type Mode = '영상' | '사진' | '음성' | '글';
 const MODES: Mode[] = ['영상', '사진', '음성', '글'];
-// 사진 모드는 촬영(photo)과 앨범 선택(meme) 두 갈래 — 실제 타입은 소스에 따라 갈린다
 const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' };
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
-function compressImage(file: File): Promise<string> {
-  return new Promise(resolve => {
+interface PreparedImage {
+  preview: string;
+  blob: Blob;
+}
+
+function prepareImage(file: File): Promise<PreparedImage> {
+  return new Promise((resolve, reject) => {
     const img = new window.Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const max = 900;
+      const max = 1600;
       const ratio = Math.min(max / img.width, max / img.height, 1);
       const canvas = document.createElement('canvas');
-      canvas.width = img.width * ratio;
-      canvas.height = img.height * ratio;
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
       canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.78));
+      canvas.toBlob(blob => {
+        URL.revokeObjectURL(url);
+        if (!blob) {
+          reject(new Error('사진을 처리하지 못했어요.'));
+          return;
+        }
+        const previewCanvas = document.createElement('canvas');
+        const previewRatio = Math.min(360 / canvas.width, 360 / canvas.height, 1);
+        previewCanvas.width = Math.max(1, Math.round(canvas.width * previewRatio));
+        previewCanvas.height = Math.max(1, Math.round(canvas.height * previewRatio));
+        previewCanvas.getContext('2d')!.drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
+        resolve({ preview: previewCanvas.toDataURL('image/jpeg', 0.68), blob });
+      }, 'image/jpeg', 0.82);
+    };
+    img.onerror = () => {
       URL.revokeObjectURL(url);
+      reject(new Error('지원하지 않는 사진 형식이에요.'));
     };
     img.src = url;
   });
@@ -65,7 +87,8 @@ function videoThumbnail(file: File): Promise<string> {
   });
 }
 
-function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, key: string) => void }) {
+function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: RecordMedia) => void }) {
+  const maxRecordingSeconds = 30;
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -107,7 +130,11 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, key: string
     mr.start();
     recorderRef.current = mr;
     setSeconds(0);
-    timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
+    timerRef.current = setInterval(() => setSeconds(current => {
+      const next = current + 1;
+      if (next >= maxRecordingSeconds) queueMicrotask(stopRecording);
+      return next;
+    }), 1000);
     setPhase('recording');
   }
 
@@ -117,14 +144,19 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, key: string
     if (!mr) return;
     setPhase('processing');
     mr.onstop = async () => {
-      const mimeType = mr.mimeType || 'video/webm';
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      const blob = new Blob(chunksRef.current, { type: mimeType });
-      const file = new File([blob], `video.${ext}`, { type: mimeType });
-      const videoKey = `video_${Date.now()}`;
-      const [thumb] = await Promise.all([videoThumbnail(file), saveVideoToIDB(videoKey, file)]);
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      onCapture(thumb, videoKey);
+      try {
+        const mimeType = mr.mimeType || 'video/webm';
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        await assertCaptureCapacity('video', blob);
+        const file = new File([blob], `video.${ext}`, { type: mimeType });
+        const videoKey = createStableId('media');
+        const [thumb] = await Promise.all([videoThumbnail(file), saveVideoToIDB(videoKey, file)]);
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        onCapture(thumb, { key: videoKey, type: file.type, size: file.size });
+      } catch {
+        setPhase('error');
+      }
     };
     mr.stop();
   }
@@ -191,6 +223,7 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, key: string
         <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
           <button
             onClick={phase === 'preview' ? startRecording : stopRecording}
+            aria-label={phase === 'preview' ? '영상 녹화 시작' : '영상 녹화 중지'}
             style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }}
           >
             {phase === 'preview'
@@ -204,9 +237,6 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, key: string
   );
 }
 
-// 그림일기 줄노트에 들어가는 최대치 (7줄 × ~13자) — 넘으면 영상에서 잘린다
-const TEXT_MAX = 90;
-
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
   return (
@@ -214,14 +244,15 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
       <div style={{ flex: 1, borderRadius: 20, background: 'rgba(255,255,255,0.06)', padding: 18 }}>
         <textarea
           value={text}
-          onChange={e => setText(e.target.value.slice(0, TEXT_MAX))}
+          maxLength={2000}
+          onChange={e => setText(e.target.value)}
           placeholder="지금 이 순간을 짧게 남겨보세요"
           autoFocus
           style={{ width: '100%', height: '100%', background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 16, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ ...MONO, fontSize: 11, color: text.length >= TEXT_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{TEXT_MAX}자</div>
+        <div style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{text.length}자</div>
         <button
           onClick={() => text.trim() && onSave(text.trim())}
           disabled={!text.trim()}
@@ -237,7 +268,8 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
 // 음성 메모는 WAV(PCM)로 녹음한다.
 // iOS MediaRecorder가 만드는 audio/mp4는 사파리 자신의 decodeAudioData조차
 // 거부하는 경우가 있어 영상 믹싱이 조용히 실패한다. WAV는 어디서나 디코딩된다.
-function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
+function AudioRecordMode({ onCapture }: { onCapture: (blob: Blob) => void }) {
+  const maxRecordingSeconds = 60;
   const [phase, setPhase] = useState<'idle' | 'recording'>('idle');
   const [seconds, setSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -273,7 +305,11 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
       streamRef.current = stream;
       setPhase('recording');
       setSeconds(0);
-      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
+      timerRef.current = setInterval(() => setSeconds(current => {
+        const next = current + 1;
+        if (next >= maxRecordingSeconds) queueMicrotask(stop);
+        return next;
+      }), 1000);
     } catch {
       alert('마이크 접근 권한이 필요해요.\n브라우저 설정에서 허용해주세요.');
     }
@@ -311,9 +347,7 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
       v.setInt16(44 + i * 2, s * 0x7FFF, true);
     }
 
-    const reader = new FileReader();
-    reader.onload = () => onCapture(reader.result as string);
-    reader.readAsDataURL(new Blob([wav], { type: 'audio/wav' }));
+    onCapture(new Blob([wav], { type: 'audio/wav' }));
   }
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
@@ -334,7 +368,7 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
               {seconds >= 5 ? '영상에는 앞 5초만 담겨요' : '녹음 중'}
             </div>
           </div>
-          <button onClick={stop} style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
+          <button onClick={stop} aria-label="음성 녹음 중지" style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
             <div style={{ width: 22, height: 22, borderRadius: 4, background: '#E5533C' }} />
           </button>
         </>
@@ -344,7 +378,7 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
             마이크로 이 순간을<br />짧게 남겨보세요
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>하루 요약 영상에는 앞 5초만 담겨요</div>
           </div>
-          <button onClick={start} style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
+          <button onClick={start} aria-label="음성 녹음 시작" style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E5533C' }} />
           </button>
         </>
@@ -353,9 +387,6 @@ function AudioRecordMode({ onCapture }: { onCapture: (url: string) => void }) {
   );
 }
 
-// 사진/영상 자막은 영상에서 한 줄이라 이 이상은 화면을 벗어난다
-const CAPTION_MAX = 20;
-
 function CaptionStep({ content, type, onSave, onRetake }: {
   content: string;
   type: RecordType;
@@ -363,7 +394,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
   onRetake?: () => void;
 }) {
   const [text, setText] = useState('');
-  const isMedia = type === 'photo' || type === 'video' || type === 'meme';
+  const isMedia = type === 'photo' || type === 'video';
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 14, minHeight: 0, overflowY: 'auto' }}>
@@ -383,7 +414,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
               onClick={onRetake}
               style={{ position: 'absolute', top: 10, right: 10, padding: '5px 12px', borderRadius: 50, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
             >
-              {type === 'meme' ? '다시 고르기' : '다시 찍기'}
+              다시 찍기
             </button>
           )}
         </div>
@@ -398,18 +429,12 @@ function CaptionStep({ content, type, onSave, onRetake }: {
       <div style={{ flex: 1, borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 16, minHeight: 100 }}>
         <textarea
           value={text}
-          onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}
-          placeholder={type === 'meme' ? '딱 이 기분이었음 ㅋㅋ' : '점심 도시락, 오후 산책...'}
+          maxLength={500}
+          onChange={e => setText(e.target.value)}
+          placeholder="점심 도시락, 오후 산책..."
           autoFocus
           style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 15, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, paddingLeft: 4 }}>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-          {type === 'meme' ? '이 문구가 하루 요약 영상에 손글씨로 들어가요' : ''}
-        </div>
-        <div style={{ ...MONO, fontSize: 11, color: text.length >= CAPTION_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{CAPTION_MAX}자</div>
       </div>
 
       {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
@@ -426,9 +451,10 @@ function CaptionStep({ content, type, onSave, onRetake }: {
 }
 
 export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   const { currentSlot: slot, settings } = useApp();
   const defaultMode: Mode = settings.captureMode === 'fixed'
-    ? ((Object.entries(MODE_TYPE).find(([, v]) => v === settings.defaultType)?.[0] as Mode) ?? '글')
+    ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '글')
     : '글';
 
   const [mode, setMode] = useState<Mode>(defaultMode);
@@ -436,41 +462,77 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const [capturedContent, setCapturedContent] = useState<string | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const albumInputRef = useRef<HTMLInputElement>(null);
-  const photoSourceRef = useRef<'camera' | 'album'>('camera');
-  const pendingVideoKeyRef = useRef<string | null>(null);
+  const pendingMediaRef = useRef<RecordMedia | null>(null);
+  const pendingBlobRef = useRef<Blob | null>(null);
+  const temporaryUrlRef = useRef<string | null>(null);
   const [retakeKey, setRetakeKey] = useState(0);
+
+  useEffect(() => () => {
+    if (temporaryUrlRef.current) URL.revokeObjectURL(temporaryUrlRef.current);
+    const media = pendingMediaRef.current;
+    if (media) void deleteVideoFromIDB(media.key);
+  }, []);
+
+  function clearPendingMedia() {
+    if (temporaryUrlRef.current) {
+      URL.revokeObjectURL(temporaryUrlRef.current);
+      temporaryUrlRef.current = null;
+    }
+    if (pendingMediaRef.current) {
+      void deleteVideoFromIDB(pendingMediaRef.current.key);
+      pendingMediaRef.current = null;
+    }
+    pendingBlobRef.current = null;
+  }
 
   async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      alert('사진이 너무 커요. 25MB 이하 파일을 선택해주세요.');
+      return;
+    }
     setLoading(true);
-    const compressed = await compressImage(file);
-    setLoading(false);
-    setCapturedContent(compressed);
+    try {
+      const prepared = await prepareImage(file);
+      await assertCaptureCapacity('photo', prepared.blob);
+      pendingBlobRef.current = prepared.blob;
+      setCapturedContent(prepared.preview);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '사진을 처리하지 못했어요.');
+    } finally {
+      setLoading(false);
+    }
     e.target.value = '';
   }
 
   function switchMode(m: Mode) {
+    clearPendingMedia();
     setMode(m);
     setCapturedContent(null);
-    pendingVideoKeyRef.current = null;
+    if (m === '사진') photoInputRef.current?.click();
   }
-
-  // 사진 모드의 실제 타입 — 촬영은 photo(풀스크린 장면), 앨범 선택은 meme(폴라로이드/스크랩북 장면)
-  const photoType: RecordType = mode === '사진' && photoSourceRef.current === 'album' ? 'meme' : MODE_TYPE[mode];
 
   function retake() {
+    clearPendingMedia();
     setCapturedContent(null);
-    if (mode === '사진') {
-      if (photoSourceRef.current === 'album') albumInputRef.current?.click();
-      else photoInputRef.current?.click();
-    } else if (mode === '영상') setRetakeKey(k => k + 1);
+    if (mode === '사진') photoInputRef.current?.click();
+    else if (mode === '영상') setRetakeKey(k => k + 1);
   }
 
-  function handleCaptionSave(caption: string) {
-    onSave(photoType, capturedContent!, caption || undefined, pendingVideoKeyRef.current ?? undefined);
-    pendingVideoKeyRef.current = null;
+  async function handleCaptionSave(caption: string) {
+    const type = MODE_TYPE[mode];
+    let media = pendingMediaRef.current;
+    if (!media && pendingBlobRef.current) {
+      const blob = pendingBlobRef.current;
+      await assertCaptureCapacity(type === 'audio' ? 'audio' : 'photo', blob);
+      const key = createStableId('media');
+      await saveVideoToIDB(key, blob);
+      media = { key, type: blob.type, size: blob.size };
+    }
+    pendingMediaRef.current = null;
+    pendingBlobRef.current = null;
+    onSave(type, type === 'audio' ? '' : capturedContent!, caption || undefined, media ?? undefined);
   }
 
   function renderContent() {
@@ -478,7 +540,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       return (
         <CaptionStep
           content={capturedContent}
-          type={photoType}
+          type={MODE_TYPE[mode]}
           onSave={handleCaptionSave}
           onRetake={mode !== '음성' ? retake : undefined}
         />
@@ -492,48 +554,44 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       );
     }
     if (mode === '글') return <TextRecordMode onSave={c => onSave('text', c)} />;
-    if (mode === '음성') return <AudioRecordMode onCapture={setCapturedContent} />;
+    if (mode === '음성') return <AudioRecordMode onCapture={blob => {
+      clearPendingMedia();
+      pendingBlobRef.current = blob;
+      const url = URL.createObjectURL(blob);
+      temporaryUrlRef.current = url;
+      setCapturedContent(url);
+    }} />;
     if (mode === '영상') return (
       <CameraVideoMode
         key={retakeKey}
-        onCapture={(thumb, key) => { pendingVideoKeyRef.current = key; setCapturedContent(thumb); }}
+        onCapture={(thumb, media) => { pendingMediaRef.current = media; setCapturedContent(thumb); }}
       />
     );
 
-    // 사진 — 촬영 / 앨범 선택
+    // 사진 — 카메라 미실행 상태
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 22px 30px' }}>
-        <div
-          onClick={() => { photoSourceRef.current = 'camera'; photoInputRef.current?.click(); }}
-          style={{ flex: 1.4, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, cursor: 'pointer' }}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
+        <button
+          type="button"
+          onClick={() => photoInputRef.current?.click()}
+          aria-label="사진 촬영하기"
+          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}
         >
-          <div style={{ width: 60, height: 60, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 16, height: 16, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
+          <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
           </div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>지금 촬영</div>
-        </div>
-        <div
-          onClick={() => { photoSourceRef.current = 'album'; albumInputRef.current?.click(); }}
-          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}
-        >
-          <div style={{ fontSize: 32 }}>🖼️</div>
-          <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
-            앨범에서 선택
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>저장해둔 사진이나 짤도 좋아요</div>
-          </div>
-        </div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
+        </button>
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="새 기록" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
-      {/* 앨범 선택은 capture 속성 없이 — iOS에서 사진 보관함이 열린다 */}
-      <input ref={albumInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
 
       <div style={{ padding: '58px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>
+        <button onClick={onClose} aria-label="기록 화면 닫기" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>
         <div style={{ ...MONO, fontSize: 11, letterSpacing: '1px', color: 'rgba(255,255,255,0.6)' }}>SLOT {slot}</div>
         <div style={{ width: 34 }} />
       </div>

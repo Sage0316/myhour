@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
-import { useApp } from '../context';
-import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS, groupRecordsBySlot } from '../store';
+import { useState } from 'react';
+import { useApp } from '../appContext';
+import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS } from '../store';
 import type { MyRecord } from '../store';
-import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
+import { useDialogFocus } from '../accessibility/useDialogFocus';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
@@ -25,32 +25,20 @@ function AudioBars() {
   );
 }
 
-function RecordTile({ record, onLongPress }: { record: MyRecord; onLongPress: () => void }) {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mediaSrc = useMediaSrc(record);
-  const hasMedia = !!mediaSrc;
-
-  function handlePointerDown() {
-    timerRef.current = setTimeout(() => { navigator.vibrate?.(30); onLongPress(); }, 500);
-  }
-  function handlePointerUp() {
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-  }
+function RecordTile({ record, onDelete }: { record: MyRecord; onDelete: () => void }) {
+  const hasMedia = record.content.startsWith('data:');
 
   const bg = TYPE_COLORS[record.type];
 
   return (
     <div
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
-      onPointerCancel={handlePointerUp}
+      data-testid={`record-${record.id}`}
       style={{ display: 'flex', flexDirection: 'column', gap: 7, userSelect: 'none', WebkitUserSelect: 'none' }}
     >
       {/* Thumbnail */}
       <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {(record.type === 'photo' || record.type === 'video' || record.type === 'meme') && hasMedia ? (
-          <img src={mediaSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        {(record.type === 'photo' || record.type === 'video') && hasMedia ? (
+          <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : record.type === 'text' ? (
           <div style={{ padding: '14px 12px', fontSize: 12, lineHeight: 1.55, color: 'rgba(26,26,26,0.75)', overflow: 'hidden', maxHeight: '100%' }}>
             {record.content}
@@ -72,6 +60,14 @@ function RecordTile({ record, onLongPress }: { record: MyRecord; onLongPress: ()
         <div style={{ position: 'absolute', top: 9, left: 9, ...MONO, fontSize: 10, color: record.type === 'text' ? 'rgba(26,26,26,0.5)' : 'rgba(255,255,255,0.9)', background: record.type === 'text' ? 'transparent' : 'rgba(0,0,0,0.28)', borderRadius: 6, padding: '2px 5px' }}>
           {record.slotTime}
         </div>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`${record.slotTime} ${TYPE_LABELS[record.type]} 기록 삭제`}
+          style={{ position: 'absolute', top: 7, right: 7, width: 30, height: 30, borderRadius: '50%', border: 0, background: 'rgba(0,0,0,0.45)', color: '#fff', cursor: 'pointer' }}
+        >
+          ⋯
+        </button>
       </div>
 
       {/* Label */}
@@ -118,12 +114,21 @@ function EmptyTile({ slot, isCurrent }: { slot: string; isCurrent: boolean }) {
 }
 
 export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps) {
-  const { records, slots, currentSlot, deleteRecord, isWrapped, settings } = useApp();
+  const { records, slots, currentSlot, deleteRecord, settings } = useApp();
   const sessionDate = getSessionDate(settings.startTime);
   const { dateShort, weekdayEn } = getDateStrings(sessionDate);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const deleteDialogRef = useDialogFocus<HTMLDivElement>(
+    pendingDelete !== null,
+    () => setPendingDelete(null),
+  );
 
-  const slotMap = groupRecordsBySlot(records, slots, settings.interval, settings.startTime);
+  const slotMap = new Map<string, MyRecord[]>();
+  for (const record of records) {
+    const group = slotMap.get(record.slotId) ?? [];
+    group.push(record);
+    slotMap.set(record.slotId, group);
+  }
   const currentIdx = slots.indexOf(currentSlot);
   const visibleSlots = slots.slice(0, currentIdx + 1);
 
@@ -156,10 +161,16 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 12px' }}>
             {visibleSlots.map(slot => {
-              const record = slotMap.get(slot);
+              const slotRecords = slotMap.get(slot) ?? [];
               const isCurrent = slot === currentSlot;
-              if (record) return <RecordTile key={slot} record={record} onLongPress={() => setPendingDelete(record.id)} />;
-              return <EmptyTile key={slot} slot={slot} isCurrent={!isWrapped && isCurrent} />;
+              if (slotRecords.length > 0) {
+                return slotRecords
+                  .sort((left, right) => left.capturedAt.localeCompare(right.capturedAt))
+                  .map(record => (
+                    <RecordTile key={record.id} record={record} onDelete={() => setPendingDelete(record.id)} />
+                  ));
+              }
+              return <EmptyTile key={slot} slot={slot} isCurrent={isCurrent} />;
             })}
           </div>
         )}
@@ -169,7 +180,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
 
       {records.length > 0 && (
         <div style={{ padding: '10px 22px 12px', background: '#F7F7F5' }}>
-          <button onClick={onWrapUp} style={{ width: '100%', height: 50, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+          <button data-modal-trigger="wrapup" onClick={onWrapUp} style={{ width: '100%', height: 50, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
             하루 마감하고 영상 만들기
           </button>
         </div>
@@ -179,14 +190,20 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
 
       {pendingDelete && (
         <div
+          role="presentation"
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}
           onClick={() => setPendingDelete(null)}
         >
           <div
+            ref={deleteDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-record-title"
+            tabIndex={-1}
             onClick={e => e.stopPropagation()}
             style={{ width: '100%', background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px 22px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}
           >
-            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.45)', textAlign: 'center', marginBottom: 4 }}>이 기록을 삭제할까요?</div>
+            <div id="delete-record-title" style={{ fontSize: 13, color: 'rgba(26,26,26,0.45)', textAlign: 'center', marginBottom: 4 }}>이 기록을 삭제할까요?</div>
             <button onClick={confirmDelete} style={{ width: '100%', height: 52, borderRadius: 50, background: '#E5533C', color: '#fff', fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
               삭제하기
             </button>

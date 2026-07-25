@@ -5,15 +5,46 @@ compatibility_date = "2026-07-01"
 # 배포 전 `npx wrangler kv namespace create SUBS` 실행 후 나온 id로 교체
 [[kv_namespaces]]
 binding = "SUBS"
-id = "7c47c7793fdd44d19f7476317399b038"
+id = "REPLACE_WITH_KV_ID"
+
+[[ratelimits]]
+name = "PUSH_RATE_LIMITER"
+namespace_id = "1002" # 계정 안에서 고유한 양의 정수로 변경
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
 
 [triggers]
 crons = ["*/30 * * * *"]
 
 [vars]
+ALLOWED_ORIGINS = "https://sage0316.github.io"
+PUSH_ENDPOINT_HOSTS = "fcm.googleapis.com,updates.push.services.mozilla.com,web.push.apple.com"
 VAPID_SUBJECT = "jihyeyun0316@gmail.com"
 VAPID_PUBLIC_KEY = "BHkes45_SwI_Bp-hKFFAPy1pAKx_2NjCXpQjucklSjNwrEEm--ZhR4cMdb1ULOBLLLeUygBp6wR5uU0VFJlf5Ys"
 
 # 비밀키는 커밋하지 말고 시크릿으로:
 #   npx wrangler secret put VAPID_PRIVATE_JWK   (scratchpad의 vapid-keys.json에서 privateJwk 값 붙여넣기)
-#   npx wrangler secret put ANTHROPIC_API_KEY   (AI 분석 무료 체험 프록시용 — /director 엔드포인트)
+#   npx wrangler secret put INSTALL_TOKEN_SECRET
+
+[env.preview]
+name = "hakku-push-preview"
+
+[[env.preview.kv_namespaces]]
+binding = "SUBS"
+id = "REPLACE_WITH_PREVIEW_KV_ID"
+
+[[env.preview.ratelimits]]
+name = "PUSH_RATE_LIMITER"
+namespace_id = "1102"
+
+  [env.preview.ratelimits.simple]
+  limit = 30
+  period = 60
+
+[env.preview.vars]
+ALLOWED_ORIGINS = "https://preview.example.com"
+PUSH_ENDPOINT_HOSTS = "fcm.googleapis.com,updates.push.services.mozilla.com,web.push.apple.com"
+VAPID_SUBJECT = "jihyeyun0316@gmail.com"
+VAPID_PUBLIC_KEY = "BHkes45_SwI_Bp-hKFFAPy1pAKx_2NjCXpQjucklSjNwrEEm--ZhR4cMdb1ULOBLLLeUygBp6wR5uU0VFJlf5Ys"

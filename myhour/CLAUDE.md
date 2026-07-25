@@ -1,8 +1,6 @@
-# MYHOUR 프로젝트
+# 하꾸 개발 메모
 
-## 개요
-하루를 기록하고 영상으로 마무리하는 iOS 스타일 PWA. React + TypeScript + Vite.
-배포: https://sage0316.github.io/myhour/
+하꾸(hakku, 하루 꾸미기)는 React 19 + TypeScript + Vite 8 기반의 로컬 우선 PWA입니다. GitHub Pages 호환을 위해 공개 경로와 Vite base는 `/myhour/`를 유지합니다.
 
 **로고(2026-07-22 확정)**: `public/brand/hakku-wordmark.svg`(흰 배경, 가로 한 줄 "HAKKU") / `hakku-wordmark-transparent.svg`(투명 배경) / `hakku-icon-mark.svg`(정사각형, "HA"/"KKU" 두 줄 — 앱 아이콘용). 순수 검정(#000000, 절대 `#1A1A1A` 같은 따뜻한 회색 쓰지 말 것 — 크림 배경과 동시대비로 갈색/똥색처럼 보임) 두꺼운 사각 블록을 이어붙여 만든 워드마크, 획마다 삐뚤빼뚤 지터(고정 시드라 항상 같은 모양). 정사각형 아이콘 버전만 글자당 한 획씩 **하늘색(#3FA0E0, "하꾸=하늘" 연상)** 포인트 — 가로 워드마크는 포인트 컬러 없이 순수 검정 단색. **주황(#D9743F)은 시그니처 컬러 아님** — scenes.ts의 drawMemeScene 기본 인자값일 뿐, 사용자가 정한 적 없음. 홈 화면 앱 아이콘(`favicon.svg`/`icon-192.png`/`icon-512.png`/`apple-touch-icon.png`) 전부 이 정사각형 마크로 교체 완료 — 이전엔 브랜드와 무관한 보라색 추상 마크(예전 템플릿 잔재)였음. maskable 안전영역(중심 반경 40%) 고려해 콘텐츠를 캔버스의 60%로 넉넉히 여백.
 
@@ -26,17 +24,21 @@
 - sessionDate: startTime 이전이면 전날 날짜 (getSessionDate 참조)
 - 아카이브: 마감할 때마다 고유 id로 누적 (같은 날 여러 개 가능), 카드 ✕로 삭제 가능
 - 원본 정리 정책: 영상 완성 시 미디어 원본(사진/음성/클립) 즉시 정리(trimRecords), 영상 없이 마감한 항목은 3일 후 자동 정리(sweepArchive). 글 텍스트는 남음
+## 핵심 원칙
 
-## 배포 방법
-이전 JS 번들을 지우면 캐시된 옛 index.html이 404를 맞아 하얀 화면이 되므로,
-gh-pages를 clone한 뒤 덮어써서 이전 assets를 유지한다 (force push 금지).
+- 신규 메타데이터는 `hakku_*` 키와 Zod 스키마 v2를 사용하되, 기존 `myhour_*` 데이터는 읽기 전용 마이그레이션으로 보존합니다.
+- 설정·현재 기록·아카이브는 Repository, 모든 미디어는 `hakku_local_v2` IndexedDB를 사용합니다.
+- 영상 생성이나 아카이브 완료 뒤에도 원본 기록을 자동 삭제하지 않습니다.
+- AI 공급자 키와 VAPID 비밀키를 브라우저 또는 저장소에 넣지 않습니다.
+- AI는 명시적 동의 후 텍스트·캡션만 Worker로 보내며 미디어 원본은 전송하지 않습니다.
+- 외부 배포와 GitHub push는 별도 사용자 승인 없이 실행하지 않습니다.
+
+## 검사
+
 ```bash
-cd /home/claude/repo/myhour
-npm run build
-cd /tmp && rm -rf deploy
-git clone -q --depth 1 -b gh-pages <origin-url> deploy
-cp -r /home/claude/repo/myhour/dist/. /tmp/deploy/
-cd /tmp/deploy && git add -A && git commit -q -m "Deploy" && git push -q origin gh-pages
+pnpm install --frozen-lockfile
+pnpm check
+pnpm test:e2e
 ```
 
 ## 이모지 규칙 (2026-07-25 정리)
@@ -83,3 +85,16 @@ iOS 16.4+ PWA 푸시. 워커 배포됨: **https://myhour-push.sage0316.workers.d
 
 ## 다음 과제 후보
 - 앱스토어 출시 준비: Capacitor 래핑, API 프록시 서버(푸시 워커에 합치면 됨), 백업 강화, 과금 모델
+`pnpm check`는 zero-warning lint, 단위/백업 테스트, AI·Push Worker 인증 테스트, Web Push 암호화 왕복, 타입 검사와 프로덕션 빌드를 실행합니다.
+
+## 주요 위치
+
+- `src/domain`, `repositories`, `persistence`: 데이터 모델과 저장
+- `src/media`, `services`: 캡처·정리·영상 마감
+- `src/backup`: SHA-256 매니페스트 전체 백업/원자적 복원
+- `ai-server`: 보호된 AI Worker
+- `push-server`: 인증된 Web Push Worker
+- `public/_headers`, `public/sw.js`: 정적 보안 정책과 오프라인 셸
+- 저장소 루트의 `PRIVACY.md`, `SECURITY.md`, `OPERATIONS.md`: 출시·운영 기준
+
+Worker URL과 VAPID 공개키는 `.env.example`의 빌드 변수로 주입합니다. Worker의 provider/VAPID/설치 토큰 비밀값은 `wrangler secret`으로만 설정합니다.

@@ -1,0 +1,46 @@
+name: Deploy GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful main-branch CI run ID containing the hakku-dist artifact
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate run ID
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+      - name: Download immutable verified build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name hakku-dist --dir release-dist
+      - name: Verify SHA-256 manifest
+        working-directory: release-dist
+        run: sha256sum --check SHA256SUMS
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: release-dist
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

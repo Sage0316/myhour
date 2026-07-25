@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated, hasMedia } from '../store';
+import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
-import { useMediaSrc } from '../useMediaSrc';
 import { generateVideo } from '../videoGenerator';
 import TabBar from '../components/TabBar';
+import { useDialogFocus } from '../accessibility/useDialogFocus';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
 interface ArchiveScreenProps {
   onTabChange: (tab: Tab) => void;
+  initialArchiveId?: string | null;
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
@@ -25,13 +26,12 @@ function monthLabel(iso: string) {
 
 function RecordThumb({ record }: { record: MyRecord }) {
   const bg = TYPE_COLORS[record.type];
-  const mediaSrc = useMediaSrc(record);
-  const hasMedia = !!mediaSrc;
+  const hasMedia = record.content.startsWith('data:');
 
-  if ((record.type === 'photo' || record.type === 'meme') && hasMedia) {
+  if (record.type === 'photo' && hasMedia) {
     return (
       <img
-        src={mediaSrc}
+        src={record.content}
         alt=""
         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
       />
@@ -40,7 +40,7 @@ function RecordThumb({ record }: { record: MyRecord }) {
   if (record.type === 'video' && hasMedia) {
     return (
       <>
-        <img src={mediaSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'blur(1px)' }} />
+        <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'blur(1px)' }} />
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)' }}>
           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: 0, height: 0, borderLeft: '8px solid #1A1A1A', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', marginLeft: 2 }} />
@@ -67,23 +67,15 @@ function RecordThumb({ record }: { record: MyRecord }) {
   );
 }
 
-function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: Blob | null; filename: string; onClose: () => void }) {
-  const noCallout: React.CSSProperties = { WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' };
-
-  // mp4로 만든 뒤엔 navigator.share(files)가 iOS에서 한 번에 시스템 공유 시트(동영상 저장 포함)를
-  // 띄워준다 — 이전엔 webm이라 공유 자체가 안 되는 형식이었던 게 진짜 원인이었다.
-  function handleSave(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (!blob) return;
-    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
-    const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/webm' });
-    if (navigator.canShare?.({ files: [file] })) {
-      navigator.share({ files: [file] }).catch(() => { /* 사용자가 공유 시트를 취소한 경우 등 — 조용히 무시 */ });
-    }
-  }
-
+function VideoFullscreen({ url, onClose }: { url: string; onClose: () => void }) {
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="생성된 하루 영상"
+      tabIndex={-1}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={onClose}
     >
@@ -92,7 +84,7 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
         controls
         autoPlay
         playsInline
-        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', ...noCallout }}
+        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
         onClick={e => e.stopPropagation()}
       />
       <button
@@ -104,22 +96,9 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
           border: '1px solid rgba(255,255,255,0.3)',
           color: '#fff', fontSize: 16, fontWeight: 500,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', lineHeight: 1, ...noCallout,
+          cursor: 'pointer', lineHeight: 1,
         }}
       >✕</button>
-      <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20 }}>
-        <button
-          onClick={handleSave}
-          disabled={!blob}
-          style={{
-            height: 40, padding: '0 16px', borderRadius: 50,
-            background: 'rgba(255,255,255,0.9)', border: 'none',
-            color: '#1A1A1A', fontSize: 14, fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: blob ? 'pointer' : 'default', opacity: blob ? 1 : 0.5, fontFamily: 'Inter, sans-serif', ...noCallout,
-          }}
-        >다운로드</button>
-      </div>
     </div>
   );
 }
@@ -127,11 +106,23 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
 // 아카이브 항목의 개별 기록을 열람하는 시트 — 영상이 만들어져도 원본 기록은 남는다
 function DetailRow({ record }: { record: MyRecord }) {
   const [clipUrl, setClipUrl] = useState<string | null>(null);
-  const mediaSrc = useMediaSrc(record);
   useEffect(() => {
-    if (record.type === 'video' && record.videoKey) {
-      loadVideoFromIDB(record.videoKey).then(setClipUrl);
-    }
+    const mediaKey = record.mediaId ?? record.videoKey;
+    if (!mediaKey) return;
+    let active = true;
+    let createdUrl: string | null = null;
+    loadVideoFromIDB(mediaKey).then(url => {
+      if (!active) {
+        if (url) URL.revokeObjectURL(url);
+        return;
+      }
+      createdUrl = url;
+      setClipUrl(url);
+    });
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
   }, [record]);
 
   return (
@@ -143,22 +134,22 @@ function DetailRow({ record }: { record: MyRecord }) {
       {record.type === 'text' && (
         <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{record.content}</div>
       )}
-      {(record.type === 'photo' || record.type === 'meme') && (
-        mediaSrc
-          ? <img src={mediaSrc} alt="" style={{ width: '100%', borderRadius: 10, display: 'block' }} />
-          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+      {record.type === 'photo' && (
+        clipUrl || record.content.startsWith('data:')
+          ? <img src={clipUrl ?? record.content} alt={record.caption ?? `${record.slotTime} 사진 기록`} style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
       )}
       {record.type === 'audio' && (
-        mediaSrc
-          ? <audio src={mediaSrc} controls style={{ width: '100%', height: 36 }} />
-          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+        clipUrl || record.content.startsWith('data:')
+          ? <audio src={clipUrl ?? record.content} controls style={{ width: '100%', height: 36 }} />
+          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
       )}
       {record.type === 'video' && (
         clipUrl
           ? <video src={clipUrl} controls playsInline style={{ width: '100%', borderRadius: 10, display: 'block' }} />
-          : mediaSrc
-            ? <img src={mediaSrc} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
-            : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
+          : record.content.startsWith('data:')
+            ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
+            : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
       )}
       {record.caption && (
         <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>{record.caption}</div>
@@ -169,8 +160,14 @@ function DetailRow({ record }: { record: MyRecord }) {
 
 function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () => void }) {
   const sorted = [...entry.records].sort((a, b) => a.createdAt - b.createdAt);
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${dateLabel(entry.date)}의 기록`}
+      tabIndex={-1}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
       onClick={onClose}
     >
@@ -182,7 +179,10 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(26,26,26,0.15)', margin: '0 auto 14px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 16, fontWeight: 600 }}>{dateLabel(entry.date)}의 기록</div>
-            <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{entry.records.length}개</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{entry.records.length}개</div>
+              <button type="button" onClick={onClose} aria-label="기록 상세 닫기" style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)' }}>✕</button>
+            </div>
           </div>
         </div>
         <div style={{ overflowY: 'auto', padding: '12px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -193,27 +193,25 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
   );
 }
 
-function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () => void }) {
+function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveEntry; onDelete: () => void; initialOpen?: boolean }) {
   const mood = guessMood(entry.records);
-  // 마감 때 영상에 들어간 제목이 있으면 그걸 쓴다 (구버전 항목엔 없어서 자동 생성으로 폴백)
-  const title = entry.title?.trim() || generateTitle(entry.records);
+  const title = generateTitle(entry.records);
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
+  const [showDetail, setShowDetail] = useState(initialOpen);
   const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadVideoBlobFromIDB(archiveVideoKey(entry)).then(blob => {
-      if (blob) { setVideoUrl(URL.createObjectURL(blob)); setVideoBlob(blob); setGenState('done'); }
+    loadVideoFromIDB(archiveVideoKey(entry)).then(url => {
+      if (url) { setVideoUrl(url); setGenState('done'); }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.date]);
 
-  const lead = entry.records.find(r => (r.type === 'photo' || r.type === 'meme') && hasMedia(r))
-    ?? entry.records.find(r => r.type === 'video' && hasMedia(r))
+  const lead = entry.records.find(r => r.type === 'photo' && r.content.startsWith('data:'))
+    ?? entry.records.find(r => r.type === 'video' && r.content.startsWith('data:'))
     ?? entry.records.find(r => r.type === 'text')
     ?? entry.records[0];
 
@@ -229,8 +227,8 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
       const blob = await generateVideo(entry.records, dateStr, (pct) => setProgress(pct));
       await saveVideoToIDB(archiveVideoKey(entry), blob);
       markArchiveGenerated(entry);
-      setVideoUrl(URL.createObjectURL(blob));
-      setVideoBlob(blob);
+      const url = URL.createObjectURL(blob);
+      setVideoUrl(url);
       setGenState('done');
       setFullscreen(true);
     } catch (e) {
@@ -242,7 +240,7 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
   return (
     <>
       {fullscreen && videoUrl && (
-        <VideoFullscreen url={videoUrl} blob={videoBlob} filename={`하꾸-${entry.date}`} onClose={() => setFullscreen(false)} />
+        <VideoFullscreen url={videoUrl} onClose={() => setFullscreen(false)} />
       )}
       {showDetail && (
         <DayDetailSheet entry={entry} onClose={() => setShowDetail(false)} />
@@ -285,14 +283,16 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
           )}
 
           {genState === 'done' && videoUrl && (
-            <div
+            <button
+              type="button"
+              aria-label="생성된 영상 전체 화면으로 보기"
               onClick={() => setFullscreen(true)}
-              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.22)', cursor: 'pointer' }}
+              style={{ position: 'absolute', inset: 0, width: '100%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.22)', cursor: 'pointer' }}
             >
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 0, height: 0, borderLeft: '13px solid #1A1A1A', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
               </div>
-            </div>
+            </button>
           )}
 
           {genState === 'generating' && (
@@ -305,7 +305,13 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
           )}
         </div>
 
-        <div onClick={() => setShowDetail(true)} style={{ cursor: 'pointer' }}>
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowDetail(true)}
+            aria-label={`${dateLabel(entry.date)} 기록 보기`}
+            style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter, sans-serif' }}
+          >
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.5)' }}>{dateLabel(entry.date)}</span>
             <span style={{
@@ -323,33 +329,14 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
           </div>
 
           <div style={{ fontSize: 10, color: 'rgba(26,26,26,0.35)', marginTop: 3 }}>기록 보기 ›</div>
+          </button>
 
           {genState === 'idle' && !entry.trimmed && (
-            <button onClick={e => { e.stopPropagation(); handleGenerate(); }} style={{
+            <button onClick={handleGenerate} style={{
               marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
               background: '#1A1A1A', color: '#fff', border: 'none',
               fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
             }}>영상 생성하기</button>
-          )}
-
-          {genState === 'done' && (
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                // 영상 완성 시 사진/음성/클립 원본은 이미 정리되므로, 그런 기록이 있으면
-                // 다시 만들 때 그 자리가 빈 카드로 나온다는 걸 미리 경고한다
-                const hasMedia = entry.records.some(r => r.type !== 'text');
-                const msg = hasMedia
-                  ? '영상을 다시 만들까요?\n사진·음성·영상 원본은 이미 정리돼서, 다시 만들면 그 자리는 빈 카드로 나와요.'
-                  : '영상을 다시 만들까요?';
-                if (confirm(msg)) handleGenerate();
-              }}
-              style={{
-                marginTop: 6, background: 'none', border: 'none', padding: 0,
-                fontSize: 10, color: 'rgba(26,26,26,0.35)', textDecoration: 'underline',
-                cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-              }}
-            >다시 만들기</button>
           )}
 
           {genError && (
@@ -361,7 +348,7 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
   );
 }
 
-export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onTabChange, initialArchiveId }: ArchiveScreenProps) {
   const [entries, setEntries] = useState<ArchiveEntry[]>(() => { sweepArchive(); return loadArchive(); });
 
   function handleDelete(entry: ArchiveEntry) {
@@ -432,8 +419,8 @@ export default function ArchiveScreen({ onTabChange }: ArchiveScreenProps) {
         display: 'grid', gridTemplateColumns: '1fr 1fr',
         gap: 14, alignContent: 'start',
       }}>
-        {filtered.map((entry, i) => (
-          <ArchiveCard key={entry.id ?? `${entry.date}-${i}`} entry={entry} onDelete={() => handleDelete(entry)} />
+        {filtered.map(entry => (
+          <ArchiveCard key={entry.id} entry={entry} initialOpen={entry.id === initialArchiveId} onDelete={() => handleDelete(entry)} />
         ))}
       </div>
 

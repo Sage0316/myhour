@@ -10,7 +10,7 @@ const uaPubRaw = new Uint8Array(await wc.subtle.exportKey('raw', ua.publicKey));
 const auth = wc.getRandomValues(new Uint8Array(16));
 
 // 2. 워커의 encryptPayload로 암호화
-const msg = JSON.stringify({ title: 'MYHOUR', body: '지금 이 순간을 기록해볼까요? 📝' });
+const msg = JSON.stringify({ title: '하꾸', body: '지금 이 순간을 기록해볼까요? 📝' });
 const packet = await encryptPayload(b64u(uaPubRaw), b64u(auth), msg);
 
 // 3. 수신자(브라우저) 입장에서 RFC 8291대로 복호화

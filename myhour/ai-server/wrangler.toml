@@ -1,0 +1,42 @@
+name = "hakku-ai"
+main = "worker.js"
+compatibility_date = "2026-07-01"
+
+[[kv_namespaces]]
+binding = "AI_STATE"
+id = "REPLACE_WITH_KV_ID"
+
+[[ratelimits]]
+name = "AI_RATE_LIMITER"
+namespace_id = "1001" # 계정 안에서 고유한 양의 정수로 변경
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+[vars]
+ALLOWED_ORIGINS = "https://sage0316.github.io"
+ANTHROPIC_MODEL = "REPLACE_WITH_SUPPORTED_MODEL_ID"
+
+# 배포 환경에서만 등록:
+# npx wrangler secret put ANTHROPIC_API_KEY
+# npx wrangler secret put INSTALL_TOKEN_SECRET
+
+[env.preview]
+name = "hakku-ai-preview"
+
+[[env.preview.kv_namespaces]]
+binding = "AI_STATE"
+id = "REPLACE_WITH_PREVIEW_KV_ID"
+
+[[env.preview.ratelimits]]
+name = "AI_RATE_LIMITER"
+namespace_id = "1101"
+
+  [env.preview.ratelimits.simple]
+  limit = 30
+  period = 60
+
+[env.preview.vars]
+ALLOWED_ORIGINS = "https://preview.example.com"
+ANTHROPIC_MODEL = "REPLACE_WITH_SUPPORTED_MODEL_ID"
