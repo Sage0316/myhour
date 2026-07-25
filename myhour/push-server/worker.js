@@ -1,103 +1,80 @@
-// MYHOUR 푸시 서버 — Cloudflare Worker
-// 역할: (1) 구독 저장/삭제, (2) 30분마다 크론으로 각 구독자의 기록 시간에 맞춰 Web Push 발송
-// Web Push 암호화(RFC 8291 aes128gcm)와 VAPID(RFC 8292)를 WebCrypto로 직접 구현.
+const encoder = new TextEncoder();
+const MAX_BODY_BYTES = 32_000;
+const TOKEN_TTL_SECONDS = 90 * 24 * 60 * 60;
 
-// ─── 유틸 ───────────────────────────────────────────────────────────────────
-
-const te = new TextEncoder();
-
-function b64urlToBytes(s) {
-  s = s.replace(/-/g, '+').replace(/_/g, '/');
-  while (s.length % 4) s += '=';
-  const bin = atob(s);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
+function fromBase64url(value) {
+  const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4));
+  return Uint8Array.from(binary, character => character.charCodeAt(0));
 }
 
-function bytesToB64url(bytes) {
-  let bin = '';
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+function toBase64url(bytes) {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function concat(...arrs) {
-  const len = arrs.reduce((a, b) => a + b.length, 0);
-  const out = new Uint8Array(len);
-  let off = 0;
-  for (const a of arrs) { out.set(a, off); off += a.length; }
-  return out;
+function concat(...arrays) {
+  const output = new Uint8Array(arrays.reduce((total, item) => total + item.length, 0));
+  let offset = 0;
+  for (const array of arrays) { output.set(array, offset); offset += array.length; }
+  return output;
 }
 
-async function hkdf(salt, ikm, info, len) {
-  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'HKDF', hash: 'SHA-256', salt, info }, key, len * 8,
-  );
-  return new Uint8Array(bits);
+async function hkdf(salt, input, info, length) {
+  const key = await crypto.subtle.importKey('raw', input, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits(
+    { name: 'HKDF', hash: 'SHA-256', salt, info }, key, length * 8,
+  ));
 }
 
-// ─── RFC 8291: 페이로드 암호화 (aes128gcm) ───────────────────────────────────
-
-export async function encryptPayload(p256dhB64url, authB64url, payloadStr) {
-  const uaPub = b64urlToBytes(p256dhB64url);   // 65 bytes (uncompressed point)
-  const authSecret = b64urlToBytes(authB64url); // 16 bytes
-
-  const asKeys = await crypto.subtle.generateKey(
+export async function encryptPayload(publicKey, auth, payload) {
+  const userPublic = fromBase64url(publicKey);
+  const authSecret = fromBase64url(auth);
+  const serverKeys = await crypto.subtle.generateKey(
     { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'],
   );
-  const asPub = new Uint8Array(await crypto.subtle.exportKey('raw', asKeys.publicKey));
-  const uaKey = await crypto.subtle.importKey(
-    'raw', uaPub, { name: 'ECDH', namedCurve: 'P-256' }, false, [],
+  const serverPublic = new Uint8Array(await crypto.subtle.exportKey('raw', serverKeys.publicKey));
+  const userKey = await crypto.subtle.importKey(
+    'raw', userPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, [],
   );
-  const ecdhSecret = new Uint8Array(
-    await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, asKeys.privateKey, 256),
-  );
-
-  const keyInfo = concat(te.encode('WebPush: info\0'), uaPub, asPub);
-  const prk = await hkdf(authSecret, ecdhSecret, keyInfo, 32);
+  const secret = new Uint8Array(await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: userKey }, serverKeys.privateKey, 256,
+  ));
+  const info = concat(encoder.encode('WebPush: info\0'), userPublic, serverPublic);
+  const prk = await hkdf(authSecret, secret, info, 32);
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const cek = await hkdf(salt, prk, te.encode('Content-Encoding: aes128gcm\0'), 16);
-  const nonce = await hkdf(salt, prk, te.encode('Content-Encoding: nonce\0'), 12);
-
-  const plaintext = concat(te.encode(payloadStr), new Uint8Array([2])); // 0x02 = 마지막 레코드 구분자
-  const aesKey = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
-  const ciphertext = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aesKey, plaintext),
-  );
-
-  // aes128gcm 헤더: salt(16) | record_size(4, BE) | keyid_len(1) | keyid(=송신자 공개키 65)
-  const rs = new Uint8Array(4);
-  new DataView(rs.buffer).setUint32(0, 4096);
-  const header = concat(salt, rs, new Uint8Array([asPub.length]), asPub);
-  return concat(header, ciphertext);
+  const cek = await hkdf(salt, prk, encoder.encode('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, prk, encoder.encode('Content-Encoding: nonce\0'), 12);
+  const plaintext = concat(encoder.encode(payload), new Uint8Array([2]));
+  const aes = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aes, plaintext));
+  const recordSize = new Uint8Array(4);
+  new DataView(recordSize.buffer).setUint32(0, 4096);
+  return concat(salt, recordSize, new Uint8Array([serverPublic.length]), serverPublic, ciphertext);
 }
 
-// ─── RFC 8292: VAPID 서명 ────────────────────────────────────────────────────
-
-async function vapidAuthHeader(endpoint, env) {
-  const aud = new URL(endpoint).origin;
-  const exp = Math.floor(Date.now() / 1000) + 12 * 3600;
-  const enc = obj => bytesToB64url(te.encode(JSON.stringify(obj)));
-  const signingInput = `${enc({ typ: 'JWT', alg: 'ES256' })}.${enc({ aud, exp, sub: `mailto:${env.VAPID_SUBJECT}` })}`;
+async function vapidHeader(endpoint, env) {
+  const expiry = Math.floor(Date.now() / 1000) + 12 * 3600;
+  const encode = value => toBase64url(encoder.encode(JSON.stringify(value)));
+  const input = `${encode({ typ: 'JWT', alg: 'ES256' })}.${encode({
+    aud: new URL(endpoint).origin, exp: expiry, sub: `mailto:${env.VAPID_SUBJECT}`,
+  })}`;
   const key = await crypto.subtle.importKey(
     'jwk', JSON.parse(env.VAPID_PRIVATE_JWK),
     { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'],
   );
-  const sig = new Uint8Array(await crypto.subtle.sign(
-    { name: 'ECDSA', hash: 'SHA-256' }, key, te.encode(signingInput),
+  const signature = new Uint8Array(await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' }, key, encoder.encode(input),
   ));
-  return `vapid t=${signingInput}.${bytesToB64url(sig)}, k=${env.VAPID_PUBLIC_KEY}`;
+  return `vapid t=${input}.${toBase64url(signature)}, k=${env.VAPID_PUBLIC_KEY}`;
 }
 
-// ─── 푸시 발송 ──────────────────────────────────────────────────────────────
-
-async function sendPush(sub, payloadStr, env) {
-  const body = await encryptPayload(sub.keys.p256dh, sub.keys.auth, payloadStr);
-  const res = await fetch(sub.endpoint, {
+async function sendPush(subscription, payload, env) {
+  const body = await encryptPayload(subscription.keys.p256dh, subscription.keys.auth, payload);
+  const response = await fetch(subscription.endpoint, {
     method: 'POST',
     headers: {
-      'Authorization': await vapidAuthHeader(sub.endpoint, env),
+      'Authorization': await vapidHeader(subscription.endpoint, env),
       'Content-Encoding': 'aes128gcm',
       'Content-Type': 'application/octet-stream',
       'TTL': '1800',
@@ -105,98 +82,193 @@ async function sendPush(sub, payloadStr, env) {
     },
     body,
   });
-  return res.status;
+  return response.status;
 }
 
-// ─── 구독 저장 키 ────────────────────────────────────────────────────────────
-
-async function subKey(endpoint) {
-  const digest = await crypto.subtle.digest('SHA-256', te.encode(endpoint));
-  return bytesToB64url(new Uint8Array(digest)).slice(0, 32);
+async function subscriptionKey(endpoint) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(endpoint));
+  return toBase64url(new Uint8Array(digest)).slice(0, 32);
 }
 
-function parseHM(hm) {
-  const [h, m] = hm.split(':').map(Number);
-  return h * 60 + (m || 0);
+function parseTime(value) {
+  const [hour, minute] = value.split(':').map(Number);
+  return hour * 60 + minute;
 }
 
-// ─── 핸들러 ─────────────────────────────────────────────────────────────────
+function allowedOrigin(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  const origins = (env.ALLOWED_ORIGINS || 'https://sage0316.github.io')
+    .split(',').map(value => value.trim()).filter(Boolean);
+  return origins.includes(origin) ? origin : '';
+}
 
-const CORS = {
-  'Access-Control-Allow-Origin': 'https://sage0316.github.io',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+function jsonResponse(request, env, body, status = 200) {
+  const origin = allowedOrigin(request, env);
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Vary': 'Origin',
+      ...(origin ? { 'Access-Control-Allow-Origin': origin } : {}),
+    },
+  });
+}
+
+async function readJson(request) {
+  if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY_BYTES) throw new Error('payload_too_large');
+  const text = await request.text();
+  if (encoder.encode(text).byteLength > MAX_BODY_BYTES) throw new Error('payload_too_large');
+  return JSON.parse(text);
+}
+
+async function sign(value, secret) {
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+  return toBase64url(new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(value))));
+}
+
+async function issueToken(installationId, env) {
+  const payload = `${installationId}.${Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS}`;
+  return `${payload}.${await sign(payload, env.INSTALL_TOKEN_SECRET)}`;
+}
+
+async function authenticate(request, env) {
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  const [installationId, expiry, signature, extra] = token.split('.');
+  if (extra !== undefined || !/^[a-f0-9-]{20,64}$/i.test(installationId || '') || Number(expiry) < Date.now() / 1000) return null;
+  const expected = await sign(`${installationId}.${expiry}`, env.INSTALL_TOKEN_SECRET);
+  if ((signature || '').length !== expected.length) return null;
+  let mismatch = 0;
+  for (let index = 0; index < expected.length; index += 1) {
+    mismatch |= signature.charCodeAt(index) ^ expected.charCodeAt(index);
+  }
+  return mismatch === 0 ? installationId : null;
+}
+
+function validSubscription(body) {
+  const subscription = body?.subscription;
+  return subscription && typeof subscription.endpoint === 'string'
+    && subscription.endpoint.startsWith('https://') && subscription.endpoint.length <= 2_048
+    && typeof subscription.keys?.p256dh === 'string' && subscription.keys.p256dh.length <= 256
+    && typeof subscription.keys?.auth === 'string' && subscription.keys.auth.length <= 128
+    && [30, 60, 120].includes(body.interval)
+    && /^\d{2}:\d{2}$/.test(body.startTime) && /^\d{2}:\d{2}$/.test(body.endTime)
+    && Number.isInteger(body.tzOffsetMin) && Math.abs(body.tzOffsetMin) <= 840;
+}
+
+async function rateAllowed(env, key) {
+  if (!env.PUSH_RATE_LIMITER) return true;
+  return (await env.PUSH_RATE_LIMITER.limit({ key })).success;
+}
+
+function endpointHostAllowed(endpoint, env) {
+  try {
+    const host = new URL(endpoint).hostname.toLowerCase();
+    const configured = (env.PUSH_ENDPOINT_HOSTS || 'fcm.googleapis.com,updates.push.services.mozilla.com,web.push.apple.com')
+      .split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+    return configured.some(allowed => host === allowed || host.endsWith(`.${allowed}`));
+  } catch {
+    return false;
+  }
+}
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
-    const json = (obj, status = 200) =>
-      new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
-
-    if (url.pathname === '/health') return json({ ok: true });
-
-    if (request.method !== 'POST') return json({ error: 'method' }, 405);
-
-    if (url.pathname === '/subscribe') {
-      const body = await request.json();
-      const { subscription, interval, startTime, endTime, tzOffsetMin } = body;
-      if (!subscription?.endpoint || !subscription?.keys?.p256dh) return json({ error: 'bad subscription' }, 400);
-      const record = {
-        sub: subscription,
-        interval: [30, 60, 120].includes(interval) ? interval : 60,
-        start: parseHM(startTime || '09:00'),
-        end: parseHM(endTime || '22:00'),
-        tz: Number.isFinite(tzOffsetMin) ? tzOffsetMin : -540, // 기본 KST
-      };
-      await env.SUBS.put(await subKey(subscription.endpoint), JSON.stringify(record));
-      return json({ ok: true });
+    const origin = allowedOrigin(request, env);
+    if (request.method === 'OPTIONS') {
+      if (!origin) return jsonResponse(request, env, { error: 'origin_not_allowed' }, 403);
+      return new Response(null, { headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin',
+      } });
     }
+    if (url.pathname === '/health' && request.method === 'GET') return jsonResponse(request, env, { ok: true });
+    if (!origin) return jsonResponse(request, env, { error: 'origin_not_allowed' }, 403);
+    if (request.method !== 'POST') return jsonResponse(request, env, { error: 'method_not_allowed' }, 405);
 
-    if (url.pathname === '/unsubscribe') {
-      const { endpoint } = await request.json();
-      if (endpoint) await env.SUBS.delete(await subKey(endpoint));
-      return json({ ok: true });
+    try {
+      if (url.pathname === '/v1/install') {
+        const body = await readJson(request);
+        if (!/^[a-f0-9-]{20,64}$/i.test(body?.installationId || '')) {
+          return jsonResponse(request, env, { error: 'invalid_installation' }, 400);
+        }
+        const clientKey = request.headers.get('CF-Connecting-IP') || body.installationId;
+        if (!await rateAllowed(env, `install:${clientKey}`)) {
+          return jsonResponse(request, env, { error: 'rate_limit_exceeded' }, 429);
+        }
+        return jsonResponse(request, env, { token: await issueToken(body.installationId, env) });
+      }
+
+      const owner = await authenticate(request, env);
+      if (!owner) return jsonResponse(request, env, { error: 'unauthorized' }, 401);
+      if (!await rateAllowed(env, `${url.pathname}:${owner}`)) {
+        return jsonResponse(request, env, { error: 'rate_limit_exceeded' }, 429);
+      }
+
+      if (url.pathname === '/v1/subscriptions') {
+        const body = await readJson(request);
+        if (!validSubscription(body) || !endpointHostAllowed(body.subscription?.endpoint, env)) {
+          return jsonResponse(request, env, { error: 'invalid_subscription' }, 400);
+        }
+        await env.SUBS.put(await subscriptionKey(body.subscription.endpoint), JSON.stringify({
+          owner,
+          sub: body.subscription,
+          interval: body.interval,
+          start: parseTime(body.startTime),
+          end: parseTime(body.endTime),
+          tz: body.tzOffsetMin,
+          lastDeliverySlot: '',
+        }));
+        return jsonResponse(request, env, { ok: true });
+      }
+
+      if (url.pathname === '/v1/subscriptions/delete') {
+        const body = await readJson(request);
+        if (typeof body?.endpoint !== 'string') return jsonResponse(request, env, { error: 'invalid_endpoint' }, 400);
+        const key = await subscriptionKey(body.endpoint);
+        const raw = await env.SUBS.get(key);
+        if (raw && JSON.parse(raw).owner !== owner) return jsonResponse(request, env, { error: 'forbidden' }, 403);
+        await env.SUBS.delete(key);
+        return jsonResponse(request, env, { ok: true });
+      }
+      return jsonResponse(request, env, { error: 'not_found' }, 404);
+    } catch (error) {
+      if (error instanceof SyntaxError) return jsonResponse(request, env, { error: 'invalid_json' }, 400);
+      if (error?.message === 'payload_too_large') return jsonResponse(request, env, { error: 'payload_too_large' }, 413);
+      return jsonResponse(request, env, { error: 'internal_error' }, 500);
     }
-
-    if (url.pathname === '/test') {
-      // 구독 직후 확인용: 그 구독자에게 즉시 테스트 푸시
-      const { endpoint } = await request.json();
-      const raw = await env.SUBS.get(await subKey(endpoint));
-      if (!raw) return json({ error: 'not found' }, 404);
-      const { sub } = JSON.parse(raw);
-      const status = await sendPush(sub, JSON.stringify({
-        title: 'MYHOUR', body: '알림 연결 완료! 이렇게 기록 시간을 알려드릴게요 ✨',
-      }), env);
-      return json({ ok: status < 300, status });
-    }
-
-    return json({ error: 'not found' }, 404);
   },
 
-  // 30분마다 실행 — 각 구독자의 로컬 시간 기준으로 기록 시간이면 푸시
-  async scheduled(_event, env, ctx) {
-    ctx.waitUntil((async () => {
+  async scheduled(_event, env, context) {
+    context.waitUntil((async () => {
       const now = new Date();
-      const utcMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+      const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
       let cursor;
       do {
-        const list = await env.SUBS.list({ cursor });
-        cursor = list.list_complete ? undefined : list.cursor;
-        for (const { name } of list.keys) {
+        const page = await env.SUBS.list({ cursor });
+        cursor = page.list_complete ? undefined : page.cursor;
+        for (const { name } of page.keys) {
           const raw = await env.SUBS.get(name);
           if (!raw) continue;
-          const rec = JSON.parse(raw);
-          // tz는 getTimezoneOffset() 값 (KST=-540): local = utc - tz
-          const localMin = ((utcMin - rec.tz) % 1440 + 1440) % 1440;
-          const since = localMin - rec.start;
-          if (since < 0 || localMin > rec.end) continue;
-          if (since % rec.interval >= 30) continue; // 크론 주기(30분) 안에 든 슬롯만
-          const status = await sendPush(rec.sub, JSON.stringify({
-            title: 'MYHOUR', body: '지금 이 순간을 기록해볼까요? 📝',
+          const record = JSON.parse(raw);
+          const localMinutes = ((utcMinutes - record.tz) % 1440 + 1440) % 1440;
+          const elapsed = localMinutes - record.start;
+          if (elapsed < 0 || localMinutes > record.end || elapsed % record.interval >= 30) continue;
+          const localDate = new Date(now.getTime() - record.tz * 60_000).toISOString().slice(0, 10);
+          const deliverySlot = `${localDate}:${Math.floor(elapsed / record.interval)}`;
+          if (record.lastDeliverySlot === deliverySlot) continue;
+          record.lastDeliverySlot = deliverySlot;
+          await env.SUBS.put(name, JSON.stringify(record));
+          const status = await sendPush(record.sub, JSON.stringify({
+            title: '하꾸', body: '지금 한 시간을 기록해볼까요? 📸',
           }), env);
-          if (status === 404 || status === 410) await env.SUBS.delete(name); // 만료된 구독 정리
+          if (status === 404 || status === 410) await env.SUBS.delete(name);
         }
       } while (cursor);
     })());

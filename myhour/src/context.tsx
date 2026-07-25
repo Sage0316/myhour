@@ -1,24 +1,13 @@
-import { createContext, useContext, useState, useMemo, useCallback, useEffect, type ReactNode } from 'react';
+import { useState, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import {
   type MyRecord, type RecordType, type AppData, type AppSettings,
   loadAppData, saveAppData, loadSettings, saveSettings,
-  getCurrentSlot, generateSlots, getSessionDate,
+  getCurrentSlot, generateSlots, getSessionDate, deleteVideoFromIDB,
+  loadArchive,
 } from './store';
-
-interface AppContextValue {
-  records: MyRecord[];
-  isWrapped: boolean;
-  settings: AppSettings;
-  slots: string[];
-  currentSlot: string;
-  addRecord: (type: RecordType, content: string, caption?: string, videoKey?: string) => void;
-  deleteRecord: (id: string) => void;
-  setWrapped: (v: boolean) => void;
-  updateSettings: (updates: Partial<AppSettings>) => void;
-  reset: () => void;
-}
-
-const AppContext = createContext<AppContextValue | null>(null);
+import { createStableId } from './domain/model';
+import { AppContext, type RecordMedia } from './appContext';
+import { cleanupOrphanMedia } from './media/cleanup';
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
@@ -49,43 +38,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [slots, settings.interval, settings.startTime, tick],
   );
 
-  const addRecord = useCallback((type: RecordType, content: string, caption?: string, videoKey?: string) => {
+  useEffect(() => {
+    void cleanupOrphanMedia(appData.records, loadArchive());
+  }, [appData.records]);
+
+  const addRecord = useCallback((type: RecordType, content: string, caption?: string, media?: RecordMedia) => {
     const now = new Date();
-    const slotTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const record: MyRecord = {
-      id: Date.now().toString(),
-      slotTime,
+      id: createStableId('record'),
+      slotId: currentSlot,
+      slotTime: currentSlot,
+      capturedAt: now.toISOString(),
       type,
       content,
       caption,
-      createdAt: Date.now(),
-      ...(videoKey ? { videoKey } : {}),
+      createdAt: now.getTime(),
+      ...(media ? {
+        mediaId: media.key,
+        mediaType: media.type,
+        mediaSize: media.size,
+        ...(type === 'video' ? { videoKey: media.key } : {}),
+      } : {}),
     };
     setAppData(prev => {
       const next = { ...prev, records: [...prev.records, record] };
       try {
         saveAppData(next);
       } catch {
+        if (media) void deleteVideoFromIDB(media.key);
         // localStorage 용량 초과 — 상태를 바꾸지 않고 알린다 (렌더링 크래시 방지)
         setTimeout(() => alert('저장 공간이 부족해서 기록을 저장하지 못했어요.\n아카이브에서 오래된 기록을 정리해 주세요.'), 0);
         return prev;
       }
       return next;
     });
-  }, [slots, settings.interval, settings.startTime]);
+  }, [currentSlot]);
 
   const deleteRecord = useCallback((id: string) => {
     setAppData(prev => {
+      const removed = prev.records.find(record => record.id === id);
       const next = { ...prev, records: prev.records.filter(r => r.id !== id) };
       saveAppData(next);
-      return next;
-    });
-  }, []);
-
-  const setWrapped = useCallback((v: boolean) => {
-    setAppData(prev => {
-      const next = { ...prev, isWrapped: v };
-      saveAppData(next);
+      const mediaKey = removed?.mediaId ?? removed?.videoKey;
+      if (mediaKey) void deleteVideoFromIDB(mediaKey);
       return next;
     });
   }, []);
@@ -100,7 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(() => {
     const date = getSessionDate(settings.startTime);
-    const fresh: AppData = { records: [], isWrapped: false, date };
+    const fresh: AppData = { schemaVersion: 2, records: [], isWrapped: false, date };
     saveAppData(fresh);
     setAppData(fresh);
   }, [settings.startTime]);
@@ -108,23 +103,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       records: appData.records,
-      isWrapped: appData.isWrapped,
       settings,
       slots,
       currentSlot,
       addRecord,
       deleteRecord,
-      setWrapped,
       updateSettings,
       reset,
     }}>
       {children}
     </AppContext.Provider>
   );
-}
-
-export function useApp() {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
-  return ctx;
 }

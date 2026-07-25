@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useApp } from '../context';
-import { type AppSettings, type AppData, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel, loadSettings, getSessionDate, addToArchive } from '../store';
-import { loadApiKey, saveApiKey } from '../llmDirector';
-import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush } from '../push';
+import { useApp } from '../appContext';
+import { type AppSettings, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel } from '../store';
+import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
+import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush, syncPushSchedule } from '../push';
 import TabBar from '../components/TabBar';
+import { exportCompleteBackup, restoreCompleteBackup, type BackupProgress } from '../backup/backupService';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
@@ -24,6 +25,9 @@ function PushSection() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { getPushEnabled().then(setEnabled); }, []);
+  useEffect(() => {
+    if (enabled) syncPushSchedule(settings).catch(() => undefined);
+  }, [enabled, settings]);
 
   const ready = PUSH_SERVER_URL !== '' && isPushSupported();
 
@@ -79,7 +83,7 @@ function PushSection() {
         {error && <div style={{ fontSize: 11, color: '#E5533C', whiteSpace: 'pre-line' }}>{error}</div>}
         {enabled && (
           <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>
-            시작 시간·간격을 바꾸면 알림을 껐다 다시 켜야 반영돼요
+            시간과 간격을 바꾸면 알림 일정도 자동으로 갱신돼요
           </div>
         )}
       </div>
@@ -121,14 +125,16 @@ interface RowProps {
 function SettingRow({ label, value, last, open, onToggle, children }: RowProps) {
   return (
     <div>
-      <div
+      <button
+        type="button"
         onClick={onToggle}
-        style={{ display: 'flex', alignItems: 'center', minHeight: 50, padding: '0 16px', cursor: 'pointer', borderBottom: last && !open ? 'none' : '1px solid rgba(26,26,26,0.07)' }}
+        aria-expanded={open}
+        style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', cursor: 'pointer', background: 'none', border: 'none', borderBottom: last && !open ? 'none' : '1px solid rgba(26,26,26,0.07)', fontFamily: 'Inter, sans-serif' }}
       >
-        <div style={{ flex: 1, fontSize: 15 }}>{label}</div>
+        <div style={{ flex: 1, fontSize: 15, textAlign: 'left' }}>{label}</div>
         <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.5)', marginRight: 10 }}>{value}</div>
         <Chevron open={open} />
-      </div>
+      </button>
       {open && (
         <div style={{ padding: '6px 16px 14px', borderBottom: last ? 'none' : '1px solid rgba(26,26,26,0.07)', background: 'rgba(26,26,26,0.02)' }}>
           {children}
@@ -163,14 +169,14 @@ function SettingGroup({ header, children }: { header: string; children: React.Re
   );
 }
 
-function ApiKeySection() {
-  const [key, setKey] = useState(loadApiKey);
-  const [saved, setSaved] = useState(false);
+function AISection() {
+  const [consented, setConsented] = useState(hasAIConsent);
+  const configured = isAIConfigured();
 
-  function handleSave() {
-    saveApiKey(key.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  function toggleConsent() {
+    const next = !consented;
+    setAIConsent(next);
+    setConsented(next);
   }
 
   return (
@@ -178,113 +184,83 @@ function ApiKeySection() {
       <SectionHeader label="AI · 촬영감독" />
       <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', lineHeight: 1.6 }}>
-          Anthropic API 키를 입력하면 하루 마감 시 AI가 제목, 무드, BGM을 자동으로 분석해줘요.
+          동의하면 텍스트 기록과 캡션만 하꾸 AI 서버로 보내 제목·무드·BGM을 추천해요. 사진·영상·음성 원본은 전송하지 않아요.
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="password"
-            value={key}
-            onChange={e => setKey(e.target.value)}
-            placeholder="sk-ant-..."
-            style={{
-              flex: 1, height: 42, borderRadius: 10, border: '1px solid rgba(26,26,26,0.15)',
-              padding: '0 12px', fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
-              outline: 'none', background: '#F7F7F5',
-            }}
-          />
-          <button
-            onClick={handleSave}
-            style={{
-              height: 42, padding: '0 18px', borderRadius: 10,
-              background: saved ? '#3FA37B' : '#1A1A1A',
-              color: '#fff', fontSize: 13, fontWeight: 500,
-              border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-              transition: 'background 0.2s',
-            }}
-          >{saved ? '저장됨' : '저장'}</button>
-        </div>
-        {key && (
-          <button
-            onClick={() => { setKey(''); saveApiKey(''); }}
-            style={{ alignSelf: 'flex-start', fontSize: 12, color: '#E5533C', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >키 삭제</button>
-        )}
+        <button
+          type="button"
+          onClick={toggleConsent}
+          disabled={!configured}
+          aria-pressed={consented}
+          style={{ alignSelf: 'flex-start', height: 38, padding: '0 16px', borderRadius: 999, border: 'none', background: consented ? '#1A1A1A' : 'rgba(26,26,26,0.08)', color: consented ? '#fff' : '#1A1A1A', cursor: configured ? 'pointer' : 'default', opacity: configured ? 1 : 0.5 }}
+        >
+          {!configured ? '서버 연결 전' : consented ? 'AI 분석 동의함' : 'AI 분석 사용하기'}
+        </button>
       </div>
     </div>
   );
 }
 
 function DataSection() {
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importOk, setImportOk] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function handleExport() {
-    const payload = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      data: localStorage.getItem('myhour_v1') ?? '{}',
-      settings: localStorage.getItem('myhour_settings_v1') ?? '{}',
-    };
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    // Try native share (iOS), fallback to download link
-    if (navigator.share) {
-      const file = new File([blob], `myhour-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
-      navigator.share({ files: [file] }).catch(() => {
-        // Share cancelled or failed, fallback
-        triggerDownload(url);
-      });
-    } else {
-      triggerDownload(url);
-    }
+  function progressText(progress: BackupProgress): string {
+    const label = progress.phase === 'collecting' ? '데이터 수집'
+      : progress.phase === 'hashing' ? '무결성 계산'
+      : progress.phase === 'compressing' ? '백업 생성'
+      : progress.phase === 'validating' ? '백업 검증'
+      : progress.phase === 'restoring' ? '복원'
+      : '완료';
+    return `${label} · ${progress.completed}/${progress.total}`;
   }
 
-  function triggerDownload(url: string) {
+  function triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `myhour-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = filename;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleExport() {
+    setBusy(true);
+    setError(null);
+    setStatus('백업 준비 중');
+    try {
+      const result = await exportCompleteBackup(progress => setStatus(progressText(progress)));
+      const file = new File([result.blob], result.filename, { type: 'application/zip' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: '하꾸 전체 백업' });
+      } else {
+        triggerDownload(result.blob, result.filename);
+      }
+      setStatus(`완료 · 미디어 ${result.mediaCount}개 포함`);
+    } catch (exportError) {
+      setError(exportError instanceof Error ? exportError.message : '백업을 만들지 못했어요.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImportError(null);
-    setImportOk(false);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const payload = JSON.parse(ev.target?.result as string);
-        if (payload.version !== 1 || !payload.data || !payload.settings) {
-          throw new Error('올바른 MYHOUR 백업 파일이 아니에요');
-        }
-        const importedData: AppData = JSON.parse(payload.data);
-        const currentDate = getSessionDate(loadSettings().startTime);
-
-        if (importedData.date === currentDate) {
-          // Same day: restore as current session
-          localStorage.setItem('myhour_v1', payload.data);
-          localStorage.setItem('myhour_settings_v1', payload.settings);
-        } else {
-          // Different day: add to archive
-          addToArchive({
-            date: importedData.date,
-            records: importedData.records,
-            isWrapped: importedData.isWrapped,
-          });
-          localStorage.setItem('myhour_settings_v1', payload.settings);
-        }
-        setImportOk(true);
-        setTimeout(() => window.location.reload(), 800);
-      } catch (err) {
-        setImportError(err instanceof Error ? err.message : '파일을 읽을 수 없어요');
-      }
-    };
-    reader.readAsText(file);
     e.target.value = '';
+    if (!confirm('현재 데이터를 검증된 백업 내용으로 교체할까요? 검증이나 복원에 실패하면 기존 데이터는 유지됩니다.')) return;
+    setBusy(true);
+    setError(null);
+    setStatus('백업 검증 중');
+    try {
+      const result = await restoreCompleteBackup(file, progress => setStatus(progressText(progress)));
+      setStatus(`복원 완료 · 미디어 ${result.mediaCount}개`);
+      setTimeout(() => window.location.reload(), 800);
+    } catch (restoreError) {
+      setError(restoreError instanceof Error ? restoreError.message : '백업을 복원하지 못했어요.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -293,30 +269,31 @@ function DataSection() {
       <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden' }}>
         <button
           onClick={handleExport}
+          disabled={busy}
           style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', background: 'none', border: 'none', borderBottom: '1px solid rgba(26,26,26,0.07)', cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left' }}
         >
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 내보내기</div>
-            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>기록과 설정을 JSON 파일로 저장</div>
+            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>설정·기록·아카이브·모든 미디어를 해시와 함께 저장</div>
           </div>
           <div style={{ fontSize: 18, color: 'rgba(26,26,26,0.35)' }}>↑</div>
         </button>
 
         <label style={{ display: 'flex', alignItems: 'center', minHeight: 50, padding: '0 16px', cursor: 'pointer', borderBottom: 'none' }}>
-          <input type="file" accept=".json,application/json" onChange={handleImport} style={{ display: 'none' }} />
+          <input type="file" accept=".zip,.hakku.zip,application/zip" onChange={handleImport} disabled={busy} style={{ display: 'none' }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 가져오기</div>
-            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>JSON 백업 파일에서 복원 · 앱이 새로고침됩니다</div>
+            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>경로·크기·해시 검증 후 원자적으로 복원</div>
           </div>
           <div style={{ fontSize: 18, color: 'rgba(26,26,26,0.35)' }}>↓</div>
         </label>
       </div>
 
-      {importError && (
-        <div style={{ fontSize: 12, color: '#E5533C', padding: '8px 4px', lineHeight: 1.5 }}>{importError}</div>
+      {error && (
+        <div role="alert" style={{ fontSize: 12, color: '#E5533C', padding: '8px 4px', lineHeight: 1.5 }}>{error}</div>
       )}
-      {importOk && (
-        <div style={{ fontSize: 12, color: '#3FA37B', padding: '8px 4px' }}>가져오기 완료! 앱을 새로고침하는 중...</div>
+      {status && (
+        <div role="status" aria-live="polite" style={{ fontSize: 12, color: '#3FA37B', padding: '8px 4px' }}>{status}</div>
       )}
     </div>
   );
@@ -413,24 +390,24 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
         {/* Output */}
         <SettingGroup header="Output · 결과물">
-          <SettingRow label="출력 비율" value={settings.outputRatio + ' 세로'} open={openRow === 'ratio'} onToggle={() => toggle('ratio')}>
-            <Option label="9:16 세로" selected={settings.outputRatio === '9:16'} onSelect={() => set('outputRatio', '9:16')} />
-            <Option label="1:1 정방형" selected={settings.outputRatio === '1:1'} onSelect={() => set('outputRatio', '1:1')} />
-          </SettingRow>
-          <SettingRow label="저장 방식" value="결과물 먼저 보기" last open={openRow === 'save'} onToggle={() => toggle('save')}>
-            <Option label="결과물 먼저 보기" selected={true} onSelect={() => setOpenRow(null)} />
-            <Option label="자동 저장" selected={false} onSelect={() => setOpenRow(null)} />
-          </SettingRow>
+          <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(26,26,26,0.07)' }}>
+            <div style={{ flex: 1, fontSize: 15 }}>영상 크기</div>
+            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.5)' }}>720×1280 · 9:16</div>
+          </div>
+          <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ flex: 1, fontSize: 15 }}>저장 방식</div>
+            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.5)' }}>아카이브 저장 후 열기</div>
+          </div>
         </SettingGroup>
 
         <PushSection />
 
         <DataSection />
 
-        <ApiKeySection />
+        <AISection />
 
         <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(26,26,26,0.3)', fontFamily: "'JetBrains Mono', monospace", padding: '8px 0' }}>
-          MYHOUR {__BUILD_VERSION__}
+          하꾸 · HAKKU {__BUILD_VERSION__}
         </div>
 
         <div style={{ height: 20 }} />

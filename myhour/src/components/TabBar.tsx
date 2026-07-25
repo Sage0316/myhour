@@ -14,7 +14,7 @@ const tabs: { id: Tab; label: string }[] = [
 
 export default function TabBar({ active, onTabChange }: TabBarProps) {
   return (
-    <div style={{
+    <nav aria-label="주요 메뉴" style={{
       display: 'flex',
       padding: '10px 20px 28px',
       borderTop: '1px solid rgba(26,26,26,0.08)',
@@ -24,7 +24,9 @@ export default function TabBar({ active, onTabChange }: TabBarProps) {
       {tabs.map(tab => (
         <button
           key={tab.id}
+          type="button"
           onClick={() => onTabChange(tab.id)}
+          aria-current={active === tab.id ? 'page' : undefined}
           style={{
             flex: 1,
             display: 'flex',
@@ -51,7 +53,7 @@ export default function TabBar({ active, onTabChange }: TabBarProps) {
           </span>
         </button>
       ))}
-    </div>
+    </nav>
   );
 }
 

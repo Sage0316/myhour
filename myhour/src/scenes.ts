@@ -603,6 +603,6 @@ export function drawClosingScene(
   wrapText(ctx, opts.closing, 44, H * 0.45, W - 88, 48);
   ctx.font = `bold 12px "Courier New", monospace`;
   ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.fillText(`MYHOUR · ${opts.dateStr}`, 44, H - 56);
+  ctx.fillText(`하꾸 · ${opts.dateStr}`, 44, H - 56);
   ctx.globalAlpha = 1;
 }
