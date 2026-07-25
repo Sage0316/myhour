@@ -3,7 +3,9 @@ import {
   type MyRecord, type RecordType, type AppData, type AppSettings,
   loadAppData, saveAppData, loadSettings, saveSettings,
   getCurrentSlot, generateSlots, getSessionDate,
+  mediaRecordKey, dataUrlToBlob, saveVideoToIDB, loadVideoBlobFromIDB,
 } from './store';
+import { resyncPush } from './push';
 
 interface AppContextValue {
   records: MyRecord[];
@@ -11,9 +13,8 @@ interface AppContextValue {
   settings: AppSettings;
   slots: string[];
   currentSlot: string;
-  addRecord: (type: RecordType, content: string, caption?: string, videoKey?: string) => void;
+  addRecord: (type: RecordType, content: string, caption?: string, videoKey?: string) => Promise<void>;
   deleteRecord: (id: string) => void;
-  setWrapped: (v: boolean) => void;
   updateSettings: (updates: Partial<AppSettings>) => void;
   reset: () => void;
 }
@@ -49,17 +50,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [slots, settings.interval, settings.startTime, tick],
   );
 
-  const addRecord = useCallback((type: RecordType, content: string, caption?: string, videoKey?: string) => {
+  const addRecord = useCallback(async (type: RecordType, content: string, caption?: string, videoKey?: string) => {
     const now = new Date();
     const slotTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const id = Date.now().toString();
+
+    // 사진·짤·음성 원본은 localStorage(5MB 한도) 대신 IndexedDB에 넣고 키만 들고 있는다.
+    // IDB 쓰기가 실패하면 예전처럼 content에 그대로 담아 최소한 기록을 잃지 않게 한다.
+    let storedContent = content;
+    let mediaKey: string | undefined;
+    if (type !== 'text' && content.startsWith('data:')) {
+      const key = mediaRecordKey(id);
+      try {
+        await saveVideoToIDB(key, dataUrlToBlob(content));
+        const written = await loadVideoBlobFromIDB(key);
+        if (written) { storedContent = ''; mediaKey = key; }
+      } catch { /* content에 data URL을 그대로 유지 */ }
+    }
+
     const record: MyRecord = {
-      id: Date.now().toString(),
+      id,
       slotTime,
       type,
-      content,
+      content: storedContent,
       caption,
       createdAt: Date.now(),
       ...(videoKey ? { videoKey } : {}),
+      ...(mediaKey ? { mediaKey } : {}),
     };
     setAppData(prev => {
       const next = { ...prev, records: [...prev.records, record] };
@@ -82,18 +99,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setWrapped = useCallback((v: boolean) => {
-    setAppData(prev => {
-      const next = { ...prev, isWrapped: v };
-      saveAppData(next);
-      return next;
-    });
-  }, []);
-
   const updateSettings = useCallback((updates: Partial<AppSettings>) => {
     setSettings(prev => {
       const next = { ...prev, ...updates };
       saveSettings(next);
+      // 알림 스케줄에 영향 있는 항목이 바뀌면 서버 구독 정보도 같이 갱신한다
+      // (예전엔 사용자가 알림을 직접 껐다 켜야 반영됐다)
+      if (
+        updates.interval !== undefined || updates.startTime !== undefined ||
+        updates.endTime !== undefined || updates.endMode !== undefined
+      ) {
+        void resyncPush(next);
+      }
       return next;
     });
   }, []);
@@ -114,7 +131,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentSlot,
       addRecord,
       deleteRecord,
-      setWrapped,
       updateSettings,
       reset,
     }}>

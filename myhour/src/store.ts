@@ -8,6 +8,10 @@ export interface MyRecord {
   caption?: string;
   createdAt: number;
   videoKey?: string; // IndexedDB key for the actual video file
+  // 사진·짤·음성 원본의 IndexedDB 키. data URL을 localStorage에 그대로 담으면
+  // 사진 수십 장에 5MB 한도가 차버려서, 원본은 IDB로 빼고 content는 비워 둔다.
+  // 구버전 기록은 mediaKey 없이 content에 data URL이 그대로 들어 있다 (hasMedia 참조).
+  mediaKey?: string;
 }
 
 // ─── IndexedDB video storage (localStorage can't handle large video files) ──
@@ -45,6 +49,25 @@ export async function deleteVideoFromIDB(key: string): Promise<void> {
   } catch { /* ignore */ }
 }
 
+export function mediaRecordKey(id: string): string {
+  return `media_${id}`;
+}
+
+// 기록에 볼 수 있는 원본이 남아 있는지 — IDB 키가 있거나(신규), content가 data URL이거나(구버전)
+export function hasMedia(r: MyRecord): boolean {
+  return !!r.mediaKey || r.content.startsWith('data:');
+}
+
+// data URL → Blob. IDB엔 base64 문자열이 아니라 Blob으로 넣어 용량·파싱 비용을 줄인다
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const [head, b64] = dataUrl.split(',');
+  const mime = head.slice(head.indexOf(':') + 1, head.indexOf(';'));
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 export async function loadVideoBlobFromIDB(key: string): Promise<Blob | null> {
   try {
     const db = await openVideoDB();
@@ -72,11 +95,8 @@ export interface AppSettings {
   endMode: 'open' | 'fixed';
   endTime: string;                           // "21:00" (only used when endMode === 'fixed')
   interval: 30 | 60 | 120;                  // minutes
-  notifyTiming: 'before' | 'exact' | 'both';
   captureMode: 'choose' | 'fixed';
   defaultType: RecordType;
-  outputRatio: '9:16' | '1:1';
-  bgMusic: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -84,11 +104,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   endMode: 'open',
   endTime: '21:00',
   interval: 120,
-  notifyTiming: 'before',
   captureMode: 'choose',
   defaultType: 'text',
-  outputRatio: '9:16',
-  bgMusic: '잔잔한 피아노',
 };
 
 const SETTINGS_KEY = 'myhour_settings_v1';
@@ -168,6 +185,29 @@ export function getCurrentSlot(slots: string[], interval: number, startTime?: st
   if (slots.length === 0) return startTime ?? '09:00';
   if (effNow < toSessionM(slots[0], startM)) return slots[0];
   return slots[slots.length - 1];
+}
+
+// 기록을 자기 시각이 속한 슬롯에 배치한다.
+// slotTime엔 정확한 시계 시각(예: "23:42")이 들어 있어서 슬롯 문자열("23:00")과 그대로는
+// 일치하지 않는다 — 문자열 비교로 매칭하면 오늘 탭 격자가 늘 비어 보인다.
+// 한 슬롯에 여러 기록이 있으면 가장 이른 것을 대표로 둔다 (격자는 슬롯당 한 칸).
+export function groupRecordsBySlot(
+  records: MyRecord[], slots: string[], interval: number, startTime: string,
+): Map<string, MyRecord> {
+  const startM = slotToMinutes(startTime);
+  const bounds = slots.map((s, i) => {
+    const sM = toSessionM(s, startM);
+    const eM = i < slots.length - 1 ? toSessionM(slots[i + 1], startM) : sM + interval;
+    return { slot: s, sM, eM };
+  });
+  const map = new Map<string, MyRecord>();
+  for (const r of [...records].sort((a, b) => a.createdAt - b.createdAt)) {
+    const rM = toSessionM(r.slotTime, startM);
+    const hit = bounds.find(b => rM >= b.sM && rM < b.eM)
+      ?? (rM < bounds[0].sM ? bounds[0] : bounds[bounds.length - 1]);
+    if (hit && !map.has(hit.slot)) map.set(hit.slot, r);
+  }
+  return map;
 }
 
 export function getNextSlot(slots: string[], startTime?: string): string | null {
@@ -323,6 +363,7 @@ export interface ArchiveEntry {
   records: MyRecord[];
   isWrapped: boolean;
   trimmed?: boolean;      // 원본 미디어가 정리된 항목 (영상 완성 or 3일 경과)
+  title?: string;         // 영상에 실제로 들어간 제목 (사용자가 수정했거나 AI가 지은 것). 구버전 항목엔 없어서 generateTitle로 폴백
 }
 
 // ─── 원본 정리 정책: 완성된 영상이 상품, 원본은 재료 ─────────────────────────
@@ -331,8 +372,8 @@ export interface ArchiveEntry {
 
 function stripRecordMedia(r: MyRecord): MyRecord {
   if (r.type === 'text') return r;
-  const { videoKey: _vk, ...rest } = r;
-  void _vk;
+  const { videoKey: _vk, mediaKey: _mk, ...rest } = r;
+  void _vk; void _mk;
   return { ...rest, content: '' };
 }
 
@@ -341,7 +382,10 @@ export function trimRecords(records: MyRecord[]): MyRecord[] {
 }
 
 export function deleteRecordMedia(records: MyRecord[]) {
-  for (const r of records) if (r.videoKey) void deleteVideoFromIDB(r.videoKey);
+  for (const r of records) {
+    if (r.videoKey) void deleteVideoFromIDB(r.videoKey);
+    if (r.mediaKey) void deleteVideoFromIDB(r.mediaKey);
+  }
 }
 
 const TRIM_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
@@ -411,10 +455,6 @@ export function removeFromArchive(entry: ArchiveEntry) {
 
 export function intervalLabel(v: number) {
   return v === 30 ? '30분' : v === 60 ? '1시간' : '2시간';
-}
-
-export function notifyLabel(v: AppSettings['notifyTiming']) {
-  return v === 'before' ? '1분 전' : v === 'exact' ? '기록 시각' : '둘 다';
 }
 
 export function captureModeLabel(v: AppSettings['captureMode']) {

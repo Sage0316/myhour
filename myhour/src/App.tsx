@@ -52,7 +52,6 @@ function AppContent() {
           onTabChange={setActiveTab}
           onRecord={() => setModal('record')}
           onWrapUp={() => setModal('wrapup')}
-          videoUrl={null}
         />
       );
       case 'today': return <TodayScreen onTabChange={setActiveTab} onWrapUp={() => setModal('wrapup')} />;

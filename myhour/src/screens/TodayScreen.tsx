@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { useApp } from '../context';
-import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS } from '../store';
+import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS, groupRecordsBySlot } from '../store';
 import type { MyRecord } from '../store';
+import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -26,7 +27,8 @@ function AudioBars() {
 
 function RecordTile({ record, onLongPress }: { record: MyRecord; onLongPress: () => void }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasMedia = record.content.startsWith('data:');
+  const mediaSrc = useMediaSrc(record);
+  const hasMedia = !!mediaSrc;
 
   function handlePointerDown() {
     timerRef.current = setTimeout(() => { navigator.vibrate?.(30); onLongPress(); }, 500);
@@ -48,7 +50,7 @@ function RecordTile({ record, onLongPress }: { record: MyRecord; onLongPress: ()
       {/* Thumbnail */}
       <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {(record.type === 'photo' || record.type === 'video' || record.type === 'meme') && hasMedia ? (
-          <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img src={mediaSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : record.type === 'text' ? (
           <div style={{ padding: '14px 12px', fontSize: 12, lineHeight: 1.55, color: 'rgba(26,26,26,0.75)', overflow: 'hidden', maxHeight: '100%' }}>
             {record.content}
@@ -121,7 +123,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
   const { dateShort, weekdayEn } = getDateStrings(sessionDate);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
-  const slotMap = new Map(records.map(r => [r.slotTime, r]));
+  const slotMap = groupRecordsBySlot(records, slots, settings.interval, settings.startTime);
   const currentIdx = slots.indexOf(currentSlot);
   const visibleSlots = slots.slice(0, currentIdx + 1);
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated } from '../store';
+import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, loadVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated, hasMedia } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
+import { useMediaSrc } from '../useMediaSrc';
 import { generateVideo } from '../videoGenerator';
 import TabBar from '../components/TabBar';
 
@@ -24,12 +25,13 @@ function monthLabel(iso: string) {
 
 function RecordThumb({ record }: { record: MyRecord }) {
   const bg = TYPE_COLORS[record.type];
-  const hasMedia = record.content.startsWith('data:');
+  const mediaSrc = useMediaSrc(record);
+  const hasMedia = !!mediaSrc;
 
   if ((record.type === 'photo' || record.type === 'meme') && hasMedia) {
     return (
       <img
-        src={record.content}
+        src={mediaSrc}
         alt=""
         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
       />
@@ -38,7 +40,7 @@ function RecordThumb({ record }: { record: MyRecord }) {
   if (record.type === 'video' && hasMedia) {
     return (
       <>
-        <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'blur(1px)' }} />
+        <img src={mediaSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'blur(1px)' }} />
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)' }}>
           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: 0, height: 0, borderLeft: '8px solid #1A1A1A', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', marginLeft: 2 }} />
@@ -125,6 +127,7 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
 // 아카이브 항목의 개별 기록을 열람하는 시트 — 영상이 만들어져도 원본 기록은 남는다
 function DetailRow({ record }: { record: MyRecord }) {
   const [clipUrl, setClipUrl] = useState<string | null>(null);
+  const mediaSrc = useMediaSrc(record);
   useEffect(() => {
     if (record.type === 'video' && record.videoKey) {
       loadVideoFromIDB(record.videoKey).then(setClipUrl);
@@ -141,20 +144,20 @@ function DetailRow({ record }: { record: MyRecord }) {
         <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{record.content}</div>
       )}
       {(record.type === 'photo' || record.type === 'meme') && (
-        record.content.startsWith('data:')
-          ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+        mediaSrc
+          ? <img src={mediaSrc} alt="" style={{ width: '100%', borderRadius: 10, display: 'block' }} />
           : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
       )}
       {record.type === 'audio' && (
-        record.content.startsWith('data:')
-          ? <audio src={record.content} controls style={{ width: '100%', height: 36 }} />
+        mediaSrc
+          ? <audio src={mediaSrc} controls style={{ width: '100%', height: 36 }} />
           : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
       )}
       {record.type === 'video' && (
         clipUrl
           ? <video src={clipUrl} controls playsInline style={{ width: '100%', borderRadius: 10, display: 'block' }} />
-          : record.content.startsWith('data:')
-            ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
+          : mediaSrc
+            ? <img src={mediaSrc} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
             : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>원본은 영상 완성 후 정리됐어요</div>
       )}
       {record.caption && (
@@ -192,7 +195,8 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
 
 function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () => void }) {
   const mood = guessMood(entry.records);
-  const title = generateTitle(entry.records);
+  // 마감 때 영상에 들어간 제목이 있으면 그걸 쓴다 (구버전 항목엔 없어서 자동 생성으로 폴백)
+  const title = entry.title?.trim() || generateTitle(entry.records);
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -208,8 +212,8 @@ function ArchiveCard({ entry, onDelete }: { entry: ArchiveEntry; onDelete: () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.date]);
 
-  const lead = entry.records.find(r => (r.type === 'photo' || r.type === 'meme') && r.content.startsWith('data:'))
-    ?? entry.records.find(r => r.type === 'video' && r.content.startsWith('data:'))
+  const lead = entry.records.find(r => (r.type === 'photo' || r.type === 'meme') && hasMedia(r))
+    ?? entry.records.find(r => r.type === 'video' && hasMedia(r))
     ?? entry.records.find(r => r.type === 'text')
     ?? entry.records[0];
 

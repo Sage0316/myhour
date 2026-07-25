@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context';
-import { type AppSettings, type AppData, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel, loadSettings, getSessionDate, addToArchive } from '../store';
+import { type AppSettings, type AppData, TYPE_LABELS, intervalLabel, captureModeLabel, loadSettings, getSessionDate, addToArchive } from '../store';
 import { loadApiKey, saveApiKey } from '../llmDirector';
 import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush } from '../push';
 import TabBar from '../components/TabBar';
@@ -79,7 +79,7 @@ function PushSection() {
         {error && <div style={{ fontSize: 11, color: '#E5533C', whiteSpace: 'pre-line' }}>{error}</div>}
         {enabled && (
           <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>
-            시작 시간·간격을 바꾸면 알림을 껐다 다시 켜야 반영돼요
+            시작 시간·간격을 바꾸면 자동으로 반영돼요
           </div>
         )}
       </div>
@@ -385,13 +385,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         </SettingGroup>
 
         {/* Capture */}
-        <SettingGroup header="Capture · 알림 · 기록 방식">
-          <SettingRow label="알림 시점" value={notifyLabel(settings.notifyTiming)} open={openRow === 'notify'} onToggle={() => toggle('notify')}>
-            <Option label="1분 전" selected={settings.notifyTiming === 'before'} onSelect={() => set('notifyTiming', 'before')} />
-            <Option label="기록 시각" selected={settings.notifyTiming === 'exact'} onSelect={() => set('notifyTiming', 'exact')} />
-            <Option label="둘 다" selected={settings.notifyTiming === 'both'} onSelect={() => set('notifyTiming', 'both')} />
-          </SettingRow>
-
+        <SettingGroup header="Capture · 기록 방식">
           <SettingRow
             label="기록 방식"
             value={captureModeLabel(settings.captureMode)}
@@ -410,18 +404,6 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
               ))}
             </SettingRow>
           )}
-        </SettingGroup>
-
-        {/* Output */}
-        <SettingGroup header="Output · 결과물">
-          <SettingRow label="출력 비율" value={settings.outputRatio + ' 세로'} open={openRow === 'ratio'} onToggle={() => toggle('ratio')}>
-            <Option label="9:16 세로" selected={settings.outputRatio === '9:16'} onSelect={() => set('outputRatio', '9:16')} />
-            <Option label="1:1 정방형" selected={settings.outputRatio === '1:1'} onSelect={() => set('outputRatio', '1:1')} />
-          </SettingRow>
-          <SettingRow label="저장 방식" value="결과물 먼저 보기" last open={openRow === 'save'} onToggle={() => toggle('save')}>
-            <Option label="결과물 먼저 보기" selected={true} onSelect={() => setOpenRow(null)} />
-            <Option label="자동 저장" selected={false} onSelect={() => setOpenRow(null)} />
-          </SettingRow>
         </SettingGroup>
 
         <PushSection />

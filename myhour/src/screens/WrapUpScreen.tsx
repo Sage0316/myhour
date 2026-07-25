@@ -9,11 +9,10 @@ import type { DirectorOutput } from '../llmDirector';
 
 interface WrapUpScreenProps {
   onClose: () => void;
-  onSave: (videoUrl?: string) => void;
+  onSave: () => void;
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
-const EMOJIS = ['😌', '🤪', '🥹', '😵', '😤'];
 const TITLE_MAX = 24; // AI/자동 제목은 더 짧지만, 직접 수정할 땐 좀 더 여유 있게
 
 export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
@@ -25,8 +24,6 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [selectedMood, setSelectedMood] = useState<MoodItem>(autoMood);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const userPickedMoodRef = useRef(false); // 사용자가 직접 고른 뒤엔 AI 추천이 덮어쓰지 않는다
-  const [selectedEmoji, setSelectedEmoji] = useState(0);
-  const [calmness, setCalmness] = useState(72);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
@@ -97,10 +94,11 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
       if (warnings.length > 0) alert('영상은 생성됐지만 문제가 있었어요:\n\n' + warnings.join('\n'));
       const entryId = Date.now().toString();
       await saveVideoToIDB(archiveVideoKey({ id: entryId, date: sessionDate }), blob);
-      // 영상이 완성됐으니 원본 미디어는 정리하고 글 텍스트만 남긴다
-      addToArchive({ id: entryId, date: sessionDate, records: trimRecords(records), isWrapped: true, trimmed: true });
+      // 영상이 완성됐으니 원본 미디어는 정리하고 글 텍스트만 남긴다.
+      // title은 영상에 실제로 들어간 제목 — 아카이브 카드도 같은 제목을 보여줘야 한다
+      addToArchive({ id: entryId, date: sessionDate, records: trimRecords(records), isWrapped: true, trimmed: true, title });
       deleteRecordMedia(records);
-      onSave(URL.createObjectURL(blob));
+      onSave();
     } catch (e) {
       const msg = e instanceof Error ? e.message : '영상 생성에 실패했어요';
       setGenError(msg);
@@ -110,7 +108,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
   function handleSkipVideo() {
     try {
-      addToArchive({ id: Date.now().toString(), date: sessionDate, records, isWrapped: false });
+      addToArchive({ id: Date.now().toString(), date: sessionDate, records, isWrapped: false, title });
       onSave();
     } catch {
       setGenError('저장에 실패했어요. 저장 공간이 부족할 수 있어요.');
@@ -231,30 +229,6 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           {analyzeError && (
             <div style={{ fontSize: 11, color: '#E5533C', opacity: 0.8 }}>{analyzeError}</div>
           )}
-
-          <div style={{ height: 1, background: 'rgba(26,26,26,0.08)' }} />
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>더 정확하게 · 선택</div>
-            <div style={{ display: 'flex', gap: 7 }}>
-              {EMOJIS.map((emoji, i) => (
-                <button key={i} onClick={() => setSelectedEmoji(i)} style={{
-                  flex: 1, height: 38, borderRadius: 11,
-                  background: selectedEmoji === i ? '#F0F0EE' : '#FFFFFF',
-                  border: selectedEmoji === i ? '1.5px solid #1A1A1A' : '1px solid rgba(26,26,26,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, cursor: 'pointer',
-                  opacity: selectedEmoji === i ? 1 : 0.45,
-                }}>{emoji}</button>
-              ))}
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>
-                <span>차분함</span><span style={MONO}>{calmness}</span>
-              </div>
-              <input type="range" min={0} max={100} value={calmness} onChange={e => setCalmness(Number(e.target.value))} style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
-            </div>
-          </div>
         </div>
 
         {generating ? (

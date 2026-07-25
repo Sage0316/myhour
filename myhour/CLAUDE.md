@@ -20,7 +20,9 @@
 
 ## 저장소 구조
 - localStorage: records, settings, archive (`myhour_v1`, `myhour_settings_v1`, `myhour_archive_v1`), API 키(`myhour_anthropic_key`), AI 결과(`myhour_director_${date}`)
-- IndexedDB: 영상 blob (`myhour_videos_v1`), 키: 클립 `video_${ts}`, 완성 영상 `wrapped_${entry.id}` (구버전은 `wrapped_${date}`, archiveVideoKey 참조)
+- IndexedDB: 미디어 blob 전부 (`myhour_videos_v1`), 키: 클립 `video_${ts}`, 완성 영상 `wrapped_${entry.id}` (구버전은 `wrapped_${date}`, archiveVideoKey 참조), **사진·짤·음성 원본 `media_${record.id}`**
+- **미디어는 절대 localStorage에 넣지 말 것** (2026-07-24 이전엔 사진·음성 data URL이 records에 그대로 들어가서 iOS Safari 5MB 한도에 사진 25~50장이면 걸렸음). 지금은 `addRecord`가 IDB에 blob으로 넣고 `content=''` + `mediaKey`만 남긴다 — 사진 1장+글 1개 기록이 약 300바이트
+- 표시할 때는 `useMediaSrc(record)` 훅을 쓴다 (IDB에서 object URL 생성 + 언마운트 시 revoke). 존재 여부만 볼 땐 `hasMedia(record)`. **구버전 기록은 mediaKey 없이 content에 data URL이 있으니 두 경로를 다 지원해야 함** — 훅과 hasMedia가 알아서 처리하니 `content.startsWith('data:')`를 직접 쓰지 말 것
 - sessionDate: startTime 이전이면 전날 날짜 (getSessionDate 참조)
 - 아카이브: 마감할 때마다 고유 id로 누적 (같은 날 여러 개 가능), 카드 ✕로 삭제 가능
 - 원본 정리 정책: 영상 완성 시 미디어 원본(사진/음성/클립) 즉시 정리(trimRecords), 영상 없이 마감한 항목은 3일 후 자동 정리(sweepArchive). 글 텍스트는 남음
@@ -36,6 +38,10 @@ git clone -q --depth 1 -b gh-pages <origin-url> deploy
 cp -r /home/claude/repo/myhour/dist/. /tmp/deploy/
 cd /tmp/deploy && git add -A && git commit -q -m "Deploy" && git push -q origin gh-pages
 ```
+
+## 주의: 슬롯 매칭
+`record.slotTime`엔 **정확한 시계 시각**("23:42")이 들어간다 — 슬롯 문자열("23:00")과 그대로 일치하지 않는다.
+오늘 탭 격자처럼 슬롯별로 배치할 땐 `groupRecordsBySlot()`을 써야 한다 (문자열 비교로 매칭하면 격자가 늘 "기록 안 함"으로 보이는 버그가 있었음, 2026-07-24 수정).
 
 ## 현재 앱 흐름
 1. 홈/오늘 탭에서 기록 추가 (텍스트/사진/영상/음성)

@@ -29,6 +29,33 @@ export async function getPushEnabled(): Promise<boolean> {
   }
 }
 
+// 서버에 구독 + 알림 스케줄을 등록한다. 같은 endpoint로 다시 보내면 스케줄만 갱신된다.
+function postSubscription(sub: PushSubscription, settings: AppSettings) {
+  return fetch(`${PUSH_SERVER_URL}/subscribe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subscription: sub.toJSON(),
+      interval: settings.interval,
+      startTime: settings.startTime,
+      endTime: settings.endMode === 'fixed' ? settings.endTime : '22:00',
+      tzOffsetMin: new Date().getTimezoneOffset(),
+    }),
+  });
+}
+
+// 기록 간격·시작/종료 시간이 바뀌면 호출 — 이미 구독 중일 때만 서버 스케줄을 갱신한다.
+// (구독 안 한 상태면 아무것도 안 하고, 실패해도 조용히 넘어간다)
+export async function resyncPush(settings: AppSettings): Promise<void> {
+  if (!PUSH_SERVER_URL || !isPushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await postSubscription(sub, settings);
+  } catch { /* 다음에 알림을 껐다 켜면 반영된다 */ }
+}
+
 export async function enablePush(settings: AppSettings): Promise<void> {
   if (!isPushSupported()) throw new Error('이 기기는 푸시 알림을 지원하지 않아요.\n(iOS 16.4 이상 + 홈 화면 설치 필요)');
   const perm = await Notification.requestPermission();
@@ -40,17 +67,7 @@ export async function enablePush(settings: AppSettings): Promise<void> {
     applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
   });
 
-  const res = await fetch(`${PUSH_SERVER_URL}/subscribe`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      subscription: sub.toJSON(),
-      interval: settings.interval,
-      startTime: settings.startTime,
-      endTime: settings.endMode === 'fixed' ? settings.endTime : '22:00',
-      tzOffsetMin: new Date().getTimezoneOffset(),
-    }),
-  });
+  const res = await postSubscription(sub, settings);
   if (!res.ok) throw new Error('알림 서버 등록에 실패했어요. 잠시 후 다시 시도해주세요.');
 
   // 연결 확인용 즉시 테스트 푸시 (실패해도 구독 자체는 유효)

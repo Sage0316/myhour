@@ -1,5 +1,5 @@
 import type { MyRecord } from './store';
-import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, loadVideoFromIDB } from './store';
+import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, loadVideoFromIDB, loadVideoBlobFromIDB } from './store';
 import {
   W, H, PAPER,
   drawCover, drawVideoCover,
@@ -220,9 +220,26 @@ export async function generateVideo(
     new Promise<never>((_, rej) => setTimeout(() => rej(new Error('decode timeout')), 8000)),
   ]);
 
+  // 사진·짤·음성 원본은 IndexedDB(mediaKey)에 있고, 구버전 기록은 content에 data URL로 남아 있다.
+  // 이미지는 표시용 URL, 음성은 디코딩용 ArrayBuffer가 필요해서 각각 따로 가져온다.
+  const mediaImageUrl = async (r: MyRecord): Promise<string | null> => {
+    if (r.content.startsWith('data:')) return r.content;
+    if (r.mediaKey) return loadVideoFromIDB(r.mediaKey);
+    return null;
+  };
+  const mediaAudioBuffer = async (r: MyRecord): Promise<ArrayBuffer | null> => {
+    if (r.content.startsWith('data:')) return dataUrlToArrayBuffer(r.content);
+    if (r.mediaKey) {
+      const blob = await loadVideoBlobFromIDB(r.mediaKey);
+      if (blob) return blob.arrayBuffer();
+    }
+    return null;
+  };
+
   await Promise.all(records.map(async r => {
     if (r.type === 'photo' || r.type === 'meme') {
-      if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
+      const src = await mediaImageUrl(r);
+      if (src) imgMap.set(r.id, await loadImage(src));
     } else if (r.type === 'video') {
       if (r.videoKey) {
         const url = await loadVideoFromIDB(r.videoKey);
@@ -234,15 +251,16 @@ export async function generateVideo(
         }
       }
       // fallback thumbnail
-      if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
+      const src = await mediaImageUrl(r);
+      if (src) imgMap.set(r.id, await loadImage(src));
     } else if (r.type === 'audio') {
       if (!audioCtx) { onWarn?.(`음성(${r.slotTime}): 오디오 컨텍스트 없음`); return; }
-      if (!r.content.startsWith('data:')) { onWarn?.(`음성(${r.slotTime}): 데이터 형식 이상 (${r.content.slice(0, 20)})`); return; }
+      const raw = await mediaAudioBuffer(r);
+      if (!raw) { onWarn?.(`음성(${r.slotTime}): 원본을 찾을 수 없어요`); return; }
       try {
-        voiceBufMap.set(r.id, await decodeWithTimeout(dataUrlToArrayBuffer(r.content)));
+        voiceBufMap.set(r.id, await decodeWithTimeout(raw));
       } catch (e) {
-        const mime = r.content.slice(5, r.content.indexOf(';'));
-        onWarn?.(`음성(${r.slotTime}) 디코딩 실패 [${mime}]: ${e instanceof Error ? (e.name + ' ' + e.message) : String(e)}`);
+        onWarn?.(`음성(${r.slotTime}) 디코딩 실패: ${e instanceof Error ? (e.name + ' ' + e.message) : String(e)}`);
       }
     }
   }));
