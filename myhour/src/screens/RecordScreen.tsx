@@ -237,6 +237,9 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
   );
 }
 
+// 그림일기 줄노트에 들어가는 최대치 (7줄 × ~13자) — 넘으면 영상에서 잘린다
+const TEXT_MAX = 90;
+
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
   return (
@@ -244,15 +247,15 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
       <div style={{ flex: 1, borderRadius: 20, background: 'rgba(255,255,255,0.06)', padding: 18 }}>
         <textarea
           value={text}
-          maxLength={2000}
-          onChange={e => setText(e.target.value)}
+          maxLength={TEXT_MAX}
+          onChange={e => setText(e.target.value.slice(0, TEXT_MAX))}
           placeholder="지금 이 순간을 짧게 남겨보세요"
           autoFocus
           style={{ width: '100%', height: '100%', background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 16, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{text.length}자</div>
+        <div style={{ ...MONO, fontSize: 11, color: text.length >= TEXT_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{TEXT_MAX}자</div>
         <button
           onClick={() => text.trim() && onSave(text.trim())}
           disabled={!text.trim()}
@@ -387,6 +390,9 @@ function AudioRecordMode({ onCapture }: { onCapture: (blob: Blob) => void }) {
   );
 }
 
+// 사진/영상 자막은 영상에서 한 줄이라 이 이상은 화면을 벗어난다
+const CAPTION_MAX = 20;
+
 function CaptionStep({ content, type, onSave, onRetake }: {
   content: string;
   type: RecordType;
@@ -394,7 +400,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
   onRetake?: () => void;
 }) {
   const [text, setText] = useState('');
-  const isMedia = type === 'photo' || type === 'video';
+  const isMedia = type === 'photo' || type === 'video' || type === 'meme';
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 14, minHeight: 0, overflowY: 'auto' }}>
@@ -414,7 +420,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
               onClick={onRetake}
               style={{ position: 'absolute', top: 10, right: 10, padding: '5px 12px', borderRadius: 50, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
             >
-              다시 찍기
+              {type === 'meme' ? '다시 고르기' : '다시 찍기'}
             </button>
           )}
         </div>
@@ -429,12 +435,19 @@ function CaptionStep({ content, type, onSave, onRetake }: {
       <div style={{ flex: 1, borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 16, minHeight: 100 }}>
         <textarea
           value={text}
-          maxLength={500}
-          onChange={e => setText(e.target.value)}
-          placeholder="점심 도시락, 오후 산책..."
+          maxLength={CAPTION_MAX}
+          onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}
+          placeholder={type === 'meme' ? '딱 이 기분이었음 ㅋㅋ' : '점심 도시락, 오후 산책...'}
           autoFocus
           style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 15, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, paddingLeft: 4 }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+          {type === 'meme' ? '이 문구가 하루 요약 영상에 손글씨로 들어가요' : ''}
+        </div>
+        <div style={{ ...MONO, fontSize: 11, color: text.length >= CAPTION_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{CAPTION_MAX}자</div>
       </div>
 
       {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
@@ -462,6 +475,9 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const [capturedContent, setCapturedContent] = useState<string | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const albumInputRef = useRef<HTMLInputElement>(null);
+  // 사진 모드는 촬영/앨범 두 갈래 — 촬영은 photo(풀스크린 장면), 앨범은 meme(폴라로이드/스크랩북 장면)
+  const photoSourceRef = useRef<'camera' | 'album'>('camera');
   const pendingMediaRef = useRef<RecordMedia | null>(null);
   const pendingBlobRef = useRef<Blob | null>(null);
   const temporaryUrlRef = useRef<string | null>(null);
@@ -510,22 +526,28 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     clearPendingMedia();
     setMode(m);
     setCapturedContent(null);
-    if (m === '사진') photoInputRef.current?.click();
   }
+
+  // 사진 모드의 실제 기록 타입 — 앨범에서 고른 건 meme
+  const photoType: RecordType = mode === '사진' && photoSourceRef.current === 'album'
+    ? 'meme'
+    : MODE_TYPE[mode];
 
   function retake() {
     clearPendingMedia();
     setCapturedContent(null);
-    if (mode === '사진') photoInputRef.current?.click();
-    else if (mode === '영상') setRetakeKey(k => k + 1);
+    if (mode === '사진') {
+      if (photoSourceRef.current === 'album') albumInputRef.current?.click();
+      else photoInputRef.current?.click();
+    } else if (mode === '영상') setRetakeKey(k => k + 1);
   }
 
   async function handleCaptionSave(caption: string) {
-    const type = MODE_TYPE[mode];
+    const type = photoType;
     let media = pendingMediaRef.current;
     if (!media && pendingBlobRef.current) {
       const blob = pendingBlobRef.current;
-      await assertCaptureCapacity(type === 'audio' ? 'audio' : 'photo', blob);
+      await assertCaptureCapacity(type === 'text' ? 'photo' : type, blob);
       const key = createStableId('media');
       await saveVideoToIDB(key, blob);
       media = { key, type: blob.type, size: blob.size };
@@ -540,7 +562,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       return (
         <CaptionStep
           content={capturedContent}
-          type={MODE_TYPE[mode]}
+          type={photoType}
           onSave={handleCaptionSave}
           onRetake={mode !== '음성' ? retake : undefined}
         />
@@ -568,19 +590,34 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       />
     );
 
-    // 사진 — 카메라 미실행 상태
+    // 사진 — 촬영/앨범 두 갈래 선택 (앨범에서 고른 건 meme 장면으로 들어간다)
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 22px 30px' }}>
         <button
           type="button"
-          onClick={() => photoInputRef.current?.click()}
-          aria-label="사진 촬영하기"
-          style={{ flex: 1, borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer' }}
+          onClick={() => { photoSourceRef.current = 'camera'; photoInputRef.current?.click(); }}
+          aria-label="지금 촬영하기"
+          style={{ flex: 1, border: 'none', borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, cursor: 'pointer' }}
         >
-          <div style={{ width: 68, height: 68, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
+          <div style={{ width: 62, height: 62, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 16, height: 16, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
           </div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>탭해서 카메라 열기</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>지금 촬영</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>카메라로 이 순간을 담아요</div>
+        </button>
+        <button
+          type="button"
+          onClick={() => { photoSourceRef.current = 'album'; albumInputRef.current?.click(); }}
+          aria-label="앨범에서 선택하기"
+          style={{ flex: 1, border: 'none', borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, cursor: 'pointer' }}
+        >
+          <div style={{ width: 62, height: 62, borderRadius: 16, border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', padding: 6, gap: 4 }}>
+            <div style={{ width: 12, height: 20, background: 'rgba(255,255,255,0.35)', borderRadius: 3 }} />
+            <div style={{ width: 12, height: 32, background: 'rgba(255,255,255,0.7)', borderRadius: 3 }} />
+            <div style={{ width: 12, height: 14, background: 'rgba(255,255,255,0.35)', borderRadius: 3 }} />
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>앨범에서 선택</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>기분에 맞는 짤·사진도 좋아요</div>
         </button>
       </div>
     );
@@ -589,6 +626,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   return (
     <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="새 기록" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
+      {/* 앨범 선택은 capture 속성 없이 — iOS에서 사진 보관함이 열린다 */}
+      <input ref={albumInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
 
       <div style={{ padding: '58px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onClose} aria-label="기록 화면 닫기" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>

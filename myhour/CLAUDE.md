@@ -17,10 +17,11 @@
 - Canvas API + MediaRecorder로 클라이언트 WebM 영상 생성
 
 ## 저장소 구조
-- localStorage: records, settings, archive (`myhour_v1`, `myhour_settings_v1`, `myhour_archive_v1`), API 키(`myhour_anthropic_key`), AI 결과(`myhour_director_${date}`)
-- IndexedDB: 미디어 blob 전부 (`myhour_videos_v1`), 키: 클립 `video_${ts}`, 완성 영상 `wrapped_${entry.id}` (구버전은 `wrapped_${date}`, archiveVideoKey 참조), **사진·짤·음성 원본 `media_${record.id}`**
-- **미디어는 절대 localStorage에 넣지 말 것** (2026-07-24 이전엔 사진·음성 data URL이 records에 그대로 들어가서 iOS Safari 5MB 한도에 사진 25~50장이면 걸렸음). 지금은 `addRecord`가 IDB에 blob으로 넣고 `content=''` + `mediaKey`만 남긴다 — 사진 1장+글 1개 기록이 약 300바이트
-- 표시할 때는 `useMediaSrc(record)` 훅을 쓴다 (IDB에서 object URL 생성 + 언마운트 시 revoke). 존재 여부만 볼 땐 `hasMedia(record)`. **구버전 기록은 mediaKey 없이 content에 data URL이 있으니 두 경로를 다 지원해야 함** — 훅과 hasMedia가 알아서 처리하니 `content.startsWith('data:')`를 직접 쓰지 말 것
+- localStorage: 현재 기록·아카이브·설정은 `hakku_journal_v2_active` / `hakku_archive_v2_active` / 설정 키 (구버전 `myhour_v1`, `myhour_archive_v1`은 읽기 전용 마이그레이션), AI 결과(`hakku_director_v1_${date}`)
+- IndexedDB: 미디어 blob 전부 (`hakku_local_v2`, 구버전 `myhour_videos_v1`), 키: 클립·완성 영상은 archiveVideoKey 참조, **사진·짤·음성 원본은 `media_*`(createStableId)**
+- **미디어는 절대 localStorage에 넣지 말 것** (2026-07-24 이전엔 사진·음성 data URL이 records에 그대로 들어가서 iOS Safari 5MB 한도에 사진 25~50장이면 걸렸음). 지금은 `addRecord`가 IDB에 blob으로 넣고 `content=''` + `mediaId`만 남긴다 — 사진 1장+글 1개 기록이 약 300바이트. **영상만 예외**: content에 작은 썸네일 data URL을 남긴다(`keepInline` 참조). RecordScreen이 blob을 IDB에 넣어 `media`를 넘겨주면 addRecord가 content를 비우는 구조라, 둘 중 한쪽만 고치면 조용히 예전 동작으로 돌아간다
+- 표시할 때는 `useMediaSrc(record)` 훅을 쓴다 (IDB에서 object URL 생성 + 언마운트 시 revoke). 존재 여부만 볼 땐 `hasMedia(record)`. **구버전 기록은 mediaId 없이 content에 data URL이 있으니 두 경로를 다 지원해야 함** — 훅과 hasMedia가 알아서 처리하니 `content.startsWith('data:')`를 직접 쓰지 말 것 (영상 썸네일만 예외)
+- **아카이브 항목의 `title`은 저장·읽기 양쪽에 다 있어야 한다.** journalRepository.loadArchive는 candidate를 새로 조립하므로 필드를 명시적으로 옮기지 않으면 읽을 때마다 조용히 사라진다 (journalRepository.test.ts가 왕복을 지킨다)
 - sessionDate: startTime 이전이면 전날 날짜 (getSessionDate 참조)
 - 아카이브: 마감할 때마다 고유 id로 누적 (같은 날 여러 개 가능), 카드 ✕로 삭제 가능
 - 원본 정리 정책: 영상 완성 시 미디어 원본(사진/음성/클립) 즉시 정리(trimRecords), 영상 없이 마감한 항목은 3일 후 자동 정리(sweepArchive). 글 텍스트는 남음
@@ -61,12 +62,16 @@ pnpm test:e2e
 - `src/scenes.ts`: 영상 장면 렌더러. 글=그림일기 틀(진한 회색 테두리+낙서 원 안에 내용 이모지+줄노트), 사진=풀스크린+무드 이모지 스캐터, 음성=실제 녹음 파형이 무드 색으로 차오름(computeEnvelope), 짤(meme)=폴라로이드/스크랩북 2종이 id 기준 랜덤(사용자 캡션이 손글씨로, 테이프·밑줄은 무드색), 마무리=블랙 카드
 - 손글씨 폰트: **개구(Gaegu, OFL)** public/fonts, ensureDiaryFont. 2026-07 크레파스 느낌으로 교체 (이전: 나눔손글씨 펜). 최종 후보였던 감자꽃(Gamja Flower)도 좋았음 — 나중에 폰트 바꿀 일 있으면 참고. 폰트는 fonts.googleapis.com css2 API에서 ttf URL 얻어 fonts.gstatic.com에서 받으면 됨 (이 세션 네트워크에서 열려 있었음)
 - 앨범(meme) 타입: RecordType 'meme'(라벨 '앨범', 색 #F9E9A6). 별도 탭이 아니라 **사진 모드 안에서 "지금 촬영/앨범에서 선택" 두 갈래** — 촬영=photo(풀스크린 장면), 앨범 선택=meme(폴라로이드/스크랩북 장면, 캡션이 손글씨). 앨범 input은 capture 속성 없음(카메라 강제 방지). 정리 정책은 사진과 동일. **주의: seededRnd(LCG)는 이웃 시드의 첫 값이 거의 같아서 Date.now() 기반 id로 분기하려면 rnd() 두 번 버리고 써야 함** (drawMemeScene 참조)
-- `src/llmDirector.ts`: **claude-sonnet-5** 1회 호출(thinking disabled 필수)로 제목·마무리·무드·무드이모지·장면 자막·BGM 무드·기록별 이모지(recordEmojis) 수신. API 키가 있으면 localStorage에 저장해 브라우저 직접 호출(anthropic-dangerous-direct-browser-access 헤더), **없으면 자동으로 push-server의 `/director` 프록시로 대체 호출** (aiAvailable() 참조) — 친구 등 키 없는 사용자도 무료 체험 가능. 워커가 서버 키로 대신 호출하고 하루 총량 80회·기기(IP)당 15회로 제한(worker.js handleDirector)
-- `src/videoGenerator.ts`: 1080×1920 렌더링. **mimeType 우선순위는 mp4를 webm보다 먼저** (2026-07-22 변경) — iOS Safari가 MediaRecorder로 webm '녹화' 자체는 지원해도 사진 앱이 webm을 영상으로 인식 못 해서, 에어드랍/공유해도 파일 앱에만 들어가고 사진 앱엔 저장 안 되는 문제가 있었음. mp4(h264)는 어디서든 정상 저장됨. 절대 webm을 다시 앞으로 올리지 말 것 BGM 무드 6종×3곡(public/bgm, 전곡 CC0, 랜덤 선곡+랜덤 시작 지점) + 음성/클립 소리 믹싱(BGM 더킹, 컷 페이드아웃). 영상·음성 장면은 3~5초(MEDIA_MAX)
+- `src/llmDirector.ts`: **AI 키는 브라우저에 절대 넣지 않는다.** 클라이언트는 얇은 호출부일 뿐이고, 프롬프트·모델·검증은 전부 `ai-server/worker.js`에 있다. 흐름: 설정에서 AI 동의 → `/v1/install`로 설치 토큰 받기(30일, HMAC 서명) → `/v1/direct`로 {date, records(텍스트·캡션만)} 전송 → 제목·마무리·무드·moodChip·무드이모지·장면 자막·BGM 무드·기록별 이모지(recordEmojis) 수신. 설치당 하루 20회 제한(AI_STATE KV) + Origin 허용목록 + rate limiter. 사진·영상·음성 원본은 전송하지 않는다. **2026-07의 push-server `/director` 프록시는 이 구조로 대체됐다** — AI 경로를 두 개 두지 말 것
+- **ai-server는 `env.PROVIDER_URL`에 Cloudflare AI Gateway 엔드포인트를 넣어야 동작한다.** Workers에서 api.anthropic.com을 직접 부르면 Cloudflare→Cloudflare 봇 방어로 403 "Request not allowed"가 난다(UA 헤더로는 안 풀림). 게이트웨이 인증을 켰으면 `CF_AIG_TOKEN`도 시크릿으로 넣고 `cf-aig-authorization` 헤더로 나간다. 계정 게이트웨이: `https://gateway.ai.cloudflare.com/v1/f68efd92d83fa98ee254ffd8c8a0ab6e/sage/anthropic/v1/messages`
+- 프롬프트 규격을 바꿀 때는 **worker.js의 buildPrompt/validResult/normalizeResult와 llmDirector의 zod 스키마를 같이** 손대야 한다. `recordEmojis`가 현재 필드명이고 구버전 응답의 `diaryEmojis`는 normalizeResult에서 받아준다. `meme`이 RECORD_TYPES에 없으면 짤이 든 하루는 서버에서 invalid_request로 전부 거절된다
+- `src/videoGenerator.ts`: 1080×1920 렌더링. **mimeType 우선순위는 mp4를 webm보다 먼저** (2026-07-22 변경) — iOS Safari가 MediaRecorder로 webm '녹화' 자체는 지원해도 사진 앱이 webm을 영상으로 인식 못 해서, 에어드랍/공유해도 파일 앱에만 들어가고 사진 앱엔 저장 안 되는 문제가 있었음. mp4(h264)는 어디서든 정상 저장됨. **절대 webm을 다시 앞으로 올리지 말 것** — 2026-07-25 병합에서 한 번 되돌아갔다. 우선순위는 `videoGenerator.ts`와 `services/video-generation-service.ts`(capabilities) **두 곳**에 있어서 같이 봐야 한다. BGM 무드 7종×3곡(public/bgm, 전곡 CC0, 랜덤 선곡 + `pickAudibleOffset`로 소리 나는 지점에서 시작) + 음성/클립 소리 믹싱(BGM 더킹, 컷 페이드아웃). 영상·음성 장면은 3~5초(MEDIA_MAX)
+- BGM 파일명은 `llmDirector.BGM_FILES`와 public/bgm이 정확히 일치해야 한다 — 어긋나면 fetch가 404 나고 영상에 음악만 조용히 빠진다. llmDirector.test.ts가 카탈로그 21곡의 실제 파일 존재를 검사한다
 - 음성 녹음은 16kHz WAV 직접 인코딩 (iOS mp4는 decodeAudioData 실패하는 버그 회피)
 - AudioContext는 탭 제스처 직후 생성 필수 (iOS suspended 버그), 폰트/디코딩엔 타임아웃, 생성 실패 시 onWarn으로 폰에 에러 표시
 - 녹화/녹음 UI: 5초 넘으면 "앞 5초만 담겨요" 안내 + 영상 미리보기 회색 전환
 - 미리보기 루프: `npm run dev -- --port 5199` 후 /myhour/preview.html (장면 스크린샷), /myhour/gentest.html (생성 통합테스트, window.__blob으로 오디오 검증). Playwright는 playwright-core + executablePath '/opt/pw-browsers/chromium'
+- 개발 컨테이너에 설치된 크로미움 버전이 playwright가 원하는 빌드와 다를 때(`Executable doesn't exist`) `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`을 주면 playwright.config.ts와 scripts/browser-verify.mjs가 그 바이너리를 쓴다. CI에서는 비어 있어 기본 동작 그대로. `playwright install`은 돌리지 말 것
 - 설정 맨 아래 빌드 버전 표시 (vite define __BUILD_VERSION__) — "고쳤는데 안 돼요"는 먼저 버전 확인
 - SW는 same-origin navigate만 처리 (외부 API 요청 건드리면 안 됨). 배포 반영은 CDN 캐시 때문에 최대 10분 + 앱 재시작 필요
 - 무료 음원 추가는 GitHub의 0lhi/FreePD(퍼블릭 도메인) 미러에서 — raw.githubusercontent.com은 네트워크 정책에서 접근 가능(2026-07 기준). freepd.com 본 사이트는 폐쇄됨. 시청 페이지: /myhour/bgm.html
@@ -83,8 +88,17 @@ iOS 16.4+ PWA 푸시. 워커 배포됨: **https://myhour-push.sage0316.workers.d
 - 세션 네트워크 정책이 api.cloudflare.com만 허용 → workers.dev로 /health 직접 확인 불가, 배포 상태는 API(scripts/myhour-push/subdomain·secrets·schedules)로 검증
 - 크론 30분 단위, 사용자별 interval(30/60/120)·시작/종료시간·타임존 반영. 만료 구독(410) 자동 정리
 
+## ⚠️ 배포 상태 (2026-07-25 기준 — 코드는 준비됐고 배포가 남았다)
+main의 하드닝 병합으로 워커 프로토콜이 새로 짜였다. 앱은 이제 `.env` 빌드 변수로 워커를 찾는다:
+`VITE_AI_WORKER_URL`, `VITE_PUSH_SERVER_URL`, `VITE_VAPID_PUBLIC_KEY` (.env.example 참고, CI는 GitHub repo `vars`에서 주입).
+- **비어 있으면 AI와 푸시가 조용히 꺼진다** — 설정 화면에 "서버 연결 전"으로 뜬다
+- 새 프로토콜(`/v1/install` + 서명 토큰)은 기존에 배포된 `myhour-push`의 옛 엔드포인트와 호환되지 않는다 → push-server 재배포 필요
+- ai-server는 아직 배포 안 됨 → 배포 + `ANTHROPIC_API_KEY`/`INSTALL_TOKEN_SECRET`/`PROVIDER_URL`(AI Gateway)/`CF_AIG_TOKEN` 시크릿 + `AI_STATE` KV 필요
+- 배포는 workflow_dispatch 수동 (`.github/workflows/deploy-workers.yml`, `deploy-pages.yml`) — main push만으로는 배포되지 않으니, GitHub Pages가 안 바뀌었다고 당황하지 말 것
+
 ## 다음 과제 후보
-- 앱스토어 출시 준비: Capacitor 래핑, API 프록시 서버(푸시 워커에 합치면 됨), 백업 강화, 과금 모델
+- 위 배포 3종(ai-server, push-server 재배포, Pages) 실행 + repo vars 설정
+- 앱스토어 출시 준비: Capacitor 래핑, 백업 강화, 과금 모델
 `pnpm check`는 zero-warning lint, 단위/백업 테스트, AI·Push Worker 인증 테스트, Web Push 암호화 왕복, 타입 검사와 프로덕션 빌드를 실행합니다.
 
 ## 주요 위치

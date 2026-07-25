@@ -13,7 +13,8 @@ export interface WrapUpResult {
 }
 
 export class WrapUpService {
-  async complete(date: string, records: MyRecord[], generatedVideo: Blob): Promise<WrapUpResult> {
+  // title: 영상에 실제로 들어간 제목 — 아카이브 카드에서 같은 제목을 보여주려면 반드시 넘겨야 한다
+  async complete(date: string, records: MyRecord[], generatedVideo: Blob, title?: string): Promise<WrapUpResult> {
     const archiveId = createStableId('archive');
     const videoKey = archiveVideoKey({ id: archiveId, date });
     await saveVideoToIDB(videoKey, generatedVideo);
@@ -24,6 +25,7 @@ export class WrapUpService {
         records,
         isWrapped: true,
         trimmed: false,
+        title: title?.trim() || undefined,
       });
       return { archiveId, generated: true };
     } catch (error) {

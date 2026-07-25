@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../appContext';
-import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS } from '../store';
+import { getDateStrings, getSessionDate, groupRecordsBySlot, TYPE_COLORS, TYPE_LABELS } from '../store';
 import type { MyRecord } from '../store';
+import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 
@@ -26,7 +27,11 @@ function AudioBars() {
 }
 
 function RecordTile({ record, onDelete }: { record: MyRecord; onDelete: () => void }) {
-  const hasMedia = record.content.startsWith('data:');
+  // 사진·짤 원본은 IDB에 있고, 영상은 content에 썸네일 data URL이 들어 있다
+  const mediaSrc = useMediaSrc(record);
+  const thumbSrc = record.type === 'video'
+    ? (record.content.startsWith('data:') ? record.content : null)
+    : mediaSrc;
 
   const bg = TYPE_COLORS[record.type];
 
@@ -37,8 +42,8 @@ function RecordTile({ record, onDelete }: { record: MyRecord; onDelete: () => vo
     >
       {/* Thumbnail */}
       <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 16, overflow: 'hidden', background: bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {(record.type === 'photo' || record.type === 'video') && hasMedia ? (
-          <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        {(record.type === 'photo' || record.type === 'meme' || record.type === 'video') && thumbSrc ? (
+          <img src={thumbSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : record.type === 'text' ? (
           <div style={{ padding: '14px 12px', fontSize: 12, lineHeight: 1.55, color: 'rgba(26,26,26,0.75)', overflow: 'hidden', maxHeight: '100%' }}>
             {record.content}
@@ -48,7 +53,7 @@ function RecordTile({ record, onDelete }: { record: MyRecord; onDelete: () => vo
         )}
 
         {/* Video play overlay */}
-        {record.type === 'video' && hasMedia && (
+        {record.type === 'video' && thumbSrc && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: 0, height: 0, borderLeft: '11px solid #fff', borderTop: '7px solid transparent', borderBottom: '7px solid transparent', marginLeft: 3 }} />
@@ -123,12 +128,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
     () => setPendingDelete(null),
   );
 
-  const slotMap = new Map<string, MyRecord[]>();
-  for (const record of records) {
-    const group = slotMap.get(record.slotId) ?? [];
-    group.push(record);
-    slotMap.set(record.slotId, group);
-  }
+  const slotMap = groupRecordsBySlot(records, slots, settings.interval, settings.startTime);
   const currentIdx = slots.indexOf(currentSlot);
   const visibleSlots = slots.slice(0, currentIdx + 1);
 

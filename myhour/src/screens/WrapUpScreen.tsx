@@ -26,6 +26,8 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const autoMood = guessMood(records);
   const [selectedMood, setSelectedMood] = useState<MoodItem>(autoMood);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
+  // 사용자가 직접 무드를 고른 뒤에는 AI 분석 결과로 덮어쓰지 않는다
+  const userPickedMoodRef = useRef(false);
   const [selectedEmoji, setSelectedEmoji] = useState(0);
   const [selectedBgmFile, setSelectedBgmFile] = useState('');
   const [calmness, setCalmness] = useState(72);
@@ -38,10 +40,27 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [director, setDirector] = useState<DirectorOutput | null>(null);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
+  const [titleOverride, setTitleOverride] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+
   const fallbackTitle = generateTitle(records);
   const fallbackClosing = generateClosing(records);
-  const title = director?.title ?? fallbackTitle;
+  const title = titleOverride ?? director?.title ?? fallbackTitle;
   const closing = director?.closing ?? fallbackClosing;
+
+  const TITLE_MAX = 30;
+
+  function startEditingTitle() {
+    setTitleDraft(title);
+    setEditingTitle(true);
+  }
+
+  function commitTitle() {
+    const next = titleDraft.trim().slice(0, TITLE_MAX);
+    setTitleOverride(next || null);
+    setEditingTitle(false);
+  }
 
   // 손글씨 폰트를 미리 데워둬서, 영상 만들기 탭 시점엔 이미 캐시돼 있게
   useEffect(() => { ensureDiaryFont(); }, []);
@@ -54,6 +73,9 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
       .then(out => {
         setDirector(out);
         setAnalyzing(false);
+        // AI가 고른 무드로 칩을 자동 선택 — 단, 사용자가 이미 직접 골랐다면 건드리지 않는다
+        const chip = MOOD_LIST.find(m => m.mood === out.moodChip);
+        if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
         try { localStorage.setItem(`hakku_director_v1_${sessionDate}`, JSON.stringify(out)); } catch { /* ignore */ }
       })
       .catch(e => {
@@ -87,10 +109,10 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
         emojis: director?.emojis ?? EMOJIS[selectedEmoji],
         mood: selectedMood.mood,
         captions: director?.captions,
-        diaryEmojis: director?.diaryEmojis,
+        recordEmojis: director?.recordEmojis,
       }, msg => warnings.push(msg), abortController.signal);
       if (warnings.length > 0) alert('영상은 생성됐지만 문제가 있었어요:\n\n' + warnings.join('\n'));
-      const result = await wrapUpService.complete(sessionDate, records, blob);
+      const result = await wrapUpService.complete(sessionDate, records, blob, title);
       onSave(result.archiveId);
     } catch (e) {
       const msg = e instanceof DOMException && e.name === 'AbortError'
@@ -156,7 +178,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           {showMoodPicker && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {MOOD_LIST.map(m => (
-                <button key={m.mood} onClick={() => { setSelectedMood(m); setShowMoodPicker(false); }} style={{
+                <button key={m.mood} onClick={() => { userPickedMoodRef.current = true; setSelectedMood(m); setShowMoodPicker(false); }} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px', borderRadius: 50, background: m.color,
                   fontSize: 12, fontWeight: selectedMood.mood === m.mood ? 600 : 400,
@@ -177,7 +199,25 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
+                {editingTitle ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      value={titleDraft}
+                      onChange={e => setTitleDraft(e.target.value.slice(0, TITLE_MAX))}
+                      onKeyDown={e => { if (e.key === 'Enter') commitTitle(); }}
+                      autoFocus
+                      maxLength={TITLE_MAX}
+                      aria-label="영상 제목"
+                      style={{ flex: 1, minWidth: 0, height: 36, borderRadius: 10, border: '1px solid rgba(26,26,26,0.18)', padding: '0 10px', fontSize: 16, fontWeight: 600, fontFamily: 'Inter, sans-serif', color: '#1A1A1A' }}
+                    />
+                    <button type="button" onClick={commitTitle} style={{ height: 36, padding: '0 12px', borderRadius: 10, border: 'none', background: '#1A1A1A', color: '#fff', fontSize: 13, cursor: 'pointer' }}>확인</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                    <div style={{ flex: 1, fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
+                    <button type="button" onClick={startEditingTitle} style={{ flexShrink: 0, fontSize: 12, color: '#7C5CC4', textDecoration: 'underline', cursor: 'pointer', border: 0, background: 'transparent' }}>제목 수정</button>
+                  </div>
+                )}
                 <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', marginTop: 7, lineHeight: 1.5 }}>"{closing}"</div>
               </>
             )}

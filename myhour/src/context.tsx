@@ -44,13 +44,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addRecord = useCallback((type: RecordType, content: string, caption?: string, media?: RecordMedia) => {
     const now = new Date();
+    // 원본이 이미 IndexedDB(mediaId)에 있으면 data URL을 localStorage에 또 담지 않는다 —
+    // iOS Safari의 5MB 한도에 사진 25~50장이면 걸려서 저장 자체가 실패했다.
+    // 영상은 content가 작은 썸네일이고 원본은 별도라 그대로 남긴다. 표시는 useMediaSrc가 처리.
+    const keepInline = !media || type === 'video' || !content.startsWith('data:');
     const record: MyRecord = {
       id: createStableId('record'),
       slotId: currentSlot,
       slotTime: currentSlot,
       capturedAt: now.toISOString(),
       type,
-      content,
+      content: keepInline ? content : '',
       caption,
       createdAt: now.getTime(),
       ...(media ? {

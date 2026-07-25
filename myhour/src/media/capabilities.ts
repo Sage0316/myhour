@@ -26,7 +26,7 @@ export async function checkCaptureCapacity(
       allowed: false,
       availableBytes: null,
       limitBytes,
-      reason: `${type === 'photo' ? '사진' : type === 'video' ? '영상' : '음성'} 크기 제한을 초과했어요.`,
+      reason: `${type === 'photo' || type === 'meme' ? '사진' : type === 'video' ? '영상' : '음성'} 크기 제한을 초과했어요.`,
     };
   }
 

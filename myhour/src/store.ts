@@ -155,21 +155,33 @@ export function getCurrentSlot(slots: string[], interval: number, startTime?: st
 // slotTime엔 정확한 시계 시각(예: "23:42")이 들어 있어서 슬롯 문자열("23:00")과 그대로는
 // 일치하지 않는다 — 문자열 비교로 매칭하면 오늘 탭 격자가 늘 비어 보인다.
 // 한 슬롯에 여러 기록이 있으면 가장 이른 것을 대표로 둔다 (격자는 슬롯당 한 칸).
+// 기록을 슬롯별로 묶는다. record.slotTime엔 정확한 시계 시각("23:42")이 들어가서 슬롯
+// 문자열("23:00")과 그대로 일치하지 않으므로, 슬롯 구간에 넣어서 매칭해야 한다.
+// (문자열 비교로 매칭하면 격자가 늘 "기록 안 함"으로 보이는 버그가 있었다 — 2026-07-24)
 export function groupRecordsBySlot(
   records: MyRecord[], slots: string[], interval: number, startTime: string,
-): Map<string, MyRecord> {
+): Map<string, MyRecord[]> {
+  const map = new Map<string, MyRecord[]>();
+  if (slots.length === 0) return map;
   const startM = slotToMinutes(startTime);
   const bounds = slots.map((s, i) => {
     const sM = toSessionM(s, startM);
     const eM = i < slots.length - 1 ? toSessionM(slots[i + 1], startM) : sM + interval;
     return { slot: s, sM, eM };
   });
-  const map = new Map<string, MyRecord>();
+  const slotSet = new Set(slots);
   for (const r of [...records].sort((a, b) => a.createdAt - b.createdAt)) {
-    const rM = toSessionM(r.slotTime, startM);
-    const hit = bounds.find(b => rM >= b.sM && rM < b.eM)
-      ?? (rM < bounds[0].sM ? bounds[0] : bounds[bounds.length - 1]);
-    if (hit && !map.has(hit.slot)) map.set(hit.slot, r);
+    // 신규 기록은 slotId에 슬롯 문자열이 그대로 들어 있어 바로 쓴다
+    let slot = slotSet.has(r.slotId) ? r.slotId : undefined;
+    if (!slot) {
+      const rM = toSessionM(r.slotTime, startM);
+      const hit = bounds.find(b => rM >= b.sM && rM < b.eM)
+        ?? (rM < bounds[0].sM ? bounds[0] : bounds[bounds.length - 1]);
+      slot = hit.slot;
+    }
+    const group = map.get(slot);
+    if (group) group.push(r);
+    else map.set(slot, [r]);
   }
   return map;
 }

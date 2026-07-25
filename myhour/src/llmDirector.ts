@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import type { MyRecord } from './store';
+import { MOOD_LIST } from './store';
+
+const MOOD_NAMES = MOOD_LIST.map(item => item.mood) as unknown as [string, ...string[]];
 
 const AI_CONSENT_STORAGE = 'hakku_ai_consent_v1';
 const AI_INSTALLATION_STORAGE = 'hakku_ai_installation_v1';
 const AI_TOKEN_STORAGE = 'hakku_ai_token_v1';
 export const AI_WORKER_URL = (import.meta.env.VITE_AI_WORKER_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
-export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic';
+export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic' | 'sad';
 
 export const BGM_TRACKS: Record<BgmTrack, string> = {
   calm: '차분한 lo-fi',
@@ -15,15 +18,20 @@ export const BGM_TRACKS: Record<BgmTrack, string> = {
   piano: '잔잔한 피아노',
   ukulele: '가벼운 우쿨렐레',
   nostalgic: '따뜻한 노스탤지어',
+  sad: '차분한 슬픔·위로',
 };
 
+// 무드별 곡 풀 — AI는 무드만 고르고, 그 안에서 매번 랜덤으로 한 곡이 뽑힌다 (전곡 CC0).
+// 파일명은 public/bgm과 정확히 일치해야 한다. 2026-07 라이선스 감사에서 출처 미상이던
+// calm/bright/emotional.mp3는 삭제하고 study-and-relax/pickled-pink/cornfield-chase로 교체했다.
 export const BGM_FILES: Record<BgmTrack, readonly string[]> = {
-  calm: ['calm.mp3', 'slice-of-life.mp3', 'lagoon.mp3'],
-  bright: ['bright.mp3', 'just-like-that.mp3', 'city-sunshine.mp3'],
-  emotional: ['emotional.mp3', 'shining-stars.mp3', 'magic-garden.mp3'],
+  calm: ['study-and-relax.mp3', 'slice-of-life.mp3', 'lagoon.mp3'],
+  bright: ['pickled-pink.mp3', 'just-like-that.mp3', 'city-sunshine.mp3'],
+  emotional: ['cornfield-chase.mp3', 'shining-stars.mp3', 'magic-garden.mp3'],
   piano: ['piano.mp3', 'landras-dream.mp3', 'piano-magic.mp3'],
   ukulele: ['ukulele.mp3', 'ukulele-song.mp3', 'funshine.mp3'],
   nostalgic: ['nostalgic.mp3', 'travelers-notebook.mp3', 'tournesol.mp3'],
+  sad: ['winter.mp3', 'isolation-waltz.mp3', 'cold-journey.mp3'],
 };
 
 export function pickBgmFile(track: BgmTrack): string {
@@ -47,11 +55,14 @@ const directorOutputSchema = z.object({
   title: z.string().trim().min(1).max(30),
   closing: z.string().trim().min(1).max(80),
   mood: z.string().trim().min(1).max(40),
+  // 마감 화면 무드 칩 자동 선택용 — MOOD_LIST 중 하나. AI가 엉뚱한 값을 주면 서버가 지운다
+  moodChip: z.enum(MOOD_NAMES).optional(),
   emojis: z.string().trim().max(20),
   bgMusic: z.string().trim().max(60),
-  bgmTrack: z.enum(['calm', 'bright', 'emotional', 'piano', 'ukulele', 'nostalgic']),
+  bgmTrack: z.enum(['calm', 'bright', 'emotional', 'piano', 'ukulele', 'nostalgic', 'sad']),
   captions: z.array(z.string().trim().max(30)).max(96),
-  diaryEmojis: z.array(z.string().trim().max(12)).max(96),
+  // 기록별 내용 이모지 — 무드 이모지(emojis)와 섞지 말 것 (CLAUDE.md 이모지 규칙)
+  recordEmojis: z.array(z.string().trim().max(12)).max(96),
 });
 
 export type DirectorOutput = z.infer<typeof directorOutputSchema>;

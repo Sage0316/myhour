@@ -72,6 +72,11 @@ export class BrowserJournalRepository implements JournalRepository {
           records: migrated.records,
           isWrapped: migrated.isWrapped,
           trimmed: source.trimmed === true,
+          // 영상에 들어간 제목 — candidate를 새로 짜서 넘기므로 여기서 옮기지 않으면
+          // 읽을 때마다 조용히 사라지고 아카이브 카드가 기록에서 만든 제목으로 돌아간다
+          ...(typeof source.title === 'string' && source.title.trim()
+            ? { title: source.title.trim() }
+            : {}),
         };
         const parsed = archiveEntrySchema.safeParse(candidate);
         return parsed.success ? [parsed.data] : [];

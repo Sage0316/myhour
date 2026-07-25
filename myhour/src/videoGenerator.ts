@@ -48,6 +48,38 @@ function computeEnvelope(buf: AudioBuffer, buckets = 44): number[] {
   return env.map(v => (max > 0 ? v / max : 0));
 }
 
+// BGM 시작점 뽑기 — 무음 구간(일부 곡은 인트로/아웃트로가 조용함)을 피해
+// 실제로 소리가 나는 0.5초 버킷 중에서 랜덤으로 고른다.
+// 이게 없으면 인트로가 조용한 곡에서 영상 중간부터 음악이 들어온다.
+function pickAudibleOffset(buf: AudioBuffer): number {
+  const ch = buf.getChannelData(0);
+  const bucketSec = 0.5;
+  const per = Math.floor(buf.sampleRate * bucketSec);
+  const nBuckets = Math.floor(ch.length / per);
+  if (nBuckets < 2) return 0;
+
+  const levels: number[] = [];
+  let peak = 0;
+  for (let i = 0; i < nBuckets; i++) {
+    let sum = 0, count = 0;
+    const start = i * per;
+    for (let j = 0; j < per; j += 64) { sum += Math.abs(ch[start + j] ?? 0); count++; }
+    const v = count > 0 ? sum / count : 0;
+    levels.push(v);
+    if (v > peak) peak = v;
+  }
+
+  // 피크의 20% 이상이면 "소리가 있다"고 본다. 시작하자마자 조용해지지 않게
+  // 다음 버킷도 소리가 있는 지점만 후보로.
+  const threshold = peak * 0.2;
+  const candidates: number[] = [];
+  for (let i = 0; i < nBuckets - 1; i++) {
+    if (levels[i] >= threshold && levels[i + 1] >= threshold) candidates.push(i);
+  }
+  if (candidates.length === 0) return Math.random() * Math.max(0, buf.duration - 5);
+  return candidates[Math.floor(Math.random() * candidates.length)] * bucketSec;
+}
+
 async function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise(resolve => {
     const img = new Image();
@@ -267,13 +299,18 @@ export async function generateVideo(
 
   if (typeof MediaRecorder === 'undefined') throw new Error('이 브라우저는 영상 생성을 지원하지 않아요');
 
+  // mp4(h264)를 webm보다 반드시 먼저 — iOS Safari는 webm '녹화'는 되지만 사진 앱이
+  // webm을 영상으로 인식하지 못해서 공유해도 파일 앱에만 들어가고 사진첩엔 저장이 안 된다.
+  // 절대 webm을 앞으로 올리지 말 것 (2026-07-22 확인).
   const mimeType = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=h264,aac',
+    'video/mp4',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm;codecs=vp9',
     'video/webm;codecs=vp8',
     'video/webm',
-    'video/mp4',
   ].find(t => MediaRecorder.isTypeSupported(t));
 
   if (!mimeType) throw new Error('이 브라우저는 영상 생성을 지원하지 않아요\n(Chrome 또는 Android에서 시도해 보세요)');
@@ -313,9 +350,9 @@ export async function generateVideo(
       bgmGain.gain.linearRampToValueAtTime(BGM_LEVEL, audioCtx.currentTime + 1);
       bgmSource.connect(bgmGain);
       bgmGain.connect(audioDest);
-      // 곡의 랜덤 지점에서 시작 — 같은 곡이라도 매번 다른 구간이 깔린다 (루프라 끝나면 처음으로)
-      const startOffset = Math.random() * Math.max(0, audioBuf.duration - 5);
-      bgmSource.start(0, startOffset);
+      // 곡의 랜덤 지점에서 시작 — 같은 곡이라도 매번 다른 구간이 깔린다 (루프라 끝나면 처음으로).
+      // 무음 구간에 떨어지면 음악이 한참 뒤에야 들어오므로 소리가 있는 지점만 고른다.
+      bgmSource.start(0, pickAudibleOffset(audioBuf));
     } catch {
       bgmGain = null; bgmSource = null;
     }
