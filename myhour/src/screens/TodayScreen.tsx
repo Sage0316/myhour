@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../appContext';
-import { getDateStrings, getSessionDate, groupRecordsBySlot, TYPE_COLORS, TYPE_LABELS } from '../store';
+import { getDateStrings, getSessionDate, TYPE_COLORS, TYPE_LABELS } from '../store';
 import type { MyRecord } from '../store';
 import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
@@ -90,36 +90,8 @@ function RecordTile({ record, onDelete }: { record: MyRecord; onDelete: () => vo
   );
 }
 
-function EmptyTile({ slot, isCurrent }: { slot: string; isCurrent: boolean }) {
-  if (isCurrent) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-        <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 16, border: '2px dashed rgba(124,92,196,0.45)', background: 'rgba(124,92,196,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px dashed rgba(124,92,196,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7C5CC4', fontSize: 18, fontWeight: 300 }}>+</div>
-          <div style={{ fontSize: 10, color: '#7C5CC4', fontWeight: 500 }}>기록하기</div>
-        </div>
-        <div style={{ paddingLeft: 2 }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#7C5CC4', fontWeight: 600 }}>{slot}</div>
-          <div style={{ fontSize: 11, color: 'rgba(124,92,196,0.7)', marginTop: 1 }}>지금</div>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 7, opacity: 0.38 }}>
-      <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 16, background: 'rgba(26,26,26,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 9, height: 7, border: '1.5px solid rgba(26,26,26,0.3)', borderRadius: '2px 2px 0 0', borderBottom: 'none', marginTop: 3 }} />
-      </div>
-      <div style={{ paddingLeft: 2 }}>
-        <div style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.5)' }}>{slot}</div>
-        <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>기록 안 함</div>
-      </div>
-    </div>
-  );
-}
-
 export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps) {
-  const { records, slots, currentSlot, deleteRecord, settings } = useApp();
+  const { records, deleteRecord, settings } = useApp();
   const sessionDate = getSessionDate(settings.startTime);
   const { dateShort, weekdayEn } = getDateStrings(sessionDate);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -127,10 +99,9 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
     pendingDelete !== null,
     () => setPendingDelete(null),
   );
-
-  const slotMap = groupRecordsBySlot(records, slots, settings.interval, settings.startTime);
-  const currentIdx = slots.indexOf(currentSlot);
-  const visibleSlots = slots.slice(0, currentIdx + 1);
+  const sortedRecords = [...records].sort(
+    (left, right) => left.capturedAt.localeCompare(right.capturedAt),
+  );
 
   function confirmDelete() {
     if (pendingDelete) { deleteRecord(pendingDelete); setPendingDelete(null); }
@@ -146,32 +117,23 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 7 }}>
           <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.7px' }}>오늘</div>
           <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.45)', paddingBottom: 5 }}>
-            {records.length}/{visibleSlots.length}
+            {records.length}개
           </div>
         </div>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '0 22px' }}>
-        {visibleSlots.length === 0 ? (
+        {sortedRecords.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 10, opacity: 0.5 }}>
             <div style={{ fontSize: 14, color: 'rgba(26,26,26,0.6)', textAlign: 'center', lineHeight: 1.6 }}>
-              아직 기록할 시간이 시작되지 않았어요
+              아직 기록이 없어요
             </div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 12px' }}>
-            {visibleSlots.map(slot => {
-              const slotRecords = slotMap.get(slot) ?? [];
-              const isCurrent = slot === currentSlot;
-              if (slotRecords.length > 0) {
-                return slotRecords
-                  .sort((left, right) => left.capturedAt.localeCompare(right.capturedAt))
-                  .map(record => (
-                    <RecordTile key={record.id} record={record} onDelete={() => setPendingDelete(record.id)} />
-                  ));
-              }
-              return <EmptyTile key={slot} slot={slot} isCurrent={isCurrent} />;
-            })}
+            {sortedRecords.map(record => (
+              <RecordTile key={record.id} record={record} onDelete={() => setPendingDelete(record.id)} />
+            ))}
           </div>
         )}
 
