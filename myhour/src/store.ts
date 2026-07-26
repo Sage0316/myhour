@@ -279,10 +279,42 @@ export const MOOD_LIST = [
 
 export type MoodItem = (typeof MOOD_LIST)[number];
 
+// AI 연출이 없을 때의 무드 추정. 부정적 감정을 앞에 둬서, 짜증과 웃음이 섞인 날이
+// 명랑한 칩으로 뭉개지지 않게 한다 (동점이면 앞선 무드가 이긴다).
+const MOOD_KEYWORDS: Array<{ mood: MoodItem['mood']; words: string[] }> = [
+  { mood: '짜증', words: ['짜증', '빡치', '빡쳤', '빡침', '열받', '화나', '화났', '최악', '싫', '시발', '씨발', 'ㅅㅂ', '개같', '미치겠', '어이없', '황당'] },
+  { mood: '슬픔', words: ['슬프', '슬펐', '눈물', '울었', '울컥', '우울', '외로', '외롭', '그리워', '그립', '보고싶', '속상', '서럽', '서운'] },
+  { mood: '지침', words: ['지쳤', '지친', '지침', '피곤', '힘들', '힘든', '녹초', '야근', '번아웃', '졸리', '졸려'] },
+  { mood: '정신없음', words: ['정신없', '정신 없', '바빴', '바쁜', '바쁘', '뛰어다', '헐레벌떡', '급했', '몰아치'] },
+  { mood: '뿌듯함', words: ['뿌듯', '해냈', '해냄', '성공', '완성', '끝냈', '끝냄', '달성', '합격', '칭찬'] },
+  { mood: '웃김', words: ['ㅋㅋ', 'ㅎㅎ', '웃겨', '웃겼', '웃긴', '웃음', '빵터', '빵 터', '재밌', '재미있', '꿀잼', '드립', '개그'] },
+  { mood: '감성', words: ['노을', '하늘', '바다', '달빛', '감성', '몽글', '설레', '설렘', '예뻤', '예쁘', '아름다', '벚꽃', '낭만'] },
+];
+
 export function guessMood(records: MyRecord[]): MoodItem {
+  const corpus = records
+    .map(r => [
+      r.type === 'text' && !r.content.startsWith('data:') ? r.content : '',
+      r.caption ?? '',
+    ].join(' '))
+    .join(' ');
+
+  let best: MoodItem | null = null;
+  let bestScore = 0;
+  for (const { mood, words } of MOOD_KEYWORDS) {
+    let score = 0;
+    for (const w of words) {
+      let idx = corpus.indexOf(w);
+      while (idx !== -1) { score += 1; idx = corpus.indexOf(w, idx + w.length); }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = MOOD_LIST.find(m => m.mood === mood) ?? null;
+    }
+  }
+  if (best) return best;
   if (records.length >= 5) return MOOD_LIST[1];
-  if (records.length === 0) return MOOD_LIST[0];
-  return MOOD_LIST[(records.length - 1) % MOOD_LIST.length];
+  return MOOD_LIST[0];
 }
 
 export function generateTitle(records: MyRecord[]): string {
@@ -292,39 +324,21 @@ export function generateTitle(records: MyRecord[]): string {
   return first.length <= 20 ? first : first.slice(0, 18) + '…';
 }
 
-const CLOSING_MOOD_PHRASE: Record<MoodItem['mood'], string> = {
-  잔잔함: '조용히 하루를 마무리했다.',
-  뿌듯함: '오늘 하루도 잘 해냈다.',
-  감성: '괜히 마음이 몽글몽글했던 하루.',
-  웃김: '피식 웃으며 하루를 접었다.',
-  정신없음: '정신없이 흘러간 하루였다.',
-  슬픔: '마음 한켠이 무거웠던 하루.',
-  짜증: '짜증 나는 순간이 많았던 하루.',
-  지침: '유독 지치는 하루였다.',
-};
-
-const CLOSING_MOOD_FALLBACK: Record<MoodItem['mood'], string> = {
-  잔잔함: '오늘도 조용히 하루를 마쳤다.',
-  뿌듯함: '오늘도 뿌듯하게 하루를 마쳤다.',
-  감성: '괜히 마음이 몽글몽글했던 하루를 마쳤다.',
-  웃김: '피식 웃으며 하루를 마쳤다.',
-  정신없음: '정신없이 흘러간 하루를 마쳤다.',
-  슬픔: '마음 한켠이 무거웠던 하루를 마쳤다.',
-  짜증: '짜증 나는 순간이 많았던 하루를 마쳤다.',
-  지침: '유독 지치는 하루를 마쳤다.',
+// AI 연출이 없을 때의 마무리 문구. 기록 원문을 그대로 되돌려주지 않는다 —
+// 사용자가 쓴 문장의 복붙은 "AI가 왜 필요하냐"는 인상만 남긴다.
+const CLOSING_BY_MOOD: Record<MoodItem['mood'], string> = {
+  잔잔함: '크게 요란하지 않아서 오히려 좋았던, 잔잔한 하루였다.',
+  뿌듯함: '하나씩 해낸 순간이 쌓여서, 꽤 뿌듯한 하루가 됐다.',
+  감성: '괜히 마음이 오래 머무는 순간들이 있는 하루였다.',
+  웃김: '피식 웃게 되는 순간들 덕분에 가볍게 마무리하는 하루.',
+  정신없음: '정신없이 지나갔지만, 어쨌든 다 지나온 하루였다.',
+  슬픔: '마음이 무거운 날이었지만, 오늘의 나를 여기 남겨둔다.',
+  짜증: '짜증나는 일이 많았지만, 그래도 오늘을 버텨냈다.',
+  지침: '많이 지친 하루, 여기까지 온 것만으로도 충분하다.',
 };
 
 export function generateClosing(records: MyRecord[], mood: string = guessMood(records).mood): string {
-  const last = records.at(-1);
-  const detail = (
-    last?.caption?.trim()
-    || (last?.type === 'text' ? last.content.trim() : '')
-  ).replace(/\s+/g, ' ').replace(/[.!?。]+$/, '').slice(0, 48);
-
-  const moodPhrase = CLOSING_MOOD_PHRASE[mood as MoodItem['mood']] ?? CLOSING_MOOD_PHRASE.잔잔함;
-  if (detail) return `${detail}. ${moodPhrase}`;
-
-  return CLOSING_MOOD_FALLBACK[mood as MoodItem['mood']] ?? CLOSING_MOOD_FALLBACK.잔잔함;
+  return CLOSING_BY_MOOD[mood as MoodItem['mood']] ?? CLOSING_BY_MOOD.잔잔함;
 }
 
 // ─── App data (records + wrap state) ────────────────────────────────────────
