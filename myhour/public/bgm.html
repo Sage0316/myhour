@@ -28,6 +28,9 @@ const MOODS = [
   ['따뜻한 노스탤지어 (nostalgic)', ['nostalgic.mp3', 'travelers-notebook.mp3', 'tournesol.mp3']],
   ['차분한 슬픔·위로 (sad)', ['winter.mp3', 'isolation-waltz.mp3', 'cold-journey.mp3']],
 ];
+// 곡 파일은 R2에 있고 hakku-media 워커가 내보낸다 (앱 배포본에는 없다).
+// 이 페이지는 빌드를 타지 않는 정적 HTML이라 Vite 환경 변수를 못 써서 주소를 직접 적는다.
+const MEDIA_BASE = 'https://hakku-media.sage0316.workers.dev';
 const list = document.getElementById('list');
 for (const [mood, files] of MOODS) {
   const h = document.createElement('h2');
@@ -37,7 +40,7 @@ for (const [mood, files] of MOODS) {
     const div = document.createElement('div');
     div.className = 'track';
     div.innerHTML = '<div class="name">' + f.replace('.mp3', '') + '</div>' +
-      '<audio controls preload="none" src="bgm/' + f + '"></audio>';
+      '<audio controls preload="none" src="' + MEDIA_BASE + '/bgm/' + f + '"></audio>';
     list.appendChild(div);
   }
 }

@@ -27,16 +27,21 @@
 
 ## 지켜야 할 제품 정책
 
-- BGM 18곡은 모두 `myhour/public/bgm`에 배포 가능한 정적 자산으로 유지한다.
+- **BGM 21곡은 R2(`myhour-media`)에 두고 `hakku-media` 워커가 정적 파일로 내보낸다.**
+  2026-07-26 사용자 승인으로 `myhour/public/bgm`에서 옮겼다 — 배포본 118MB 중 114MB(96.6%)가
+  오디오였다. 원래 정책의 의도(앱 시작을 오디오가 막지 않게)는 그대로 유지된다.
 - BGM을 초기 JavaScript 번들이나 서비스워커 install precache에 포함하지 않는다.
-- 사용자가 선택한 곡의 상대 URL만 영상 생성 시 지연 로딩한다.
+- 사용자가 선택한 곡의 URL만 영상 생성 시 지연 로딩한다.
+- **BGM은 CORS 허용 응답으로 받아야 한다.** 영상 생성이 `fetch → arrayBuffer → decodeAudioData`로
+  바이트를 읽기 때문이다. `<audio src>` 재생만 하는 시청 페이지는 CORS 없이도 되므로,
+  이걸 빼면 "시청 페이지에선 들리는데 영상엔 음악이 없다"는 헷갈리는 증상이 된다.
 - 기록과 미디어는 로컬 우선으로 보관하며, AI에는 명시적 동의 후 텍스트와 캡션만 보호된 Worker를 통해 전송한다.
 - 비밀키와 private JWK는 저장소에 추가하지 않는다.
 - 기존 `myhour` URL, 저장 키, 데이터 마이그레이션 호환성을 임의로 깨지 않는다.
 
 ## 외부 출시 전 남은 게이트
 
-- BGM 18곡의 출처·저작자·배포 라이선스 근거 확정
+- BGM 21곡의 출처·저작자·배포 라이선스 근거 확정 (2026-07-20 감사에서 전곡 CC0 확인 — myhour/CLAUDE.md 참고)
 - 실제 iOS 16.4+ 및 Android Chromium 기기 검증
 - GitHub/Cloudflare 환경 변수·KV·secret 설정
 - 실제 배포와 Pages/Worker 롤백 리허설

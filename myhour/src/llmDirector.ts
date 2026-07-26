@@ -46,9 +46,15 @@ export const BGM_CATALOG = (Object.entries(BGM_FILES) as Array<[BgmTrack, readon
     label: file.replace(/\.mp3$/i, '').replaceAll('-', ' '),
   })));
 
+// 곡 파일은 R2(myhour-media)에 있고 hakku-media 워커가 내보낸다. 앱 배포본에는 넣지 않는다 —
+// 배포본 118MB 중 114MB가 오디오였다. 지연 로딩과 "번들·precache에 넣지 않는다"는
+// 원래 정책은 그대로다 (CLAUDE.md 참고). 값이 비어 있으면 예전처럼 public/bgm에서 찾는다.
+const MEDIA_BASE_URL = (import.meta.env.VITE_MEDIA_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+
 export function bgmAssetUrl(file: string): string {
   if (!BGM_CATALOG.some(item => item.file === file)) throw new Error('지원하지 않는 BGM 파일이에요.');
-  return `${import.meta.env.BASE_URL}bgm/${encodeURIComponent(file)}`;
+  const name = encodeURIComponent(file);
+  return MEDIA_BASE_URL ? `${MEDIA_BASE_URL}/bgm/${name}` : `${import.meta.env.BASE_URL}bgm/${name}`;
 }
 
 const directorOutputSchema = z.object({

@@ -56,3 +56,12 @@ git pull --ff-only"
 **Decision**: `hakku_*` 유지. 구버전 `myhour_*`는 읽기 전용 마이그레이션 소스로 보존
 
 ---
+
+## BGM을 R2로 이전
+**Timestamp**: 2026-07-26T07:20:00Z
+**User Input**: "내가 cloudflare R2에 우리 bgm 다 올려놨어" → (정책 충돌·CORS 설명 후) "정적 자산으로 유지한다는 게 무슨 말인지 먼저 듣고 결정할래" → "응 잘 들려ㅋㅋ 그럼 배포할 때 용량도 가벼워지는건가"
+**AI Response**: "루트 CLAUDE.md의 'BGM을 public/bgm에 정적 자산으로 유지한다' 정책과 충돌함을 먼저 보고했다. 그 정책의 실제 의도가 '번들·precache에 넣어 앱 시작을 막지 않는다'이며 R2로 옮겨도 그 의도는 유지되고 오히려 강화됨을 설명했다. 배포본 118MB 중 114MB(96.6%)가 오디오이며, git 히스토리 용량은 줄지 않는다는 점도 정정해 전달했다."
+**Context**: 사전 승인. 결정 근거를 남기기 위해 기록
+**Decision**: BGM은 R2(myhour-media) + hakku-media 워커로 서빙. public/bgm 삭제. VITE_MEDIA_BASE_URL이 비면 예전 경로로 폴백
+
+---

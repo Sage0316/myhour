@@ -1,6 +1,7 @@
 // 영상 생성 파이프라인 통합 테스트 (개발용)
 import type { MyRecord } from './store';
 import { generateVideo } from './videoGenerator';
+import { bgmAssetUrl } from './llmDirector';
 
 const log = (m: string) => {
   document.getElementById('log')!.textContent += '\n' + m;
@@ -63,7 +64,7 @@ async function main() {
       mood: '잔잔함',
       captions: ['', '오늘의 목소리', '', ''],
       recordEmojis: ['☕', '', '🍢', '😆'],
-      bgmUrl: `${import.meta.env.BASE_URL}bgm/study-and-relax.mp3`,
+      bgmUrl: bgmAssetUrl('study-and-relax.mp3'),
     });
     (window as unknown as { __blob?: Blob }).__blob = blob;
     log(`DONE blob size=${blob.size} type=${blob.type}`);
