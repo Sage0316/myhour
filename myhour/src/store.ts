@@ -292,16 +292,22 @@ export function generateTitle(records: MyRecord[]): string {
   return first.length <= 20 ? first : first.slice(0, 18) + '…';
 }
 
-const CLOSING = [
-  "별일 없었지만, 이런 하루가 제일 오래 남더라.",
-  "오늘도 잘 살았다.",
-  "이 순간들이 모여 나를 만든다.",
-  "내일도 이렇게 살아가면 된다.",
-  "오늘 하루, 충분했다.",
-];
-
 export function generateClosing(records: MyRecord[]): string {
-  return CLOSING[records.length % CLOSING.length];
+  const last = records.at(-1);
+  const detail = (
+    last?.caption?.trim()
+    || (last?.type === 'text' ? last.content.trim() : '')
+  ).replace(/\s+/g, ' ').replace(/[.!?。]+$/, '').slice(0, 48);
+
+  if (detail) return `마지막 기록: ${detail}`;
+
+  switch (last?.type) {
+    case 'photo': return '마지막으로 사진 한 장을 남겼다.';
+    case 'video': return '마지막으로 영상 하나를 남겼다.';
+    case 'audio': return '마지막으로 음성 하나를 남겼다.';
+    case 'meme': return '마지막으로 저장한 이미지를 남겼다.';
+    default: return '기록을 마쳤다.';
+  }
 }
 
 // ─── App data (records + wrap state) ────────────────────────────────────────
@@ -394,3 +400,4 @@ export function notifyLabel(v: AppSettings['notifyTiming']) {
 export function captureModeLabel(v: AppSettings['captureMode']) {
   return v === 'choose' ? '매번 선택' : '하나로 고정';
 }
+
