@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import worker from './worker.js';
+import worker, { normalizeResult } from './worker.js';
 
 class MemoryKV {
   values = new Map();
@@ -39,4 +39,27 @@ const limited = await worker.fetch(request('/v1/install', {
   AI_RATE_LIMITER: { limit: async () => ({ success: false }) },
 });
 assert.equal(limited.status, 429);
+
+const directorBase = {
+  title: '라면 먹은 날',
+  closing: '이 순간들이 모여 나를 만든다',
+  mood: '조용한 밤',
+  moodChip: '잔잔함',
+  emojis: '😌',
+  bgMusic: '잔잔한 피아노',
+  bgmTrack: 'piano',
+  captions: [''],
+  recordEmojis: ['🍜'],
+};
+const records = [{ slotTime: '23:00', type: 'text', content: '라면 먹고 바로 잤다', caption: '' }];
+assert.equal(
+  normalizeResult(directorBase, records).closing,
+  '마지막 기록: 라면 먹고 바로 잤다',
+  '감성 클리셰는 마지막 기록의 실제 내용으로 교체해야 한다',
+);
+assert.equal(
+  normalizeResult({ ...directorBase, closing: '라면 국물까지 다 마셨다.' }, records).closing,
+  '라면 국물까지 다 마셨다.',
+  '기록에 붙은 구체적인 closing은 유지해야 한다',
+);
 console.log('✅ AI AUTH/VALIDATION OK');

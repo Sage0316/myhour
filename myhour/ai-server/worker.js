@@ -92,15 +92,47 @@ function validResult(value, recordCount) {
 }
 
 // 모델이 규격을 살짝 어겨도(길이 초과, moodChip 오타, 구버전 필드명) 버리지 않고 다듬는다
-function normalizeResult(value, recordCount) {
+const CLICHE_CLOSING_PATTERNS = [
+  /이\s*순간들이?\s*모여/,
+  /순간들이?\s*쌓여/,
+  /나를\s*만든/,
+  /소중한\s*순간/,
+  /빛나는\s*하루/,
+  /기억될\s*하루/,
+  /오늘도\s*나답게/,
+  /하루가\s*완성/,
+  /충분했던?\s*하루/,
+];
+
+function fallbackClosing(records) {
+  const last = records.at(-1);
+  const detail = (
+    last?.caption?.trim()
+    || (last?.type === 'text' ? last.content.trim() : '')
+  ).replace(/\s+/g, ' ').replace(/[.!?。]+$/, '').slice(0, 48);
+  if (detail) return `마지막 기록: ${detail}`.slice(0, 80);
+  return {
+    photo: '마지막으로 사진 한 장을 남겼다.',
+    video: '마지막으로 영상 하나를 남겼다.',
+    audio: '마지막으로 음성 하나를 남겼다.',
+    meme: '마지막으로 저장한 이미지를 남겼다.',
+  }[last?.type] ?? '마지막 기록에서 하루를 닫았다.';
+}
+
+export function normalizeResult(value, records) {
+  const recordCount = records.length;
   if (!value || typeof value !== 'object') return value;
   const trimAll = (list, max) => (Array.isArray(list) ? list : [])
     .slice(0, recordCount)
     .map(item => String(item ?? '').trim().slice(0, max));
+  const rawClosing = String(value.closing ?? '').trim().slice(0, 80);
+  const closing = CLICHE_CLOSING_PATTERNS.some(pattern => pattern.test(rawClosing))
+    ? fallbackClosing(records)
+    : rawClosing;
   return {
     ...value,
     title: String(value.title ?? '').trim().slice(0, 30),
-    closing: String(value.closing ?? '').trim().slice(0, 80),
+    closing,
     mood: String(value.mood ?? '').trim().slice(0, 40),
     moodChip: MOOD_CHIPS.includes(value.moodChip) ? value.moodChip : undefined,
     emojis: String(value.emojis ?? '').trim().slice(0, 20),
@@ -149,7 +181,7 @@ ${lines}
 
 문체 규칙 (중요):
 - 담백하고 건조하게. 일기 쓰듯이.
-- 오글거리는 표현, 감탄사, 클리셰 금지: "소소한 행복", "충분했다", "빛나는 하루", "잘 살았다", "마무리합니다" 같은 말 절대 쓰지 말 것.
+- 오글거리는 표현, 감탄사, 클리셰 금지: "이 순간들이 모여 나를 만든다", "소소한 행복", "충분했다", "빛나는 하루", "잘 살았다", "마무리합니다", "오늘도 나답게" 같은 말 절대 쓰지 말 것.
 - 기록에 실제로 나온 단어와 장면을 재료로 쓸 것. 일반론 금지.
 - 제목은 명사구로 짧게 끊어도 좋음 (예: "커피 두 잔의 날", "결국 또 떡볶이").
 - 자막은 툭 던지는 반말 (예: "오늘의 첫 커피", "이 맛에 퇴근하지").
@@ -194,7 +226,7 @@ async function callProvider(body, env) {
   const text = providerBody.content?.find(part => part.type === 'text')?.text ?? '';
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('invalid_provider_output');
-  const result = normalizeResult(JSON.parse(match[0]), body.records.length);
+  const result = normalizeResult(JSON.parse(match[0]), body.records);
   if (!validResult(result, body.records.length)) throw new Error('invalid_provider_output');
   return result;
 }
