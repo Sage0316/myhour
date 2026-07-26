@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
 import { exportCompleteBackup, restoreCompleteBackup } from './backupService';
 import { deleteMediaBlob, listMediaKeys, loadMediaBlob, saveMediaBlob } from '../persistence/mediaRepository';
-import { DEFAULT_SETTINGS, loadAppData, saveAppData, saveSettings } from '../store';
+import { DEFAULT_SETTINGS, getSessionDate, loadAppData, saveAppData, saveSettings } from '../store';
 
 describe('complete backup', () => {
   beforeEach(async () => {
@@ -24,15 +24,16 @@ describe('complete backup', () => {
 
   it('round-trips metadata and media', async () => {
     saveSettings(DEFAULT_SETTINGS);
+    const sessionDate = getSessionDate(DEFAULT_SETTINGS.startTime);
     const original = loadAppData(DEFAULT_SETTINGS.startTime);
-    saveAppData({ ...original, date: '2026-07-25' });
+    saveAppData({ ...original, date: sessionDate });
     await saveMediaBlob('media_test', new Blob(['hello'], { type: 'text/plain' }));
 
     const exported = await exportCompleteBackup();
     localStorage.clear();
     await restoreCompleteBackup(exported.blob);
 
-    expect(loadAppData(DEFAULT_SETTINGS.startTime).date).toBe('2026-07-25');
+    expect(loadAppData(DEFAULT_SETTINGS.startTime).date).toBe(sessionDate);
     expect(await (await loadMediaBlob('media_test'))?.text()).toBe('hello');
   });
 
