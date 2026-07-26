@@ -31,3 +31,6 @@ coverage
 .wrangler
 # 로컬 빌드용 환경 변수 — 배포 값은 GitHub repo vars에 두고 커밋하지 않는다
 .env*.local
+# 워커 로컬 시크릿 (wrangler dev가 읽는 파일) — 실제 API 키가 들어가므로 절대 커밋 금지
+.dev.vars
+.dev.vars.*
