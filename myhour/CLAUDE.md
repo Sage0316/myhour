@@ -103,28 +103,38 @@ iOS 16.4+ PWA 푸시. 워커 배포됨: **https://myhour-push.sage0316.workers.d
 - **GitHub repo `vars`는 아직 비어 있다** — 그래서 CI 빌드는 AI·푸시·BGM이 꺼진 앱을 만든다.
   지금 라이브 배포본은 로컬 `.env.production.local`로 수동 빌드한 것이다. CI로 배포를 넘기려면 repo vars부터 채워야 한다
 
-## ⚠️ 인수인계: AI 연출이 지금 죽어 있다 (2026-07-26)
-증상은 마감 화면의 "분석을 할 수 없어요" + 제목·마무리가 규칙 기반 대체값(`generateTitle`/`generateClosing`)으로 나오는 것.
-**원인은 `hakku-ai`에 등록된 `ANTHROPIC_API_KEY`가 손상된 값이라는 것** — 대화 요약본에서 읽은 값을 검증 없이
-`wrangler secret put`으로 올렸다. `curl`로 확인하면 `HTTP 401 authentication_error`, 길이 107에 `sk-ant-api03-` 패턴 불일치.
+## AI 연출: 워커 키는 유효하다 — "키가 손상됐다"는 진단은 틀렸다 (2026-07-26)
+`hakku-ai`의 `ANTHROPIC_API_KEY`는 **정상이다.** AI 연출은 16:20 KST에 실제로 성공했다.
+근거: `AI_STATE` KV의 유일한 키가 `quota:2026-07-26:<installationId>` = 1이고 16:20에 쓰였다.
+`enforceQuota`는 프로바이더 호출 **직전에** 증가하므로 이 값이 곧 그 시각 요청이 그 단계까지 갔다는 뜻이고,
+TTL이 2일이라 07-25에 요청이 있었다면 아직 남아 있어야 하는데 없다.
 
-다음 세션에서 할 일 (순서 지킬 것):
-1. 환경변수 `HAKKU_ANTHROPIC_KEY`를 읽는다 (사용자가 클라우드 환경 설정에 넣어둠. 환경 변경은 **새 세션에만** 반영된다)
-2. **워커에 넣기 전에** `curl -s -o /dev/null -w '%{http_code}' https://api.anthropic.com/v1/messages -H "x-api-key: $HAKKU_ANTHROPIC_KEY" -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-sonnet-5","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}'` 로 200을 확인한다. 이 검증을 건너뛴 게 이 사고의 원인이다
-3. `cd myhour/ai-server && npx wrangler secret put ANTHROPIC_API_KEY` (CLOUDFLARE_API_TOKEN 환경변수 필요)
-4. AI Gateway 인증을 켜뒀다면 `CF_AIG_TOKEN`도 같이. 껐으면 넣지 않는다 (있으면 `cf-aig-authorization` 헤더로 나감)
-5. `hakku-ai`에 `/v1/install` → `/v1/direct` 실제 호출로 끝까지 확인한다
+**틀린 진단이 나온 경위 (같은 실수를 반복하지 말 것)**: 대화가 압축된 뒤 요약본에서 키 값을 재구성해
+`curl`로 찔러 401을 받고 "워커의 키가 손상됐다"고 결론냈다. 워커 시크릿은 **되읽을 수 없다** —
+증명된 것은 "요약본에서 읽은 문자열이 무효"일 뿐이고 워커에 실제로 올라간 문자열이 아니다.
+`wrangler secret list`는 이름과 타입만 준다. 키 유효성은 **워커의 실제 동작**으로만 판정할 수 있다.
+
+**그때 "분석 불가"가 났던 유력한 원인** (KV에 흔적이 없어 추정): `authenticate()`가 `enforceQuota()`보다
+먼저 돌기 때문에 설치 토큰 인증 실패는 KV에 아무 기록을 남기지 않는다. localStorage의 `hakku_ai_token_v1`이
+예전 `INSTALL_TOKEN_SECRET`으로 서명된 토큰이면 HMAC 검증에서 401 `unauthorized`가 나고, 앱은 이걸
+`analysis_unavailable`과 구분하지 못한다. AI 동의를 껐다 켜면 `setAIConsent(false)`가 그 토큰을 지워서 낫는다.
+→ **시크릿을 재등록하면 기존 설치 토큰이 전부 무효가 된다**는 걸 기억할 것.
+
+**그래서 오류 코드 세분화가 급하다.** 지금은 인증 실패·프로바이더 거부·출력 형식 오류가 전부
+`analysis_unavailable` 하나로 뭉개져서, 이 오진이 정확히 그 때문에 가능했다 (에러로그.md 사례 2·15).
 
 **세션 네트워크 정책 주의**: 기본 허용 목록이 `api.cloudflare.com`뿐이라 `gateway.ai.cloudflare.com`과
-`*.workers.dev`가 막힌다 → 2·5번을 못 한다. 사용자에게 클라우드 환경 설정의 허용 도메인에
-`api.anthropic.com` / `gateway.ai.cloudflare.com` / `*.workers.dev` 추가를 요청할 것.
-(`api.anthropic.com`은 2026-07-26 기준 목록에 없어도 도달했지만 명시하는 게 안전하다)
+`*.workers.dev`가 막혀서 워커를 직접 부를 수 없다. `api.anthropic.com`은 2026-07-26 기준 목록에 없어도 도달했다.
+KV와 시크릿 목록은 `api.cloudflare.com`으로 읽히므로 진단은 KV부터 볼 것.
+AI Gateway 로그(`/accounts/{acc}/ai-gateway/gateways/sage/logs`)가 요청별 status를 주지만
+현재 `CLOUDFLARE_API_TOKEN`에 AI Gateway 읽기 권한이 없어 10000 Authentication error가 난다 — 권한을 추가하면
+프로바이더 응답을 직접 확인할 수 있다.
 
 **미검증으로 남은 것** (workers.dev가 막혀서 이 세션에서 확인 못 함): `hakku-media` 워커의 실제 응답,
 그리고 R2 경유 BGM이 생성된 영상에 실제로 들어가는지 — 사용자 폰 또는 위 도메인 허용 후 확인이 필요하다.
 
 ## 다음 과제 후보
-- 위 AI 키 복구 + repo vars 설정
+- repo vars 설정 (AI 키는 멀쩡하니 손대지 않아도 된다)
 - 푸시 알림 미도달 진단: 크론 한 틱 뒤 KV의 `lastStatus`/`lastAttemptAt`을 읽는다 (201=성공, 403=VAPID 거부, 400=요청 오류)
 - `ai-server`의 오류 코드 세분화 — 지금은 전부 `analysis_unavailable`로 뭉개져서 인증 실패와 출력 형식 오류를 구분할 수 없다 (에러로그.md 사례 2와 같은 침묵 실패 패턴)
 - 앱스토어 출시 준비: Capacitor 래핑, 백업 강화, 과금 모델
