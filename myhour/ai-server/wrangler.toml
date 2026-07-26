@@ -4,7 +4,7 @@ compatibility_date = "2026-07-01"
 
 [[kv_namespaces]]
 binding = "AI_STATE"
-id = "REPLACE_WITH_KV_ID"
+id = "e5d5739b4d7b4fffa36b557caf2d9c2f"
 
 [[ratelimits]]
 name = "AI_RATE_LIMITER"
@@ -16,11 +16,15 @@ namespace_id = "1001" # 계정 안에서 고유한 양의 정수로 변경
 
 [vars]
 ALLOWED_ORIGINS = "https://sage0316.github.io"
-ANTHROPIC_MODEL = "REPLACE_WITH_SUPPORTED_MODEL_ID"
+ANTHROPIC_MODEL = "claude-sonnet-5"
+# Workers에서 api.anthropic.com을 직접 부르면 Cloudflare→Cloudflare 봇 방어로 403이 난다.
+# AI Gateway를 거쳐야 통과한다 (CLAUDE.md 참고).
+PROVIDER_URL = "https://gateway.ai.cloudflare.com/v1/f68efd92d83fa98ee254ffd8c8a0ab6e/sage/anthropic/v1/messages"
 
 # 배포 환경에서만 등록:
 # npx wrangler secret put ANTHROPIC_API_KEY
 # npx wrangler secret put INSTALL_TOKEN_SECRET
+# npx wrangler secret put CF_AIG_TOKEN
 
 [env.preview]
 name = "hakku-ai-preview"
