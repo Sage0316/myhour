@@ -1,6 +1,9 @@
 name: Deploy GitHub Pages
 
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
     inputs:
       run_id:
@@ -20,6 +23,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -27,13 +31,13 @@ jobs:
     steps:
       - name: Validate run ID
         env:
-          RUN_ID: ${{ inputs.run_id }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
         run: |
           [[ "$RUN_ID" =~ ^[0-9]+$ ]]
       - name: Download immutable verified build
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ inputs.run_id }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
         run: gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name hakku-dist --dir release-dist
       - name: Verify SHA-256 manifest
         working-directory: release-dist
@@ -44,3 +48,4 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+
