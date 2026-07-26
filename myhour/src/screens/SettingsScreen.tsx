@@ -14,10 +14,13 @@ interface SettingsScreenProps {
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
+// 하꾸 브랜드 하늘색 — 아이콘 마크의 포인트 컬러와 같은 값 ("하꾸=하늘")
+const BRAND_BLUE = '#3FA0E0';
+
 const START_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00'];
 const END_TIMES   = ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
 
-// 좌우로 미끄러지는 on/off 스위치. 켜지면 초록, 꺼지면 회색.
+// 좌우로 미끄러지는 on/off 스위치. 켜지면 브랜드 하늘색(#3FA0E0), 꺼지면 회색.
 // 실제 <input type="checkbox">를 숨겨서 얹는 대신 button + role="switch"를 쓴다 —
 // 스크린리더가 상태를 읽고, 키보드 스페이스/엔터가 그대로 동작한다.
 function ToggleSwitch({ checked, onChange, disabled, label }: {
@@ -39,7 +42,7 @@ function ToggleSwitch({ checked, onChange, disabled, label }: {
       style={{
         width: W, height: H, flexShrink: 0, padding: 0,
         borderRadius: H / 2, border: 'none',
-        background: checked ? '#34C759' : 'rgba(26,26,26,0.18)',
+        background: checked ? BRAND_BLUE : 'rgba(26,26,26,0.18)',
         transition: 'background 0.2s ease',
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.4 : 1,

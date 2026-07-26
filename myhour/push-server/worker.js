@@ -268,7 +268,15 @@ export default {
           const status = await sendPush(record.sub, JSON.stringify({
             title: '하꾸', body: '지금 한 시간을 기록해볼까요? 📸',
           }), env);
-          if (status === 404 || status === 410) await env.SUBS.delete(name);
+          if (status === 404 || status === 410) {
+            await env.SUBS.delete(name);
+            continue;
+          }
+          // 푸시 제공자의 응답을 기록에 남긴다. 이게 없으면 발송 실패가 조용히 사라져서
+          // "알림이 안 온다"를 진단할 방법이 없다 (201=성공, 403=VAPID 거부, 400=요청 오류).
+          record.lastStatus = status;
+          record.lastAttemptAt = now.toISOString();
+          await env.SUBS.put(name, JSON.stringify(record));
         }
       } while (cursor);
     })());
