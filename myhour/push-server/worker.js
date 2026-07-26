@@ -69,6 +69,20 @@ async function vapidHeader(endpoint, env) {
   return `vapid t=${input}.${toBase64url(signature)}, k=${env.VAPID_PUBLIC_KEY}`;
 }
 
+// 알림은 **시계 정각 기준**으로 울린다 — 자정부터 interval 배수 지점(30분이면 :00/:30,
+// 60분이면 매시 :00, 120분이면 짝수시 :00). 허용 시작 시각을 기준으로 세지 않는다.
+// 예: 시작 09:00 + 120분이면 09:00이 아니라 10:00·12:00·14:00에 울린다.
+// 크론이 30분 단위라 `< 30`은 그 틈을 허용하는 것이다(30분이 아닌 오프셋 시간대 대응).
+export function shouldDeliverAt(localMinutes, record) {
+  if (localMinutes < record.start || localMinutes > record.end) return false;
+  return localMinutes % record.interval < 30;
+}
+
+// 하루 안에서 슬롯을 유일하게 식별한다. 자정 기준이라 시작 시각을 바꿔도 번호가 밀리지 않는다.
+export function deliverySlotIndex(localMinutes, interval) {
+  return Math.floor(localMinutes / interval);
+}
+
 async function sendPush(subscription, payload, env) {
   const body = await encryptPayload(subscription.keys.p256dh, subscription.keys.auth, payload);
   const response = await fetch(subscription.endpoint, {
@@ -258,10 +272,9 @@ export default {
           if (!raw) continue;
           const record = JSON.parse(raw);
           const localMinutes = ((utcMinutes - record.tz) % 1440 + 1440) % 1440;
-          const elapsed = localMinutes - record.start;
-          if (elapsed < 0 || localMinutes > record.end || elapsed % record.interval >= 30) continue;
+          if (!shouldDeliverAt(localMinutes, record)) continue;
           const localDate = new Date(now.getTime() - record.tz * 60_000).toISOString().slice(0, 10);
-          const deliverySlot = `${localDate}:${Math.floor(elapsed / record.interval)}`;
+          const deliverySlot = `${localDate}:${deliverySlotIndex(localMinutes, record.interval)}`;
           if (record.lastDeliverySlot === deliverySlot) continue;
           record.lastDeliverySlot = deliverySlot;
           await env.SUBS.put(name, JSON.stringify(record));
