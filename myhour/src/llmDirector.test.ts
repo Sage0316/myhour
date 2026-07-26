@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BGM_CATALOG, BGM_FILES, bgmAssetUrl } from './llmDirector';
+import { BGM_CATALOG, BGM_FILES, DEFAULT_MEDIA_BASE_URL, bgmAssetUrl } from './llmDirector';
 
 // hakku-media 워커가 받아주는 키 형태 (media-server/worker.js의 KEY_PATTERN과 같아야 한다)
 const MEDIA_KEY_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.mp3$/;
@@ -18,8 +18,8 @@ describe('BGM static asset catalog', () => {
     expect(rejected.map(item => item.file)).toEqual([]);
   });
 
-  it('builds an asset URL only for catalog files', () => {
-    expect(bgmAssetUrl('slice-of-life.mp3')).toMatch(/bgm\/slice-of-life\.mp3$/);
+  it('always builds a media Worker URL for catalog files', () => {
+    expect(bgmAssetUrl('slice-of-life.mp3')).toBe(`${DEFAULT_MEDIA_BASE_URL}/bgm/slice-of-life.mp3`);
     expect(() => bgmAssetUrl('../secret.mp3')).toThrow('지원하지 않는');
   });
 });

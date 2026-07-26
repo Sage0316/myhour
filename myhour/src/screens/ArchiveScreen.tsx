@@ -245,16 +245,25 @@ function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveE
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [showDetail, setShowDetail] = useState(initialOpen);
+  const [showDetail, setShowDetail] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
     // blob까지 들고 있어야 다운로드(공유) 버튼이 await 없이 바로 share()를 부를 수 있다
     loadVideoBlobFromIDB(archiveVideoKey(entry)).then(blob => {
-      if (blob) { setVideoUrl(URL.createObjectURL(blob)); setVideoBlob(blob); setGenState('done'); }
+      if (blob) {
+        setVideoUrl(URL.createObjectURL(blob));
+        setVideoBlob(blob);
+        setGenState('done');
+        // 하루 마감 직후에는 기록 상세가 아니라 방금 만든 영상을 바로 보여준다.
+        if (initialOpen) setFullscreen(true);
+      } else if (initialOpen) {
+        // 영상 없이 마감한 날의 딥 링크만 기록 상세를 연다.
+        setShowDetail(true);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entry.id, entry.date]);
+  }, [entry.id, entry.date, initialOpen]);
 
   const lead = entry.records.find(r => (r.type === 'photo' || r.type === 'meme') && hasMedia(r))
     ?? entry.records.find(r => r.type === 'video' && hasMedia(r))

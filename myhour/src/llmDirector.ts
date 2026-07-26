@@ -22,7 +22,7 @@ export const BGM_TRACKS: Record<BgmTrack, string> = {
 };
 
 // 무드별 곡 풀 — AI는 무드만 고르고, 그 안에서 매번 랜덤으로 한 곡이 뽑힌다 (전곡 CC0).
-// 파일명은 public/bgm과 정확히 일치해야 한다. 2026-07 라이선스 감사에서 출처 미상이던
+// 파일명은 R2의 myhour-media 객체 키와 정확히 일치해야 한다. 2026-07 라이선스 감사에서 출처 미상이던
 // calm/bright/emotional.mp3는 삭제하고 study-and-relax/pickled-pink/cornfield-chase로 교체했다.
 export const BGM_FILES: Record<BgmTrack, readonly string[]> = {
   calm: ['study-and-relax.mp3', 'slice-of-life.mp3', 'lagoon.mp3'],
@@ -48,13 +48,17 @@ export const BGM_CATALOG = (Object.entries(BGM_FILES) as Array<[BgmTrack, readon
 
 // 곡 파일은 R2(myhour-media)에 있고 hakku-media 워커가 내보낸다. 앱 배포본에는 넣지 않는다 —
 // 배포본 118MB 중 114MB가 오디오였다. 지연 로딩과 "번들·precache에 넣지 않는다"는
-// 원래 정책은 그대로다 (CLAUDE.md 참고). 값이 비어 있으면 예전처럼 public/bgm에서 찾는다.
-const MEDIA_BASE_URL = (import.meta.env.VITE_MEDIA_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+// 원래 정책은 그대로다 (CLAUDE.md 참고). Worker 주소는 공개 엔드포인트라 기본값으로 고정하고,
+// VITE_MEDIA_BASE_URL은 다른 환경에서만 재정의한다. public/bgm은 삭제됐으므로 로컬 경로로 폴백하면 안 된다.
+export const DEFAULT_MEDIA_BASE_URL = 'https://hakku-media.sage0316.workers.dev';
+const MEDIA_BASE_URL = (
+  (import.meta.env.VITE_MEDIA_BASE_URL as string | undefined)?.trim() || DEFAULT_MEDIA_BASE_URL
+).replace(/\/$/, '');
 
 export function bgmAssetUrl(file: string): string {
   if (!BGM_CATALOG.some(item => item.file === file)) throw new Error('지원하지 않는 BGM 파일이에요.');
   const name = encodeURIComponent(file);
-  return MEDIA_BASE_URL ? `${MEDIA_BASE_URL}/bgm/${name}` : `${import.meta.env.BASE_URL}bgm/${name}`;
+  return `${MEDIA_BASE_URL}/bgm/${name}`;
 }
 
 const directorOutputSchema = z.object({
