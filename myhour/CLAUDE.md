@@ -94,16 +94,39 @@ iOS 16.4+ PWA 푸시. 워커 배포됨: **https://myhour-push.sage0316.workers.d
 - 세션 네트워크 정책이 api.cloudflare.com만 허용 → workers.dev로 /health 직접 확인 불가, 배포 상태는 API(scripts/myhour-push/subdomain·secrets·schedules)로 검증
 - 크론 30분 단위, 사용자별 interval(30/60/120)·시작/종료시간·타임존 반영. 만료 구독(410) 자동 정리
 
-## ⚠️ 배포 상태 (2026-07-25 기준 — 코드는 준비됐고 배포가 남았다)
-main의 하드닝 병합으로 워커 프로토콜이 새로 짜였다. 앱은 이제 `.env` 빌드 변수로 워커를 찾는다:
-`VITE_AI_WORKER_URL`, `VITE_PUSH_SERVER_URL`, `VITE_VAPID_PUBLIC_KEY` (.env.example 참고, CI는 GitHub repo `vars`에서 주입).
-- **비어 있으면 AI와 푸시가 조용히 꺼진다** — 설정 화면에 "서버 연결 전"으로 뜬다
-- 새 프로토콜(`/v1/install` + 서명 토큰)은 기존에 배포된 `myhour-push`의 옛 엔드포인트와 호환되지 않는다 → push-server 재배포 필요
-- ai-server는 아직 배포 안 됨 → 배포 + `ANTHROPIC_API_KEY`/`INSTALL_TOKEN_SECRET`/`PROVIDER_URL`(AI Gateway)/`CF_AIG_TOKEN` 시크릿 + `AI_STATE` KV 필요
+## 배포 상태 (2026-07-26 기준 — 3종 다 배포됨)
+앱은 `.env` 빌드 변수로 워커를 찾는다: `VITE_AI_WORKER_URL`, `VITE_PUSH_SERVER_URL`,
+`VITE_MEDIA_BASE_URL`, `VITE_VAPID_PUBLIC_KEY` (.env.example 참고).
+- **비어 있으면 AI·푸시·BGM이 조용히 꺼진다** — 설정 화면에 "서버 연결 전"으로 뜬다
+- 배포된 것: Pages(`gh-pages`, 버전 표시는 설정 맨 아래) + 워커 3종 `myhour-push` / `hakku-ai` / `hakku-media`
 - 배포는 workflow_dispatch 수동 (`.github/workflows/deploy-workers.yml`, `deploy-pages.yml`) — main push만으로는 배포되지 않으니, GitHub Pages가 안 바뀌었다고 당황하지 말 것
+- **GitHub repo `vars`는 아직 비어 있다** — 그래서 CI 빌드는 AI·푸시·BGM이 꺼진 앱을 만든다.
+  지금 라이브 배포본은 로컬 `.env.production.local`로 수동 빌드한 것이다. CI로 배포를 넘기려면 repo vars부터 채워야 한다
+
+## ⚠️ 인수인계: AI 연출이 지금 죽어 있다 (2026-07-26)
+증상은 마감 화면의 "분석을 할 수 없어요" + 제목·마무리가 규칙 기반 대체값(`generateTitle`/`generateClosing`)으로 나오는 것.
+**원인은 `hakku-ai`에 등록된 `ANTHROPIC_API_KEY`가 손상된 값이라는 것** — 대화 요약본에서 읽은 값을 검증 없이
+`wrangler secret put`으로 올렸다. `curl`로 확인하면 `HTTP 401 authentication_error`, 길이 107에 `sk-ant-api03-` 패턴 불일치.
+
+다음 세션에서 할 일 (순서 지킬 것):
+1. 환경변수 `HAKKU_ANTHROPIC_KEY`를 읽는다 (사용자가 클라우드 환경 설정에 넣어둠. 환경 변경은 **새 세션에만** 반영된다)
+2. **워커에 넣기 전에** `curl -s -o /dev/null -w '%{http_code}' https://api.anthropic.com/v1/messages -H "x-api-key: $HAKKU_ANTHROPIC_KEY" -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-sonnet-5","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}'` 로 200을 확인한다. 이 검증을 건너뛴 게 이 사고의 원인이다
+3. `cd myhour/ai-server && npx wrangler secret put ANTHROPIC_API_KEY` (CLOUDFLARE_API_TOKEN 환경변수 필요)
+4. AI Gateway 인증을 켜뒀다면 `CF_AIG_TOKEN`도 같이. 껐으면 넣지 않는다 (있으면 `cf-aig-authorization` 헤더로 나감)
+5. `hakku-ai`에 `/v1/install` → `/v1/direct` 실제 호출로 끝까지 확인한다
+
+**세션 네트워크 정책 주의**: 기본 허용 목록이 `api.cloudflare.com`뿐이라 `gateway.ai.cloudflare.com`과
+`*.workers.dev`가 막힌다 → 2·5번을 못 한다. 사용자에게 클라우드 환경 설정의 허용 도메인에
+`api.anthropic.com` / `gateway.ai.cloudflare.com` / `*.workers.dev` 추가를 요청할 것.
+(`api.anthropic.com`은 2026-07-26 기준 목록에 없어도 도달했지만 명시하는 게 안전하다)
+
+**미검증으로 남은 것** (workers.dev가 막혀서 이 세션에서 확인 못 함): `hakku-media` 워커의 실제 응답,
+그리고 R2 경유 BGM이 생성된 영상에 실제로 들어가는지 — 사용자 폰 또는 위 도메인 허용 후 확인이 필요하다.
 
 ## 다음 과제 후보
-- 위 배포 3종(ai-server, push-server 재배포, Pages) 실행 + repo vars 설정
+- 위 AI 키 복구 + repo vars 설정
+- 푸시 알림 미도달 진단: 크론 한 틱 뒤 KV의 `lastStatus`/`lastAttemptAt`을 읽는다 (201=성공, 403=VAPID 거부, 400=요청 오류)
+- `ai-server`의 오류 코드 세분화 — 지금은 전부 `analysis_unavailable`로 뭉개져서 인증 실패와 출력 형식 오류를 구분할 수 없다 (에러로그.md 사례 2와 같은 침묵 실패 패턴)
 - 앱스토어 출시 준비: Capacitor 래핑, 백업 강화, 과금 모델
 `pnpm check`는 zero-warning lint, 단위/백업 테스트, AI·Push Worker 인증 테스트, Web Push 암호화 왕복, 타입 검사와 프로덕션 빌드를 실행합니다.
 
