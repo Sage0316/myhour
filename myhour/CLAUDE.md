@@ -5,11 +5,17 @@
 **로고(2026-07-22 확정)**: `public/brand/hakku-wordmark.svg`(흰 배경, 가로 한 줄 "HAKKU") / `hakku-wordmark-transparent.svg`(투명 배경) / `hakku-icon-mark.svg`(정사각형, "HA"/"KKU" 두 줄 — 앱 아이콘용). 순수 검정(#000000, 절대 `#1A1A1A` 같은 따뜻한 회색 쓰지 말 것 — 크림 배경과 동시대비로 갈색/똥색처럼 보임) 두꺼운 사각 블록을 이어붙여 만든 워드마크, 획마다 삐뚤빼뚤 지터(고정 시드라 항상 같은 모양). 정사각형 아이콘 버전만 글자당 한 획씩 **하늘색(#3FA0E0, "하꾸=하늘" 연상)** 포인트 — 가로 워드마크는 포인트 컬러 없이 순수 검정 단색. **주황(#D9743F)은 시그니처 컬러 아님** — scenes.ts의 drawMemeScene 기본 인자값일 뿐, 사용자가 정한 적 없음. 홈 화면 앱 아이콘(`favicon.svg`/`icon-192.png`/`icon-512.png`/`apple-touch-icon.png`) 전부 이 정사각형 마크로 교체 완료 — 이전엔 브랜드와 무관한 보라색 추상 마크(예전 템플릿 잔재)였음. maskable 안전영역(중심 반경 40%) 고려해 콘텐츠를 캔버스의 60%로 넉넉히 여백.
 
 **표시 이름은 "하꾸"(2026-07-22 확정), 내부 작업명은 그대로 MYHOUR/myhour.**
-저장소명·리포·URL(`/myhour/`)·워커명(`myhour-push`)·localStorage 키(`myhour_*`)는 전부 변경 비용이라 그대로 두고,
+저장소명·리포·URL(`/myhour/`)·워커명(`myhour-push`)은 변경 비용이라 그대로 두고,
 **사용자에게 실제로 보이는 텍스트만** "하꾸"로 교체함: `index.html`(title, apple-mobile-web-app-title),
 `manifest.json`(name/short_name — 홈 화면 아이콘 이름), `App.tsx`(데스크톱 미리보기 프레임 라벨),
 `push.ts`/`SettingsScreen.tsx`(에러 문구), `scenes.ts`(영상 인트로 카드 "하 꾸" 워터마크 + 마무리 카드 자막),
 `push-server/worker.js`/`public/sw.js`(푸시 알림 제목). 새 코드 작성 시 사용자 노출 문자열에 "MYHOUR" 쓰지 말 것 — "하꾸"로.
+
+**localStorage 키는 예외다.** 원래 결정은 `myhour_*` 유지였지만, 2026-07 하드닝에서 Zod 스키마 v2와
+함께 `hakku_*`로 바뀌었다(구버전 `myhour_v1`·`myhour_archive_v1`·`myhour_settings_v1`·`myhour_videos_v1`은
+읽기 전용 마이그레이션 소스로 보존). **이 변경은 사전 승인 없이 들어갔다.** 되돌리는 비용(마이그레이션
+재작성 + 실데이터 위험)이 이름을 되찾는 이득보다 커서 유지하기로 했다(2026-07-26 결정).
+새 스키마 버전을 새 키에 쓰는 것 자체는 구버전 데이터를 건드리지 않아 롤백 여지를 남기는 이점이 있다.
 
 ## 기술 스택
 - Vite 8 + React + TypeScript
