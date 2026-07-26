@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:browser-verify": "node scripts/browser-verify.mjs",
-    "test:workers": "node push-server/roundtrip-test.mjs && node push-server/worker-auth-test.mjs && node push-server/schedule-test.mjs && node ai-server/worker-auth-test.mjs",
+    "test:workers": "node push-server/roundtrip-test.mjs && node push-server/worker-auth-test.mjs && node push-server/schedule-test.mjs && node ai-server/worker-auth-test.mjs && node media-server/worker-test.mjs",
     "check": "pnpm run lint && pnpm run test:coverage && pnpm run test:workers && pnpm run build",
     "preview": "vite preview"
   },

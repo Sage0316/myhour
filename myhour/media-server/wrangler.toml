@@ -1,0 +1,10 @@
+name = "hakku-media"
+main = "worker.js"
+compatibility_date = "2026-07-01"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "myhour-media"
+
+[vars]
+ALLOWED_ORIGINS = "https://sage0316.github.io"
