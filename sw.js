@@ -1,54 +1,53 @@
-const CACHE = 'myhour-v4';
+const CACHE = 'hakku-shell-v1';
+const SHELL = ['/myhour/', '/myhour/index.html', '/myhour/manifest.json', '/myhour/favicon.svg'];
 
-// ─── 푸시 알림 수신 ─────────────────────────────────────────────────────────
-self.addEventListener('push', e => {
+self.addEventListener('push', event => {
   let data = {};
-  try { data = e.data ? e.data.json() : {}; } catch { /* 페이로드 없으면 기본 문구 */ }
-  e.waitUntil(self.registration.showNotification(data.title || '하꾸', {
-    body: data.body || '지금 이 순간을 기록해볼까요? 📝',
+  try { data = event.data ? event.data.json() : {}; } catch { /* use defaults */ }
+  event.waitUntil(self.registration.showNotification(data.title || '하꾸', {
+    body: data.body || '지금 한 시간을 기록해볼까요? 📸',
     icon: '/myhour/icon-192.png',
     badge: '/myhour/icon-192.png',
+    data: { url: '/myhour/' },
   }));
 });
 
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  e.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const c of list) {
-        if (c.url.includes('/myhour/')) return c.focus();
-      }
-      return clients.openWindow('/myhour/');
-    })
-  );
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windows => {
+    const existing = windows.find(client => client.url.includes('/myhour/'));
+    return existing ? existing.focus() : clients.openWindow(event.notification.data?.url || '/myhour/');
+  }));
 });
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(['/myhour/', '/myhour/index.html']))
-  );
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => clients.claim())
-  );
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+    .then(() => clients.claim()));
 });
 
-self.addEventListener('fetch', e => {
-  if (new URL(e.request.url).origin !== location.origin) return;
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put('/myhour/index.html', copy));
-        }
-        return res;
-      }).catch(() => caches.match('/myhour/index.html'))
-    );
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== location.origin) return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request)
+      .then(response => {
+        if (response.ok) caches.open(CACHE).then(cache => cache.put('/myhour/index.html', response.clone()));
+        return response;
+      })
+      .catch(() => caches.match('/myhour/index.html')));
+    return;
+  }
+  const url = new URL(event.request.url);
+  // BGM은 설치 시 precache하지 않는다. 실제 선택/재생 요청이 발생한 파일만 런타임 캐시에 넣는다.
+  if (url.pathname.includes('/assets/') || /\.(?:png|svg|ttf|mp3)$/.test(url.pathname)) {
+    event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+      if (response.ok) caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
+      return response;
+    })));
   }
 });
