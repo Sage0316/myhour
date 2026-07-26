@@ -3,7 +3,7 @@ import { useApp } from '../appContext';
 import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate } from '../store';
 import type { MoodItem } from '../store';
 import { ensureDiaryFont } from '../scenes';
-import { analyzeDay, hasAIConsent, isAIConfigured, BGM_CATALOG, BGM_TRACKS, bgmAssetUrl, pickBgmFile } from '../llmDirector';
+import { analyzeDay, hasAIConsent, isAIConfigured, BGM_TRACKS, bgmAssetUrl, pickBgmFile } from '../llmDirector';
 import type { DirectorOutput } from '../llmDirector';
 import { videoGenerationService } from '../services/video-generation-service';
 import { wrapUpService } from '../services/wrap-up-service';
@@ -29,7 +29,6 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   // 사용자가 직접 무드를 고른 뒤에는 AI 분석 결과로 덮어쓰지 않는다
   const userPickedMoodRef = useRef(false);
   const [selectedEmoji, setSelectedEmoji] = useState(0);
-  const [selectedBgmFile, setSelectedBgmFile] = useState('');
   const [calmness, setCalmness] = useState(72);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -101,7 +100,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     generationAbortRef.current = abortController;
     try {
       const bgmTrack = director?.bgmTrack ?? (calmness >= 60 ? 'calm' : 'bright');
-      const bgmFile = selectedBgmFile || pickBgmFile(bgmTrack);
+      const bgmFile = pickBgmFile(bgmTrack);
       const bgmUrl = bgmAssetUrl(bgmFile);
       const warnings: string[] = [];
       const blob = await videoGenerationService.generate(records, `${dateDay} ${dateWeekday}`, p => setProgress(p), {
@@ -248,22 +247,6 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>더 정확하게 · 선택</div>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>
-              BGM
-              <select
-                value={selectedBgmFile}
-                onChange={event => setSelectedBgmFile(event.target.value)}
-                style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid rgba(26,26,26,0.12)', background: '#fff', padding: '0 10px', color: '#1A1A1A', fontFamily: 'Inter, sans-serif' }}
-              >
-                <option value="">무드에 맞춰 자동 추천</option>
-                {BGM_CATALOG.map(item => (
-                  <option key={item.file} value={item.file}>
-                    {BGM_TRACKS[item.track]} · {item.label}
-                  </option>
-                ))}
-              </select>
-              <span style={{ fontSize: 10, color: 'rgba(26,26,26,0.38)' }}>선택한 곡은 영상 생성 시에만 불러와요.</span>
-            </label>
             <div style={{ display: 'flex', gap: 7 }}>
               {EMOJIS.map((emoji, i) => (
                 <button key={i} onClick={() => setSelectedEmoji(i)} style={{
