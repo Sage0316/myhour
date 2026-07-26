@@ -7,11 +7,11 @@
 ## 세션 시작 시 읽을 문서
 
 1. `AGENTS.md` — 이 저장소에 설치된 AI-DLC 실행 규칙
-2. `aidlc-docs/aidlc-state.md` — 현재 단계, 완료 범위, 외부 출시 게이트
-3. `aidlc-docs/product-brand.md` — 제품명과 저장소 식별자 구분
-4. `aidlc-docs/construction/pre-implementation-readiness.md` — Unit 준비 상태
-5. `aidlc-docs/construction/u1-domain-persistence/code/code-summary.md`부터 `u7-public-beta-delivery/code/code-summary.md`까지 — 구현 결과와 의도적 편차
-6. `aidlc-docs/audit.md` — 사용자 승인과 결정 이력
+2. `aidlc-docs/README.md` — 통합 문서 안내
+3. `aidlc-docs/aidlc-state.md` — 현재 단계, 검증 결과, 외부 출시 게이트
+4. `aidlc-docs/PROJECT_CONTEXT.md` — 제품·UX·아키텍처·데이터·보안 요구사항
+5. `aidlc-docs/IMPLEMENTATION_SUMMARY.md` — U1–U7 구현 결과와 의도적 제한
+6. `aidlc-docs/audit.md` — 사용자 승인과 핵심 결정
 7. 세부 작업을 시작할 때 `AGENTS.md`가 지정한 `.aidlc-rule-details/` 규칙
 
 앱 내부 명령과 구조는 `myhour/CLAUDE.md` 및 `myhour/README.md`를 따릅니다.
@@ -22,7 +22,8 @@
 - `myhour`에서 `pnpm check` 통과: zero-warning lint, 16개 테스트, Worker 검증, 프로덕션 빌드
 - Chromium 브라우저 흐름, dialog 포커스 복귀, 콘솔 오류, axe critical 검증 통과
 - GitHub Actions CI, 동일 artifact Pages 배포·롤백, Worker preview/production 및 버전 롤백 구성 완료
-- 외부 배포, PR, `main` 병합은 별도 승인 대상
+- 앱과 AI-DLC/Claude Code 자료는 `main`에 병합됨
+- 외부 배포는 하지 않았으며 최근 원격 CI가 `pnpm run check`에서 실패해 진단이 필요함
 
 ## 지켜야 할 제품 정책
 
