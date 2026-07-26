@@ -17,6 +17,54 @@ const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 const START_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00'];
 const END_TIMES   = ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
 
+// 좌우로 미끄러지는 on/off 스위치. 켜지면 초록, 꺼지면 회색.
+// 실제 <input type="checkbox">를 숨겨서 얹는 대신 button + role="switch"를 쓴다 —
+// 스크린리더가 상태를 읽고, 키보드 스페이스/엔터가 그대로 동작한다.
+function ToggleSwitch({ checked, onChange, disabled, label }: {
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  const W = 50, H = 30, PAD = 3;
+  const knob = H - PAD * 2;
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onChange}
+      disabled={disabled}
+      style={{
+        width: W, height: H, flexShrink: 0, padding: 0,
+        borderRadius: H / 2, border: 'none',
+        background: checked ? '#34C759' : 'rgba(26,26,26,0.18)',
+        transition: 'background 0.2s ease',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.4 : 1,
+        position: 'relative',
+        // 스위치를 길게 눌러도 텍스트 선택으로 넘어가지 않게
+        WebkitTapHighlightColor: 'transparent',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute', top: PAD, left: PAD,
+          width: knob, height: knob, borderRadius: '50%',
+          background: '#fff',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.28)',
+          transform: checked ? `translateX(${W - knob - PAD * 2}px)` : 'translateX(0)',
+          transition: 'transform 0.2s ease',
+        }}
+      />
+    </button>
+  );
+}
+
 // 기록 시간 푸시 알림 — 서버(push-server/) 배포 전에는 준비 중 상태로 표시
 function PushSection() {
   const { settings } = useApp();
@@ -64,21 +112,12 @@ function PushSection() {
                   : 'iOS 16.4 이상 + 홈 화면 설치가 필요해요'}
             </div>
           </div>
-          <button
-            onClick={toggle}
+          <ToggleSwitch
+            label="기록 시간 알림"
+            checked={enabled}
+            onChange={toggle}
             disabled={!ready || busy}
-            style={{
-              minWidth: 52, height: 32, borderRadius: 50, border: 'none',
-              background: enabled ? '#1A1A1A' : 'rgba(26,26,26,0.1)',
-              color: enabled ? '#fff' : 'rgba(26,26,26,0.5)',
-              fontSize: 12, fontWeight: 600,
-              cursor: ready && !busy ? 'pointer' : 'default',
-              opacity: ready ? 1 : 0.5,
-              fontFamily: 'Inter, sans-serif',
-            }}
-          >
-            {busy ? '...' : enabled ? 'ON' : 'OFF'}
-          </button>
+          />
         </div>
         {error && <div style={{ fontSize: 11, color: '#E5533C', whiteSpace: 'pre-line' }}>{error}</div>}
         {enabled && (
@@ -183,18 +222,23 @@ function AISection() {
     <div>
       <SectionHeader label="AI · 촬영감독" />
       <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', lineHeight: 1.6 }}>
-          동의하면 텍스트 기록과 캡션만 하꾸 AI 서버로 보내 제목·무드·BGM을 추천해요. 사진·영상·음성 원본은 전송하지 않아요.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 15 }}>AI 분석 사용</div>
+            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>
+              {configured ? (consented ? '제목·무드·BGM을 AI가 추천해요' : '켜면 하루 마감에서 AI가 연출해요') : '서버 연결 전이에요'}
+            </div>
+          </div>
+          <ToggleSwitch
+            label="AI 분석 사용"
+            checked={consented}
+            onChange={toggleConsent}
+            disabled={!configured}
+          />
         </div>
-        <button
-          type="button"
-          onClick={toggleConsent}
-          disabled={!configured}
-          aria-pressed={consented}
-          style={{ alignSelf: 'flex-start', height: 38, padding: '0 16px', borderRadius: 999, border: 'none', background: consented ? '#1A1A1A' : 'rgba(26,26,26,0.08)', color: consented ? '#fff' : '#1A1A1A', cursor: configured ? 'pointer' : 'default', opacity: configured ? 1 : 0.5 }}
-        >
-          {!configured ? '서버 연결 전' : consented ? 'AI 분석 동의함' : 'AI 분석 사용하기'}
-        </button>
+        <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.5)', lineHeight: 1.6 }}>
+          켜면 텍스트 기록과 캡션만 하꾸 AI 서버로 보내 제목·무드·BGM을 추천해요. 사진·영상·음성 원본은 전송하지 않아요.
+        </div>
       </div>
     </div>
   );
