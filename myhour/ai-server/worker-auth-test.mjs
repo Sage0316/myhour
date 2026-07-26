@@ -62,4 +62,9 @@ assert.equal(
   '라면 국물까지 다 마셨다.',
   '기록에 붙은 구체적인 closing은 유지해야 한다',
 );
+assert.equal(
+  normalizeResult({ ...directorBase, closing: '그 시간, 그 한 줄.' }, records).closing,
+  '마지막 기록: 라면 먹고 바로 잤다',
+  '기록의 구체 단어가 하나도 없는 문장도 교체해야 한다',
+);
 console.log('✅ AI AUTH/VALIDATION OK');

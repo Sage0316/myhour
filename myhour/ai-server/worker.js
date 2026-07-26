@@ -119,6 +119,24 @@ function fallbackClosing(records) {
   }[last?.type] ?? '마지막 기록에서 하루를 닫았다.';
 }
 
+function recordKeywords(records) {
+  const stopwords = new Set(['오늘', '하루', '기록', '마지막', '순간', '시간', '마음', '느낌', '생각']);
+  return records.flatMap(record => [
+    record.caption,
+    record.type === 'text' ? record.content : '',
+  ]).flatMap(text => String(text ?? '').split(/\s+/))
+    .map(token => token.replace(/[^\p{L}\p{N}]/gu, '').replace(/(에서|으로|에게|한테|까지|부터|처럼|보다|은|는|이|가|을|를|에|와|과|도|만|의|로)$/u, ''))
+    .filter(token => token.length >= 2 && !stopwords.has(token));
+}
+
+function isGenericClosing(closing, records) {
+  if (CLICHE_CLOSING_PATTERNS.some(pattern => pattern.test(closing))) return true;
+  const keywords = recordKeywords(records);
+  if (keywords.length === 0) return true;
+  const compactClosing = closing.replace(/[^\p{L}\p{N}]/gu, '');
+  return !keywords.some(keyword => compactClosing.includes(keyword));
+}
+
 export function normalizeResult(value, records) {
   const recordCount = records.length;
   if (!value || typeof value !== 'object') return value;
@@ -126,7 +144,7 @@ export function normalizeResult(value, records) {
     .slice(0, recordCount)
     .map(item => String(item ?? '').trim().slice(0, max));
   const rawClosing = String(value.closing ?? '').trim().slice(0, 80);
-  const closing = CLICHE_CLOSING_PATTERNS.some(pattern => pattern.test(rawClosing))
+  const closing = isGenericClosing(rawClosing, records)
     ? fallbackClosing(records)
     : rawClosing;
   return {
@@ -182,6 +200,7 @@ ${lines}
 문체 규칙 (중요):
 - 담백하고 건조하게. 일기 쓰듯이.
 - 오글거리는 표현, 감탄사, 클리셰 금지: "이 순간들이 모여 나를 만든다", "소소한 행복", "충분했다", "빛나는 하루", "잘 살았다", "마무리합니다", "오늘도 나답게" 같은 말 절대 쓰지 말 것.
+- closing에는 반드시 실제 기록에 나온 구체적인 단어나 사물 이름을 하나 이상 그대로 넣을 것. "그 시간", "그 한 줄", "이 순간"처럼 기록 내용 없이도 쓸 수 있는 문장 금지.
 - 기록에 실제로 나온 단어와 장면을 재료로 쓸 것. 일반론 금지.
 - 제목은 명사구로 짧게 끊어도 좋음 (예: "커피 두 잔의 날", "결국 또 떡볶이").
 - 자막은 툭 던지는 반말 (예: "오늘의 첫 커피", "이 맛에 퇴근하지").
