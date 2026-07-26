@@ -44,7 +44,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [titleDraft, setTitleDraft] = useState('');
 
   const fallbackTitle = generateTitle(records);
-  const fallbackClosing = generateClosing(records);
+  const fallbackClosing = generateClosing(records, selectedMood.mood);
   const title = titleOverride ?? director?.title ?? fallbackTitle;
   const closing = director?.closing ?? fallbackClosing;
 

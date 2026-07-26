@@ -289,8 +289,8 @@ export async function generateVideo(
   await yieldToBrowser(signal);
 
   const title = overrides?.title ?? generateTitle(records);
-  const closing = overrides?.closing ?? generateClosing(records);
   const moodName = overrides?.mood ?? guessMood(records).mood;
+  const closing = overrides?.closing ?? generateClosing(records, moodName);
   const moodColor = MOOD_LIST.find(m => m.mood === moodName)?.dot ?? '#7C5CC4';
   // 그날의 무드 이모지 하나 — 그림일기 '오늘' 칸에만 쓴다 (기록별 이모지와 섞지 않는다)
   const moodEmoji = (overrides?.emojis

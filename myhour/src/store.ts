@@ -292,22 +292,39 @@ export function generateTitle(records: MyRecord[]): string {
   return first.length <= 20 ? first : first.slice(0, 18) + '…';
 }
 
-export function generateClosing(records: MyRecord[]): string {
+const CLOSING_MOOD_PHRASE: Record<MoodItem['mood'], string> = {
+  잔잔함: '조용히 하루를 마무리했다.',
+  뿌듯함: '오늘 하루도 잘 해냈다.',
+  감성: '괜히 마음이 몽글몽글했던 하루.',
+  웃김: '피식 웃으며 하루를 접었다.',
+  정신없음: '정신없이 흘러간 하루였다.',
+  슬픔: '마음 한켠이 무거웠던 하루.',
+  짜증: '짜증 나는 순간이 많았던 하루.',
+  지침: '유독 지치는 하루였다.',
+};
+
+const CLOSING_MOOD_FALLBACK: Record<MoodItem['mood'], string> = {
+  잔잔함: '오늘도 조용히 하루를 마쳤다.',
+  뿌듯함: '오늘도 뿌듯하게 하루를 마쳤다.',
+  감성: '괜히 마음이 몽글몽글했던 하루를 마쳤다.',
+  웃김: '피식 웃으며 하루를 마쳤다.',
+  정신없음: '정신없이 흘러간 하루를 마쳤다.',
+  슬픔: '마음 한켠이 무거웠던 하루를 마쳤다.',
+  짜증: '짜증 나는 순간이 많았던 하루를 마쳤다.',
+  지침: '유독 지치는 하루를 마쳤다.',
+};
+
+export function generateClosing(records: MyRecord[], mood: string = guessMood(records).mood): string {
   const last = records.at(-1);
   const detail = (
     last?.caption?.trim()
     || (last?.type === 'text' ? last.content.trim() : '')
   ).replace(/\s+/g, ' ').replace(/[.!?。]+$/, '').slice(0, 48);
 
-  if (detail) return `마지막 기록: ${detail}`;
+  const moodPhrase = CLOSING_MOOD_PHRASE[mood as MoodItem['mood']] ?? CLOSING_MOOD_PHRASE.잔잔함;
+  if (detail) return `${detail}. ${moodPhrase}`;
 
-  switch (last?.type) {
-    case 'photo': return '마지막으로 사진 한 장을 남겼다.';
-    case 'video': return '마지막으로 영상 하나를 남겼다.';
-    case 'audio': return '마지막으로 음성 하나를 남겼다.';
-    case 'meme': return '마지막으로 저장한 이미지를 남겼다.';
-    default: return '기록을 마쳤다.';
-  }
+  return CLOSING_MOOD_FALLBACK[mood as MoodItem['mood']] ?? CLOSING_MOOD_FALLBACK.잔잔함;
 }
 
 // ─── App data (records + wrap state) ────────────────────────────────────────
