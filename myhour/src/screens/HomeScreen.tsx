@@ -25,6 +25,8 @@ function MediaIcon({ type, bg }: { type: IconType; bg: string }) {
   };
   if (type === 'video') return <div style={base}><div style={{ width: 0, height: 0, borderLeft: '8px solid #1A1A1A', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', marginLeft: 2 }} /></div>;
   if (type === 'photo') return <div style={base}><div style={{ width: 10, height: 10, border: '2px solid #1A1A1A', borderRadius: '50%' }} /></div>;
+  // meme(앨범) — 폴라로이드 모양. 분기가 없으면 맨 아래 '빈 슬롯' 점선 아이콘으로 떨어져 기록이 없는 것처럼 보인다
+  if (type === 'meme') return <div style={base}><div style={{ width: 11, height: 12, border: '2px solid #1A1A1A', borderRadius: 2, borderBottomWidth: 5 }} /></div>;
   if (type === 'audio') return (
     <div style={{ ...base, alignItems: 'flex-end', gap: 2, paddingBottom: 7 }}>
       <div style={{ width: 2, height: 7, background: '#1A1A1A' }} />

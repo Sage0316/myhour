@@ -52,10 +52,15 @@ const directorBase = {
   recordEmojis: ['🍜'],
 };
 const records = [{ slotTime: '23:00', type: 'text', content: '라면 먹고 바로 잤다', caption: '' }];
-assert.equal(
-  normalizeResult(directorBase, records).closing,
-  '마지막 기록: 라면 먹고 바로 잤다',
-  '감성 클리셰는 마지막 기록의 실제 내용으로 교체해야 한다',
+const clicheReplaced = normalizeResult(directorBase, records).closing;
+assert.notEqual(
+  clicheReplaced,
+  '이 순간들이 모여 나를 만든다',
+  '감성 클리셰는 교체해야 한다',
+);
+assert.ok(
+  !clicheReplaced.includes('라면 먹고 바로 잤다'),
+  '교체된 closing이 사용자의 기록 원문을 그대로 되돌려주면 안 된다',
 );
 assert.equal(
   normalizeResult({ ...directorBase, closing: '라면 국물까지 다 마셨다.' }, records).closing,
@@ -63,8 +68,13 @@ assert.equal(
   '기록에 붙은 구체적인 closing은 유지해야 한다',
 );
 assert.equal(
-  normalizeResult({ ...directorBase, closing: '그 시간, 그 한 줄.' }, records).closing,
-  '마지막 기록: 라면 먹고 바로 잤다',
-  '기록의 구체 단어가 하나도 없는 문장도 교체해야 한다',
+  normalizeResult({ ...directorBase, closing: '늦은 밤에야 하루가 조용해졌다.' }, records).closing,
+  '늦은 밤에야 하루가 조용해졌다.',
+  '기록 키워드가 안 겹쳐도 멀쩡한 요약 문장은 유지해야 한다',
+);
+assert.equal(
+  normalizeResult({ ...directorBase, closing: '' }, records).closing,
+  '마지막 문장을 쓰고 하루를 닫았다.',
+  '빈 closing은 타입별 중립 문장으로 채운다',
 );
 console.log('✅ AI AUTH/VALIDATION OK');
