@@ -104,14 +104,12 @@ const CLICHE_CLOSING_PATTERNS = [
   /충분했던?\s*하루/,
 ];
 
+// 사용자가 쓴 문장을 그대로 되돌려주지 않는다 — 마지막 기록을 복붙한 마무리는
+// "하루 요약"이 아니라 메아리라서, 타입별 중립 문장만 쓴다
 function fallbackClosing(records) {
   const last = records.at(-1);
-  const detail = (
-    last?.caption?.trim()
-    || (last?.type === 'text' ? last.content.trim() : '')
-  ).replace(/\s+/g, ' ').replace(/[.!?。]+$/, '').slice(0, 48);
-  if (detail) return `마지막 기록: ${detail}`.slice(0, 80);
   return {
+    text: '마지막 문장을 쓰고 하루를 닫았다.',
     photo: '마지막으로 사진 한 장을 남겼다.',
     video: '마지막으로 영상 하나를 남겼다.',
     audio: '마지막으로 음성 하나를 남겼다.',
@@ -119,22 +117,10 @@ function fallbackClosing(records) {
   }[last?.type] ?? '마지막 기록에서 하루를 닫았다.';
 }
 
-function recordKeywords(records) {
-  const stopwords = new Set(['오늘', '하루', '기록', '마지막', '순간', '시간', '마음', '느낌', '생각']);
-  return records.flatMap(record => [
-    record.caption,
-    record.type === 'text' ? record.content : '',
-  ]).flatMap(text => String(text ?? '').split(/\s+/))
-    .map(token => token.replace(/[^\p{L}\p{N}]/gu, '').replace(/(에서|으로|에게|한테|까지|부터|처럼|보다|은|는|이|가|을|를|에|와|과|도|만|의|로)$/u, ''))
-    .filter(token => token.length >= 2 && !stopwords.has(token));
-}
-
-function isGenericClosing(closing, records) {
-  if (CLICHE_CLOSING_PATTERNS.some(pattern => pattern.test(closing))) return true;
-  const keywords = recordKeywords(records);
-  if (keywords.length === 0) return true;
-  const compactClosing = closing.replace(/[^\p{L}\p{N}]/gu, '');
-  return !keywords.some(keyword => compactClosing.includes(keyword));
+// 클리셰 문구만 걸러낸다. 예전엔 기록의 키워드를 문자 그대로 포함해야 통과시켰는데,
+// 멀쩡한 요약 문장이 키워드가 안 겹친다는 이유로 전부 fallback으로 교체되는 부작용이 컸다
+function isGenericClosing(closing) {
+  return CLICHE_CLOSING_PATTERNS.some(pattern => pattern.test(closing));
 }
 
 export function normalizeResult(value, records) {
@@ -144,9 +130,9 @@ export function normalizeResult(value, records) {
     .slice(0, recordCount)
     .map(item => String(item ?? '').trim().slice(0, max));
   const rawClosing = String(value.closing ?? '').trim().slice(0, 80);
-  const closing = isGenericClosing(rawClosing, records)
-    ? fallbackClosing(records)
-    : rawClosing;
+  const closing = rawClosing && !isGenericClosing(rawClosing)
+    ? rawClosing
+    : fallbackClosing(records);
   return {
     ...value,
     title: String(value.title ?? '').trim().slice(0, 30),

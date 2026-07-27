@@ -242,7 +242,9 @@ export async function generateVideo(
   ]);
 
   await Promise.all(records.map(async r => {
-    if (r.type === 'photo') {
+    // meme(앨범에서 고른 이미지)도 사진과 같은 경로로 원본을 불러온다 —
+    // 여기서 빠지면 drawMemeScene이 img=null을 받아 업로드한 사진이 영상에서 사라진다
+    if (r.type === 'photo' || r.type === 'meme') {
       const mediaKey = r.mediaId ?? r.videoKey;
       if (mediaKey) {
         const url = await loadVideoFromIDB(mediaKey);
