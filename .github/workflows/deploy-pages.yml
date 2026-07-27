@@ -42,6 +42,10 @@ jobs:
       - name: Verify SHA-256 manifest
         working-directory: release-dist
         run: sha256sum --check SHA256SUMS
+      - name: Require worker URLs in the build
+        # repo vars(VITE_*)가 비면 AI·푸시·BGM이 꺼진 앱이 만들어진다.
+        # 그런 빌드가 라이브를 조용히 덮어쓰지 않도록 여기서 배포를 실패시킨다.
+        run: grep -rq "workers.dev" release-dist/assets
       - uses: actions/upload-pages-artifact@v4
         with:
           path: release-dist
