@@ -117,31 +117,62 @@ async function getInstallationToken(signal?: AbortSignal): Promise<string> {
   return body.token;
 }
 
+// 워커가 돌려주는 오류 코드를 사람이 읽을 문장으로 옮긴다.
+// 코드는 괄호에 남겨서, 문제가 생겼을 때 어느 단계에서 막혔는지 바로 알 수 있게 한다.
+const ERROR_MESSAGES: Record<string, string> = {
+  unauthorized: 'AI 연결이 만료됐어요. 다시 시도해 주세요.',
+  daily_quota_exceeded: '오늘 쓸 수 있는 AI 분석을 다 썼어요. 내일 다시 시도해 주세요.',
+  rate_limit_exceeded: '요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
+  invalid_request: '기록 형식이 올바르지 않아 분석하지 못했어요.',
+  origin_not_allowed: '허용되지 않은 주소에서 온 요청이에요.',
+  provider_not_configured: 'AI 서버에 API 키가 설정되지 않았어요.',
+  provider_auth_failed: 'AI 서버의 API 키가 거절됐어요. 키를 다시 등록해 주세요.',
+  provider_forbidden: 'AI 게이트웨이가 요청을 막았어요. 게이트웨이 설정을 확인해 주세요.',
+  provider_rate_limited: 'AI 사용량 한도에 걸렸어요. 잠시 후 다시 시도해 주세요.',
+  provider_unavailable: 'AI 서버가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해 주세요.',
+  invalid_provider_output: 'AI 응답을 이해하지 못했어요. 다시 시도해 주세요.',
+  analysis_unavailable: 'AI 분석에 실패했어요. 잠시 후 다시 시도해 주세요.',
+};
+
+function directorError(code: string | undefined, status: number): Error {
+  if (!code) return new Error(`AI 분석 오류 (${status})`);
+  return new Error(`${ERROR_MESSAGES[code] ?? 'AI 분석에 실패했어요.'} (${code})`);
+}
+
 export async function analyzeDay(
   records: MyRecord[],
   dateStr: string,
   signal?: AbortSignal,
 ): Promise<DirectorOutput> {
   if (!hasAIConsent()) throw new Error('AI 분석 동의가 필요해요.');
-  const token = await getInstallationToken(signal);
-  const response = await fetch(`${AI_WORKER_URL}/v1/direct`, {
+  const payload = JSON.stringify({
+    date: dateStr.slice(0, 40),
+    records: records.slice(0, 96).map(record => ({
+      slotTime: record.slotTime,
+      type: record.type,
+      content: record.type === 'text' ? record.content.slice(0, 2_000) : '',
+      caption: record.caption?.slice(0, 500) ?? '',
+    })),
+  });
+  const post = async (token: string) => fetch(`${AI_WORKER_URL}/v1/direct`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      date: dateStr.slice(0, 40),
-      records: records.slice(0, 96).map(record => ({
-        slotTime: record.slotTime,
-        type: record.type,
-        content: record.type === 'text' ? record.content.slice(0, 2_000) : '',
-        caption: record.caption?.slice(0, 500) ?? '',
-      })),
-    }),
+    body: payload,
     signal,
   });
+
+  let response = await post(await getInstallationToken(signal));
+  if (response.status === 401) {
+    // 워커의 INSTALL_TOKEN_SECRET이 바뀌면 폰에 저장된 토큰이 무효가 된다.
+    // 예전엔 설정에서 AI 동의를 껐다 켜야 풀렸고, 그 사이 증상이 "분석 불가"로만 보여서
+    // 키가 죽은 것처럼 오해하기 쉬웠다. 여기서 토큰을 버리고 한 번 다시 받는다.
+    localStorage.removeItem(AI_TOKEN_STORAGE);
+    response = await post(await getInstallationToken(signal));
+  }
   const body = await response.json().catch(() => ({})) as { result?: unknown; error?: string };
-  if (!response.ok) throw new Error(body.error ?? `AI 분석 오류 (${response.status})`);
+  if (!response.ok) throw directorError(body.error, response.status);
   return directorOutputSchema.parse(body.result);
 }
