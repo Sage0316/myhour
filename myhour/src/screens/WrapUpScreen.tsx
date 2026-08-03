@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../appContext';
 import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate } from '../store';
 import type { MoodItem } from '../store';
-import { ensureDiaryFont } from '../scenes';
+import { ensureDiaryFont, fallbackEmojisFor, splitEmojis } from '../scenes';
 import { analyzeDay, hasAIConsent, isAIConfigured, BGM_TRACKS, bgmAssetUrl, pickBgmFile } from '../llmDirector';
 import type { DirectorOutput } from '../llmDirector';
 import { videoGenerationService } from '../services/video-generation-service';
@@ -15,7 +15,12 @@ interface WrapUpScreenProps {
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
-const EMOJIS = ['😌', '🤪', '🥹', '😵', '😤'];
+
+// BGM 무드 → "차분함" 슬라이더 초깃값. AI가 고른 곡 분위기를 슬라이더에 비춰준다.
+// 예전엔 무조건 72로 시작해서, 슬픈 날에도 슬라이더가 남의 값처럼 걸려 있었다.
+const CALMNESS_BY_TRACK: Record<string, number> = {
+  calm: 85, piano: 80, nostalgic: 76, sad: 74, emotional: 66, ukulele: 30, bright: 25,
+};
 
 export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
@@ -28,8 +33,11 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   // 사용자가 직접 무드를 고른 뒤에는 AI 분석 결과로 덮어쓰지 않는다
   const userPickedMoodRef = useRef(false);
-  const [selectedEmoji, setSelectedEmoji] = useState(0);
-  const [calmness, setCalmness] = useState(72);
+  // 이모지·차분함은 "사용자가 고쳤을 때만" AI 결과를 이긴다. null이면 아직 안 건드린 상태.
+  // 예전엔 고정 초깃값(😌, 72)이 들어가 있고 생성할 땐 AI 값이 무조건 이겨서,
+  // 무슨 칩을 눌러도 영상이 그대로였다 — 그래서 "에러 나서 기본값에 걸린" 것처럼 보였다.
+  const [emojiPick, setEmojiPick] = useState<string | null>(null);
+  const [calmnessPick, setCalmnessPick] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
@@ -47,6 +55,15 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const fallbackClosing = generateClosing(records, selectedMood.mood);
   const title = titleOverride ?? director?.title ?? fallbackTitle;
   const closing = director?.closing ?? fallbackClosing;
+
+  // 고를 이모지는 그날 무드에서 나온다 (슬픔이면 😢🌧️💧🫂). 5개 고정 목록이던 시절엔
+  // 무드와 상관없이 항상 😌이 선택돼 있어서, 우울한 날 화면과 대놓고 어긋났다.
+  const emojiChoices = fallbackEmojisFor(selectedMood.mood);
+  const activeEmoji = emojiPick
+    ?? (director?.emojis ? splitEmojis(director.emojis)[0] : undefined)
+    ?? emojiChoices[0];
+  const calmness = calmnessPick
+    ?? (director ? CALMNESS_BY_TRACK[director.bgmTrack] ?? 72 : 72);
 
   const TITLE_MAX = 30;
 
@@ -99,13 +116,16 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     const abortController = new AbortController();
     generationAbortRef.current = abortController;
     try {
-      const bgmTrack = director?.bgmTrack ?? (calmness >= 60 ? 'calm' : 'bright');
+      // 슬라이더를 직접 움직였으면 그 선택이 AI가 고른 곡보다 우선한다
+      const bgmTrack = calmnessPick !== null
+        ? (calmnessPick >= 60 ? 'calm' : 'bright')
+        : director?.bgmTrack ?? (calmness >= 60 ? 'calm' : 'bright');
       const bgmFile = pickBgmFile(bgmTrack);
       const bgmUrl = bgmAssetUrl(bgmFile);
       const warnings: string[] = [];
       const blob = await videoGenerationService.generate(records, `${dateDay} ${dateWeekday}`, p => setProgress(p), {
         title, closing, bgmUrl,
-        emojis: director?.emojis ?? EMOJIS[selectedEmoji],
+        emojis: emojiPick ?? director?.emojis ?? emojiChoices.join(''),
         mood: selectedMood.mood,
         captions: director?.captions,
         recordEmojis: director?.recordEmojis,
@@ -177,7 +197,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           {showMoodPicker && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {MOOD_LIST.map(m => (
-                <button key={m.mood} onClick={() => { userPickedMoodRef.current = true; setSelectedMood(m); setShowMoodPicker(false); }} style={{
+                <button key={m.mood} onClick={() => { userPickedMoodRef.current = true; setSelectedMood(m); setEmojiPick(null); setShowMoodPicker(false); }} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px', borderRadius: 50, background: m.color,
                   fontSize: 12, fontWeight: selectedMood.mood === m.mood ? 600 : 400,
@@ -248,22 +268,28 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>더 정확하게 · 선택</div>
             <div style={{ display: 'flex', gap: 7 }}>
-              {EMOJIS.map((emoji, i) => (
-                <button key={i} onClick={() => setSelectedEmoji(i)} style={{
-                  flex: 1, height: 38, borderRadius: 11,
-                  background: selectedEmoji === i ? '#F0F0EE' : '#FFFFFF',
-                  border: selectedEmoji === i ? '1.5px solid #1A1A1A' : '1px solid rgba(26,26,26,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, cursor: 'pointer',
-                  opacity: selectedEmoji === i ? 1 : 0.45,
-                }}>{emoji}</button>
+              {emojiChoices.map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => setEmojiPick(emoji)}
+                  aria-pressed={emoji === activeEmoji}
+                  aria-label={`무드 이모지 ${emoji}`}
+                  style={{
+                    flex: 1, height: 38, borderRadius: 11,
+                    background: emoji === activeEmoji ? '#F0F0EE' : '#FFFFFF',
+                    border: emoji === activeEmoji ? '1.5px solid #1A1A1A' : '1px solid rgba(26,26,26,0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18, cursor: 'pointer',
+                    opacity: emoji === activeEmoji ? 1 : 0.45,
+                  }}
+                >{emoji}</button>
               ))}
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>
                 <span>차분함</span><span style={MONO}>{calmness}</span>
               </div>
-              <input type="range" min={0} max={100} value={calmness} onChange={e => setCalmness(Number(e.target.value))} style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
+              <input type="range" min={0} max={100} value={calmness} onChange={e => setCalmnessPick(Number(e.target.value))} aria-label="차분함" style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
             </div>
           </div>
         </div>
