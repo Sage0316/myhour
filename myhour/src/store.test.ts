@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { generateClosing, guessMood, type MyRecord } from './store';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { generateClosing, guessMood, loadAppData, loadArchive, type MyRecord } from './store';
+import { journalRepository } from './repositories/journalRepository';
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function record(overrides: Partial<MyRecord> = {}): MyRecord {
   return {
@@ -63,3 +68,70 @@ describe('guessMood', () => {
   });
 });
 
+
+describe('날짜 넘어감 (rollover)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers();
+  });
+
+  // 사용자가 사진만 찍고 마감하지 않은 하루가 통째로 사라졌던 버그.
+  // 빈 하루를 돌려주기만 하면 cleanupOrphanMedia가 그 사진들을 참조 없는 blob으로 보고 지운다.
+  it('마감하지 않은 어제 기록을 버리지 않고 아카이브로 옮긴다', () => {
+    const yesterday = record({ id: 'record-photo', type: 'photo', content: '', mediaId: 'media_1' });
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [yesterday],
+      isWrapped: false,
+      date: '2026-08-03',
+    });
+
+    // 8/4 오전 9시 이후에 앱을 연 상황 (시작 시간 09:00)
+    vi.setSystemTime(new Date('2026-08-04T10:00:00'));
+    const fresh = loadAppData('09:00');
+
+    expect(fresh.date).toBe('2026-08-04');
+    expect(fresh.records).toHaveLength(0);
+
+    const archived = loadArchive();
+    expect(archived).toHaveLength(1);
+    expect(archived[0].date).toBe('2026-08-03');
+    expect(archived[0].isWrapped).toBe(false);
+    expect(archived[0].records[0].mediaId).toBe('media_1');
+  });
+
+  it('같은 하루를 두 번 아카이브하지 않는다', () => {
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [record()],
+      isWrapped: false,
+      date: '2026-08-03',
+    });
+    vi.setSystemTime(new Date('2026-08-04T10:00:00'));
+
+    loadAppData('09:00');
+    // saveCurrent가 실패해 어제 데이터가 그대로 남은 상황을 흉내낸다
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [record()],
+      isWrapped: false,
+      date: '2026-08-03',
+    });
+    loadAppData('09:00');
+
+    expect(loadArchive()).toHaveLength(1);
+  });
+
+  it('기록이 없는 하루는 아카이브에 넣지 않는다', () => {
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [],
+      isWrapped: false,
+      date: '2026-08-03',
+    });
+    vi.setSystemTime(new Date('2026-08-04T10:00:00'));
+
+    loadAppData('09:00');
+    expect(loadArchive()).toHaveLength(0);
+  });
+});

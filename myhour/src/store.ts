@@ -1,4 +1,5 @@
 import {
+  createStableId,
   settingsSchema,
   type JournalAppData,
   type JournalArchiveEntry,
@@ -345,11 +346,36 @@ export function generateClosing(records: MyRecord[], mood: string = guessMood(re
 
 export type AppData = JournalAppData;
 
+// 마감 없이 날짜가 넘어간 하루를 아카이브에 보존한다. 영상은 아직 없으므로 isWrapped: false —
+// 아카이브 카드의 "영상 만들기" 버튼으로 나중에 만들 수 있다.
+function rolloverUnwrappedDay(data: AppData): void {
+  if (data.records.length === 0) return;
+  // saveCurrent가 실패해 같은 하루를 두 번 읽는 경우에도 중복 항목을 만들지 않는다
+  if (loadArchive().some(entry => entry.date === data.date && !entry.isWrapped)) return;
+  addToArchive({
+    id: createStableId('archive'),
+    date: data.date,
+    records: data.records,
+    isWrapped: false,
+    trimmed: false,
+  });
+}
+
 export function loadAppData(startTime: string = DEFAULT_SETTINGS.startTime): AppData {
   const date = getSessionDate(startTime);
   const data = journalRepository.loadCurrent(date);
   if (data.date !== date) {
-    return { schemaVersion: 2, records: [], isWrapped: false, date };
+    // 날짜가 넘어갔다. 예전엔 여기서 빈 하루를 돌려주기만 해서 어제 기록이 통째로 사라졌다 —
+    // 곧이어 cleanupOrphanMedia가 그 기록들의 사진을 "참조 없는 blob"으로 보고 IDB에서 지웠고,
+    // 다음 저장이 localStorage의 어제 기록마저 덮어썼다. 반드시 먼저 아카이브로 옮긴다.
+    rolloverUnwrappedDay(data);
+    const fresh: AppData = { schemaVersion: 2, records: [], isWrapped: false, date };
+    try {
+      journalRepository.saveCurrent(fresh);
+    } catch {
+      // 저장에 실패해도 위에서 아카이브에 옮겨뒀으니 기록은 남는다
+    }
+    return fresh;
   }
   return data;
 }
