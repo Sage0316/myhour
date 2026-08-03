@@ -23,7 +23,14 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # CI는 pull_request에서도 도는데 그 실행은 hakku-dist가 아니라 hakku-preview-<n>을 올린다.
+    # 성공 여부만 보면 PR CI가 끝날 때마다 배포가 떠서 아티팩트를 못 찾고 실패하므로,
+    # main에 push된 CI 실행에서만 배포한다.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
