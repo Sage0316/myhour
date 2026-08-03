@@ -56,12 +56,14 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const title = titleOverride ?? director?.title ?? fallbackTitle;
   const closing = director?.closing ?? fallbackClosing;
 
-  // 고를 이모지는 그날 무드에서 나온다 (슬픔이면 😢🌧️💧🫂). 5개 고정 목록이던 시절엔
-  // 무드와 상관없이 항상 😌이 선택돼 있어서, 우울한 날 화면과 대놓고 어긋났다.
-  const emojiChoices = fallbackEmojisFor(selectedMood.mood);
-  const activeEmoji = emojiPick
-    ?? (director?.emojis ? splitEmojis(director.emojis)[0] : undefined)
-    ?? emojiChoices[0];
+  // 칩 = AI가 오늘 고른 이모지 + 그날 무드 팔레트(슬픔이면 😢🌧️💧🫂), 중복 제거해서 5개까지.
+  // AI 것을 목록에 넣지 않으면 선택된 칩이 하나도 없는 상태가 된다 — AI는 팔레트 밖 이모지를
+  // 자주 고르기 때문이다 (예: 슬픔인데 😮‍💨). 첫 칸이 곧 기본 선택이라 AI 것이 앞에 온다.
+  const emojiChoices = [...new Set([
+    ...(director?.emojis ? splitEmojis(director.emojis) : []),
+    ...fallbackEmojisFor(selectedMood.mood),
+  ])].slice(0, 5);
+  const activeEmoji = emojiPick ?? emojiChoices[0];
   const calmness = calmnessPick
     ?? (director ? CALMNESS_BY_TRACK[director.bgmTrack] ?? 72 : 72);
 
