@@ -16,7 +16,7 @@ interface WrapUpScreenProps {
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
-// BGM 무드 → "차분함" 슬라이더 초깃값. AI가 고른 곡 분위기를 슬라이더에 비춰준다.
+// BGM 무드 → 슬라이더 초깃값. AI가 고른 곡 분위기를 슬라이더에 비춰준다.
 // 예전엔 무조건 72로 시작해서, 슬픈 날에도 슬라이더가 남의 값처럼 걸려 있었다.
 const CALMNESS_BY_TRACK: Record<string, number> = {
   calm: 85, piano: 80, nostalgic: 76, sad: 74, emotional: 66, ukulele: 30, bright: 25,
@@ -33,7 +33,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   // 사용자가 직접 무드를 고른 뒤에는 AI 분석 결과로 덮어쓰지 않는다
   const userPickedMoodRef = useRef(false);
-  // 이모지·차분함은 "사용자가 고쳤을 때만" AI 결과를 이긴다. null이면 아직 안 건드린 상태.
+  // 이모지·정도는 "사용자가 고쳤을 때만" AI 결과를 이긴다. null이면 아직 안 건드린 상태.
   // 예전엔 고정 초깃값(😌, 72)이 들어가 있고 생성할 땐 AI 값이 무조건 이겨서,
   // 무슨 칩을 눌러도 영상이 그대로였다 — 그래서 "에러 나서 기본값에 걸린" 것처럼 보였다.
   const [emojiPick, setEmojiPick] = useState<string | null>(null);
@@ -284,7 +284,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>AI가 정한 거 바꾸기</span>
               {/* 접힌 채로도 지금 값이 보이게 — 펼쳐야만 알 수 있으면 접은 의미가 없다 */}
               <span style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', whiteSpace: 'nowrap' }}>
-                {activeEmoji} · 차분함 {calmness}
+                {activeEmoji} · {selectedMood.mood} {calmness}
               </span>
               <span aria-hidden="true" style={{
                 fontSize: 11, color: 'rgba(26,26,26,0.4)',
@@ -320,9 +320,9 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>
-                <span>차분함</span><span style={MONO}>{calmness}</span>
+                <span>{selectedMood.mood}</span><span style={MONO}>{calmness}</span>
               </div>
-              <input type="range" min={0} max={100} value={calmness} onChange={e => setCalmnessPick(Number(e.target.value))} aria-label="차분함" style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
+              <input type="range" min={0} max={100} value={calmness} onChange={e => setCalmnessPick(Number(e.target.value))} aria-label={`${selectedMood.mood} 정도`} style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
             </div>
             </div>
           </div>
