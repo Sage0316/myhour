@@ -34,6 +34,39 @@ export const BGM_FILES: Record<BgmTrack, readonly string[]> = {
   sad: ['winter.mp3', 'isolation-waltz.mp3', 'cold-journey.mp3'],
 };
 
+// 무드 × 감정 강도 → 곡 풀. [약하게, 보통, 강하게] 순.
+// 같은 "슬픔"이라도 덜 가라앉은 날엔 잔잔한 피아노, 깊은 날엔 위로하는 곡으로 간다.
+// 예전엔 강도가 calm/bright 둘 중 하나로만 접혀서, 슬픈 날 슬라이더를 조금만 내려도
+// 음악이 경쾌한 곡으로 튀었다 — 영상 분위기와 정면으로 어긋나는 결과였다.
+export const MOOD_TRACKS: Record<string, readonly [BgmTrack, BgmTrack, BgmTrack]> = {
+  '잔잔함': ['calm', 'calm', 'piano'],
+  '뿌듯함': ['calm', 'bright', 'bright'],
+  '감성': ['piano', 'nostalgic', 'emotional'],
+  '웃김': ['ukulele', 'ukulele', 'bright'],
+  '정신없음': ['calm', 'bright', 'bright'],
+  '슬픔': ['piano', 'nostalgic', 'sad'],
+  '짜증': ['calm', 'calm', 'sad'],
+  '지침': ['calm', 'nostalgic', 'sad'],
+};
+
+const DEFAULT_MOOD_TRACKS = MOOD_TRACKS['잔잔함'];
+
+function intensityLevel(intensity: number): 0 | 1 | 2 {
+  if (intensity < 40) return 0;
+  return intensity < 70 ? 1 : 2;
+}
+
+export function trackForMood(mood: string, intensity: number): BgmTrack {
+  return (MOOD_TRACKS[mood] ?? DEFAULT_MOOD_TRACKS)[intensityLevel(intensity)];
+}
+
+// 슬라이더 초깃값 — AI가 고른 곡이 그 무드에서 몇 번째 단계인지 되짚는다.
+// 이래야 슬라이더가 AI의 판단을 그대로 비추고, 사용자가 옮긴 만큼만 달라진다.
+export function intensityForTrack(mood: string, track: BgmTrack): number {
+  const index = (MOOD_TRACKS[mood] ?? DEFAULT_MOOD_TRACKS).lastIndexOf(track);
+  return index < 0 ? 60 : [25, 55, 85][index];
+}
+
 export function pickBgmFile(track: BgmTrack): string {
   const files = BGM_FILES[track] ?? BGM_FILES.calm;
   return files[Math.floor(Math.random() * files.length)];
