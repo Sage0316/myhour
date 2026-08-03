@@ -206,6 +206,7 @@ ${lines}
 }
 
 async function callProvider(body, env) {
+  if (!env.ANTHROPIC_API_KEY) throw new Error('provider_not_configured');
   // Workers에서 api.anthropic.com을 직접 부르면 Cloudflare→Cloudflare 봇 방어로 403
   // "Request not allowed"가 난다. PROVIDER_URL에 AI Gateway 엔드포인트를 넣어 우회한다
   // (게이트웨이 인증을 켰다면 CF_AIG_TOKEN도 함께). README 참고.
@@ -226,15 +227,42 @@ async function callProvider(body, env) {
       messages: [{ role: 'user', content: buildPrompt(body) }],
     }),
   });
-  if (!providerResponse.ok) throw new Error('provider_error');
+  if (!providerResponse.ok) {
+    // 거절 이유를 코드로 구분해 둔다. 전부 analysis_unavailable로 뭉개면 "키가 죽었나,
+    // 한도인가, 게이트웨이가 막았나"를 밖에서 구분할 수 없어 오진이 나온다 (README 참고).
+    const detail = await providerResponse.text().catch(() => '');
+    console.error('provider_rejected', providerResponse.status, detail.slice(0, 500));
+    if (providerResponse.status === 401) throw new Error('provider_auth_failed');
+    if (providerResponse.status === 403) throw new Error('provider_forbidden');
+    if (providerResponse.status === 429) throw new Error('provider_rate_limited');
+    if (providerResponse.status >= 500) throw new Error('provider_unavailable');
+    throw new Error('provider_error');
+  }
   const providerBody = await providerResponse.json();
   const text = providerBody.content?.find(part => part.type === 'text')?.text ?? '';
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('invalid_provider_output');
+  if (!match) {
+    console.error('provider_output_not_json', text.slice(0, 500));
+    throw new Error('invalid_provider_output');
+  }
   const result = normalizeResult(JSON.parse(match[0]), body.records);
-  if (!validResult(result, body.records.length)) throw new Error('invalid_provider_output');
+  if (!validResult(result, body.records.length)) {
+    console.error('provider_output_invalid', JSON.stringify(result).slice(0, 500));
+    throw new Error('invalid_provider_output');
+  }
   return result;
 }
+
+// 코드 → HTTP 상태. 여기 없는 오류만 analysis_unavailable로 떨어진다.
+const ERROR_STATUS = {
+  provider_not_configured: 503,
+  provider_auth_failed: 502,
+  provider_forbidden: 502,
+  provider_rate_limited: 503,
+  provider_unavailable: 503,
+  provider_error: 502,
+  invalid_provider_output: 502,
+};
 
 export default {
   async fetch(request, env) {
@@ -282,6 +310,8 @@ export default {
       const message = error instanceof Error ? error.message : 'internal_error';
       if (message === 'payload_too_large') return response(request, env, { error: message }, 413);
       if (error instanceof SyntaxError) return response(request, env, { error: 'invalid_json' }, 400);
+      if (ERROR_STATUS[message]) return response(request, env, { error: message }, ERROR_STATUS[message]);
+      console.error('unhandled_error', message, error instanceof Error ? error.stack : '');
       return response(request, env, { error: 'analysis_unavailable' }, 502);
     }
   },

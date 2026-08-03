@@ -19,11 +19,13 @@
 ## 현재 구현 상태
 
 - U1–U7 설계와 로컬 구현 완료
-- `myhour`에서 `pnpm check` 통과: zero-warning lint, 16개 테스트, Worker 검증, 프로덕션 빌드
+- `myhour`에서 `pnpm check` 통과: zero-warning lint, 30개 테스트, Worker 검증, 프로덕션 빌드
 - Chromium 브라우저 흐름, dialog 포커스 복귀, 콘솔 오류, axe critical 검증 통과
 - GitHub Actions CI, 동일 artifact Pages 배포·롤백, Worker preview/production 및 버전 롤백 구성 완료
 - 앱과 AI-DLC/Claude Code 자료는 `main`에 병합됨
-- 외부 배포는 하지 않았으며 최근 원격 CI가 `pnpm run check`에서 실패해 진단이 필요함
+- **2026-08-03 기준 실제 운영 중이다.** repo vars 4종이 채워져 CI 빌드에 워커 URL이 박히고,
+  main에 push되면 Pages가 자동 배포된다. 워커 3종(`hakku-ai`/`myhour-push`/`hakku-media`)도 배포돼 있고
+  AI 연출은 사용자 폰에서 동작이 확인됐다. 세부 배포 상태는 `myhour/CLAUDE.md`의 "배포 상태" 절 참고
 
 ## 지켜야 할 제품 정책
 
@@ -42,7 +44,8 @@
 ## 외부 출시 전 남은 게이트
 
 - BGM 21곡의 출처·저작자·배포 라이선스 근거 확정 (2026-07-20 감사에서 전곡 CC0 확인 — myhour/CLAUDE.md 참고)
-- 실제 iOS 16.4+ 및 Android Chromium 기기 검증
-- GitHub/Cloudflare 환경 변수·KV·secret 설정
-- 실제 배포와 Pages/Worker 롤백 리허설
+- 실제 iOS 16.4+ 및 Android Chromium 기기 검증 (2026-08-03에 iOS PWA로 영상 생성·AI 연출 동작 확인 —
+  나머지 흐름과 Android는 미검증)
+- ~~GitHub/Cloudflare 환경 변수·KV·secret 설정~~ — 2026-08-03 완료
+- Pages/Worker 롤백 리허설 (배포 자체는 자동화돼 돌고 있으나 롤백은 아직 실제로 해보지 않았다)
 - GitHub Pages에서 지원되지 않는 `_headers` 요구사항의 운영 호스팅 결정

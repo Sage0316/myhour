@@ -94,14 +94,18 @@ iOS 16.4+ PWA 푸시. 워커 배포됨: **https://myhour-push.sage0316.workers.d
 - 세션 네트워크 정책이 api.cloudflare.com만 허용 → workers.dev로 /health 직접 확인 불가, 배포 상태는 API(scripts/myhour-push/subdomain·secrets·schedules)로 검증
 - 크론 30분 단위, 사용자별 interval(30/60/120)·시작/종료시간·타임존 반영. 만료 구독(410) 자동 정리
 
-## 배포 상태 (2026-07-26 기준 — 3종 다 배포됨)
+## 배포 상태 (2026-08-03 기준 — Pages 자동 배포, 워커 3종 배포됨)
 앱은 `.env` 빌드 변수로 워커를 찾는다: `VITE_AI_WORKER_URL`, `VITE_PUSH_SERVER_URL`,
 `VITE_MEDIA_BASE_URL`, `VITE_VAPID_PUBLIC_KEY` (.env.example 참고).
 - **비어 있으면 AI·푸시·BGM이 조용히 꺼진다** — 설정 화면에 "서버 연결 전"으로 뜬다
 - 배포된 것: Pages(`gh-pages`, 버전 표시는 설정 맨 아래) + 워커 3종 `myhour-push` / `hakku-ai` / `hakku-media`
-- 배포는 workflow_dispatch 수동 (`.github/workflows/deploy-workers.yml`, `deploy-pages.yml`) — main push만으로는 배포되지 않으니, GitHub Pages가 안 바뀌었다고 당황하지 말 것
-- **GitHub repo `vars`는 아직 비어 있다** — 그래서 CI 빌드는 AI·푸시·BGM이 꺼진 앱을 만든다.
-  지금 라이브 배포본은 로컬 `.env.production.local`로 수동 빌드한 것이다. CI로 배포를 넘기려면 repo vars부터 채워야 한다
+- **GitHub repo `vars` 4종은 2026-08-03에 채워졌다.** 그래서 CI 빌드에 워커 URL이 박히고 AI·푸시·BGM이 켜진다
+- **Pages는 main에 push되면 자동 배포된다** (`deploy-pages.yml`이 CI 성공을 받아 동작). 워커는 여전히
+  workflow_dispatch 수동(`deploy-workers.yml`) 또는 해당 디렉터리에서 `npx wrangler deploy`
+- `deploy-pages.yml`의 "Require worker URLs in the build" 단계가 dist에서 `workers.dev`를 찾지 못하면
+  배포를 실패시킨다 — vars가 비어 AI가 꺼진 빌드가 라이브를 조용히 덮어쓴 사고가 있어서 넣은 가드다
+- **배포 job은 main에 push된 CI 실행에서만 돈다.** CI는 pull_request에서도 도는데 그 실행은
+  `hakku-dist`가 아니라 `hakku-preview-<n>`을 올려서, 조건이 없으면 PR마다 배포가 떠서 실패한다
 
 ## AI 연출: 워커 키는 유효하다 — "키가 손상됐다"는 진단은 틀렸다 (2026-07-26)
 `hakku-ai`의 `ANTHROPIC_API_KEY`는 **정상이다.** AI 연출은 16:20 KST에 실제로 성공했다.
@@ -120,8 +124,14 @@ TTL이 2일이라 07-25에 요청이 있었다면 아직 남아 있어야 하는
 `analysis_unavailable`과 구분하지 못한다. AI 동의를 껐다 켜면 `setAIConsent(false)`가 그 토큰을 지워서 낫는다.
 → **시크릿을 재등록하면 기존 설치 토큰이 전부 무효가 된다**는 걸 기억할 것.
 
-**그래서 오류 코드 세분화가 급하다.** 지금은 인증 실패·프로바이더 거부·출력 형식 오류가 전부
-`analysis_unavailable` 하나로 뭉개져서, 이 오진이 정확히 그 때문에 가능했다 (에러로그.md 사례 2·15).
+**오류 코드 세분화는 2026-08-03에 끝났다.** 이제 워커가 프로바이더 거부를 상태별로 나눠서 돌려준다:
+`provider_auth_failed`(401, 키 거절) / `provider_forbidden`(403, 게이트웨이·봇 방어) /
+`provider_rate_limited`(429) / `provider_unavailable`(5xx) / `provider_error`(그 외) /
+`provider_not_configured`(키 미설정) / `invalid_provider_output`(모델 출력 형식). `analysis_unavailable`은
+이제 **진짜 미분류 오류에만** 남는다 — 이 코드가 보이면 `wrangler tail`의 `unhandled_error` 로그를 볼 것.
+클라이언트는 `llmDirector.ts`의 `ERROR_MESSAGES`로 한국어 문장 + 괄호 안 원본 코드를 보여준다.
+**401은 이제 자동 복구된다**: 앱이 저장된 설치 토큰을 버리고 한 번 다시 받아 재시도하므로,
+`INSTALL_TOKEN_SECRET`을 바꿔도 사용자가 AI 동의를 껐다 켤 필요가 없다.
 
 **세션 네트워크 정책 주의**: 기본 허용 목록이 `api.cloudflare.com`뿐이라 `gateway.ai.cloudflare.com`과
 `*.workers.dev`가 막혀서 워커를 직접 부를 수 없다. `api.anthropic.com`은 2026-07-26 기준 목록에 없어도 도달했다.
@@ -133,10 +143,21 @@ AI Gateway 로그(`/accounts/{acc}/ai-gateway/gateways/sage/logs`)가 요청별 
 **미검증으로 남은 것** (workers.dev가 막혀서 이 세션에서 확인 못 함): `hakku-media` 워커의 실제 응답,
 그리고 R2 경유 BGM이 생성된 영상에 실제로 들어가는지 — 사용자 폰 또는 위 도메인 허용 후 확인이 필요하다.
 
+## 하루 마감과 날짜 넘김 (2026-08-03)
+마감하지 않은 하루는 **버리지 않고 아카이브로 옮긴다** (`loadAppData` → `rolloverUnwrappedDay`).
+예전엔 날짜가 넘어가면 빈 하루를 돌려주기만 해서 하루치가 통째로 사라졌다. 유실이 완성된 경로:
+① 기록이 메모리에서 사라지고 → ② `cleanupOrphanMedia`가 그 사진들을 참조 없는 blob으로 보고 IDB에서
+삭제하고 → ③ 다음 저장이 localStorage의 기록마저 덮어썼다. **아카이브에 넣는 것이 곧 사진을 지키는 것**이라
+이 순서를 바꾸지 말 것. `store.test.ts`의 rollover 테스트가 지킨다.
+- 넘김은 두 곳에서 발동한다: 앱을 열 때(`loadAppData`)와 켜둔 채 1분마다(`context.tsx`의 tick 검사).
+  둘 중 하나만 있으면 "앱 켜두면 안 넘어감" 또는 "다시 열어야 넘어감" 중 한쪽 구멍이 남는다
+- 아카이브에 들어간 미마감 항목은 `isWrapped: false`이고, 카드의 "영상 만들기" 버튼으로 나중에 만든다
+- **영상 자동 생성은 불가능하다** — Canvas + MediaRecorder가 포그라운드에서만 돌고 AudioContext는 탭
+  제스처가 필요하다. 다음날 정해진 시각에 자동 생성해 달라는 요구는 "앱을 열었을 때 물어보기"로 풀 것
+
 ## 다음 과제 후보
-- repo vars 설정 (AI 키는 멀쩡하니 손대지 않아도 된다)
 - 푸시 알림 미도달 진단: 크론 한 틱 뒤 KV의 `lastStatus`/`lastAttemptAt`을 읽는다 (201=성공, 403=VAPID 거부, 400=요청 오류)
-- `ai-server`의 오류 코드 세분화 — 지금은 전부 `analysis_unavailable`로 뭉개져서 인증 실패와 출력 형식 오류를 구분할 수 없다 (에러로그.md 사례 2와 같은 침묵 실패 패턴)
+- 마감 안 한 하루가 있으면 앱 열 때 "어제 기록으로 영상 만들까요?" 물어보기 (자동 생성의 현실적인 대안)
 - 앱스토어 출시 준비: Capacitor 래핑, 백업 강화, 과금 모델
 `pnpm check`는 zero-warning lint, 단위/백업 테스트, AI·Push Worker 인증 테스트, Web Push 암호화 왕복, 타입 검사와 프로덕션 빌드를 실행합니다.
 
