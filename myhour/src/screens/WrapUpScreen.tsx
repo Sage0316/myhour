@@ -38,6 +38,9 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   // 무슨 칩을 눌러도 영상이 그대로였다 — 그래서 "에러 나서 기본값에 걸린" 것처럼 보였다.
   const [emojiPick, setEmojiPick] = useState<string | null>(null);
   const [calmnessPick, setCalmnessPick] = useState<number | null>(null);
+  // 기본은 접어둔다 — 늘 펼쳐져 있으면서 "더 정확하게 · 선택"이라고만 적혀 있으니
+  // 뭘 하는 칸인지, 눌러도 되는 건지 알 수 없었다
+  const [tuningOpen, setTuningOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
@@ -268,7 +271,35 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
           <div style={{ height: 1, background: 'rgba(26,26,26,0.08)' }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>더 정확하게 · 선택</div>
+            <button
+              type="button"
+              onClick={() => setTuningOpen(open => !open)}
+              aria-expanded={tuningOpen}
+              aria-controls="wrapup-tuning"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                background: 'transparent', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>AI가 정한 거 바꾸기</span>
+              {/* 접힌 채로도 지금 값이 보이게 — 펼쳐야만 알 수 있으면 접은 의미가 없다 */}
+              <span style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', whiteSpace: 'nowrap' }}>
+                {activeEmoji} · 차분함 {calmness}
+              </span>
+              <span aria-hidden="true" style={{
+                fontSize: 11, color: 'rgba(26,26,26,0.4)',
+                transform: tuningOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s',
+              }}>▾</span>
+            </button>
+
+            <div
+              id="wrapup-tuning"
+              hidden={!tuningOpen}
+              style={{ display: tuningOpen ? 'flex' : 'none', flexDirection: 'column', gap: 9 }}
+            >
+            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.5)', lineHeight: 1.5 }}>
+              그냥 두면 AI가 정한 대로 만들어져요. 바꾸고 싶을 때만 고르세요.
+            </div>
             <div style={{ display: 'flex', gap: 7 }}>
               {emojiChoices.map(emoji => (
                 <button
@@ -292,6 +323,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
                 <span>차분함</span><span style={MONO}>{calmness}</span>
               </div>
               <input type="range" min={0} max={100} value={calmness} onChange={e => setCalmnessPick(Number(e.target.value))} aria-label="차분함" style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
+            </div>
             </div>
           </div>
         </div>
