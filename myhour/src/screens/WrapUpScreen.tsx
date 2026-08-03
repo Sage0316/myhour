@@ -47,6 +47,9 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [director, setDirector] = useState<DirectorOutput | null>(null);
+  // 지금 화면에 적용된 director가 "어떤 키"에서 나왔는지. 강도를 바꾸면 이 값이
+  // 현재 키와 어긋나고, 그때 확정 버튼이 다시 활성화된다.
+  const [directorKey, setDirectorKey] = useState<string | null>(null);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
@@ -91,50 +94,51 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   // 손글씨 폰트를 미리 데워둬서, 영상 만들기 탭 시점엔 이미 캐시돼 있게
   useEffect(() => { ensureDiaryFont(); }, []);
 
-  // AI 연출은 "캐시에 없을 때만" 부른다.
-  // 예전엔 화면을 열 때마다 무조건 호출하고 결과는 저장만 한 뒤 아무도 읽지 않아서,
-  // 영상을 한 편도 안 만들어도 열어본 횟수만큼 비용이 나갔다.
-  const aiKey = hasAIConsent() && isAIConfigured() && records.length > 0 && !alreadyGenerated
-    ? directorKeyFor(records, sessionDate, intensityLevel)
-    : null;
+  // AI는 **사용자가 확정 버튼을 누를 때만** 부른다.
+  // 화면을 열었다는 이유로 부르면, "영상 없이 마감"만 눌러도 비용이 나간다.
+  const aiAvailable = hasAIConsent() && isAIConfigured() && records.length > 0 && !alreadyGenerated;
+  const aiKey = aiAvailable ? directorKeyFor(records, sessionDate, intensityLevel) : null;
+  // 이 강도의 결과가 이미 화면에 적용돼 있는가
+  const directorIsCurrent = aiKey !== null && directorKey === aiKey;
 
+  function applyDirector(out: DirectorOutput, key: string) {
+    setDirector(out);
+    setDirectorKey(key);
+    // AI가 고른 무드로 칩을 자동 선택 — 단, 사용자가 이미 직접 골랐다면 건드리지 않는다
+    const chip = MOOD_LIST.find(m => m.mood === out.moodChip);
+    if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
+  }
+
+  // 저장된 결과가 있으면 호출 없이 그대로 붙인다.
+  // 강도를 2 → 4 → 2로 되돌린 경우도 여기서 걸려서 버튼을 누를 필요가 없다.
   useEffect(() => {
-    if (!aiKey) return;
-
-    // 같은 조건으로 이미 받아둔 결과가 있으면 그대로 쓴다 (호출 없음).
-    // 강도를 2 → 4 → 2로 되돌려도 여기서 걸린다.
+    if (!aiKey || directorKey === aiKey) return;
     const cached = readDirectorCache(sessionDate, aiKey);
-    if (cached) {
-      setDirector(cached);
-      setAnalyzing(false);
-      setAnalyzeError(null);
-      const chip = MOOD_LIST.find(m => m.mood === cached.moodChip);
-      if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
-      return;
-    }
+    if (cached) applyDirector(cached, aiKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiKey, sessionDate, directorKey]);
 
+  const analyzeAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => analyzeAbortRef.current?.abort(), []);
+
+  async function confirmDirector() {
+    if (!aiKey || analyzing || directorIsCurrent) return;
     const controller = new AbortController();
+    analyzeAbortRef.current = controller;
     setAnalyzing(true);
     setAnalyzeError(null);
-    // analyzeDay가 같은 키의 동시 요청을 하나로 합친다 (연타·재마운트 대비)
-    analyzeDay(records, `${dateDay} ${dateWeekday}`, sessionDate, intensityLevel, controller.signal)
-      .then(out => {
-        if (controller.signal.aborted) return;
-        setDirector(out);
-        setAnalyzing(false);
-        // AI가 고른 무드로 칩을 자동 선택 — 단, 사용자가 이미 직접 골랐다면 건드리지 않는다
-        const chip = MOOD_LIST.find(m => m.mood === out.moodChip);
-        if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
-      })
-      .catch(e => {
-        if (controller.signal.aborted) return;
+    try {
+      // analyzeDay가 캐시 확인과 동시요청 합치기를 모두 처리한다
+      const out = await analyzeDay(records, `${dateDay} ${dateWeekday}`, sessionDate, intensityLevel, controller.signal);
+      applyDirector(out, aiKey);
+    } catch (e) {
+      if (!controller.signal.aborted) {
         setAnalyzeError(e instanceof Error ? e.message : 'AI 분석 실패');
-        setAnalyzing(false);
-      });
-    return () => controller.abort();
-    // aiKey에 설치·날짜·기록해시·강도단계·프롬프트버전이 모두 들어 있다 —
-    // 이 값이 그대로면 다시 부를 이유가 없다.
-  }, [aiKey, sessionDate, dateDay, dateWeekday, records, intensityLevel]);
+      }
+    } finally {
+      if (!controller.signal.aborted) setAnalyzing(false);
+    }
+  }
 
   useEffect(() => () => generationAbortRef.current?.abort(), []);
 
@@ -296,6 +300,36 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
                 </div>
               </div>
             </>
+          )}
+
+          {aiAvailable && (
+            <button
+              type="button"
+              onClick={confirmDirector}
+              disabled={analyzing || directorIsCurrent}
+              style={{
+                width: '100%', height: 40, borderRadius: 12,
+                border: directorIsCurrent ? '1px solid rgba(26,26,26,0.12)' : '1.5px solid #1A1A1A',
+                background: directorIsCurrent ? 'rgba(26,26,26,0.04)' : '#FFFFFF',
+                color: directorIsCurrent ? 'rgba(26,26,26,0.45)' : '#1A1A1A',
+                fontSize: 13, fontWeight: 600,
+                cursor: analyzing || directorIsCurrent ? 'default' : 'pointer',
+              }}
+            >
+              {analyzing
+                ? 'AI가 연출 중...'
+                : directorIsCurrent
+                  ? '이 강도로 연출 적용됨'
+                  : director
+                    ? '바뀐 강도로 다시 연출하기'
+                    : 'AI에게 연출 맡기기'}
+            </button>
+          )}
+
+          {aiAvailable && !director && !analyzing && (
+            <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.45)', lineHeight: 1.5, marginTop: -4 }}>
+              누르지 않으면 AI를 부르지 않아요. 지금 제목과 마무리는 기록에서 만든 문장이에요.
+            </div>
           )}
 
           {analyzeError && (
