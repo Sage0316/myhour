@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { generateVideo } from '../videoGenerator';
+import { consumeVideoForDate, hasVideoForDate } from '../videoEntitlement';
 import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
@@ -273,6 +274,11 @@ function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveE
   const fallbackBg = lead ? TYPE_COLORS[lead.type] : '#E2DBF0';
 
   async function handleGenerate() {
+    // 마감 화면과 같은 규칙: 한 날짜의 영상은 한 번만 만든다
+    if (hasVideoForDate(entry.date)) {
+      setGenError('이 날짜는 이미 영상을 만들었어요.');
+      return;
+    }
     setGenState('generating');
     setProgress(0);
     setGenError(null);
@@ -282,6 +288,8 @@ function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveE
       const blob = await generateVideo(entry.records, dateStr, (pct) => setProgress(pct));
       await saveVideoToIDB(archiveVideoKey(entry), blob);
       markArchiveGenerated(entry);
+      // 차감은 영상과 저장이 모두 성공한 뒤에 한 번만 (마감 화면과 동일)
+      consumeVideoForDate(entry.date);
       setVideoUrl(URL.createObjectURL(blob));
       setVideoBlob(blob);
       setGenState('done');
@@ -386,30 +394,14 @@ function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveE
           <div style={{ fontSize: 10, color: 'rgba(26,26,26,0.35)', marginTop: 3 }}>기록 보기 ›</div>
           </button>
 
+          {/* 영상이 아직 없는 항목에서만 보인다. 이미 만든 날은 버튼 자체가 없다 —
+              한 날짜의 영상은 한 번만 만든다는 정책이라 "다시 만들기"는 두지 않는다. */}
           {genState === 'idle' && !entry.trimmed && (
             <button onClick={handleGenerate} style={{
-              marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 10,
+              marginTop: 8, width: '100%', padding: '11px 0', borderRadius: 12,
               background: '#1A1A1A', color: '#fff', border: 'none',
-              fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-            }}>영상 생성하기</button>
-          )}
-
-          {genState === 'done' && (
-            <button
-              type="button"
-              onClick={() => {
-                // 구버전 항목(trimmed)은 원본이 이미 정리돼서, 다시 만들면 그 자리가 빈 카드로 나온다
-                const msg = entry.trimmed
-                  ? '영상을 다시 만들까요?\n사진·음성·영상 원본이 정리된 항목이라, 그 자리는 빈 카드로 나와요.'
-                  : '영상을 다시 만들까요?';
-                if (confirm(msg)) handleGenerate();
-              }}
-              style={{
-                marginTop: 6, background: 'none', border: 'none', padding: 0,
-                fontSize: 10, color: 'rgba(26,26,26,0.35)', textDecoration: 'underline',
-                cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-              }}
-            >다시 만들기</button>
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+            }}>영상 만들기</button>
           )}
 
           {genError && (
