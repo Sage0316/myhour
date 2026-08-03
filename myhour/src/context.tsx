@@ -31,6 +31,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [settings.startTime]);
 
+  // 앱을 켜둔 채로 시작 시간을 넘기는 경우. 위 visibilitychange는 포그라운드로 "돌아올 때"만
+  // 도니까, 화면을 계속 보고 있으면 어제 기록이 넘어가지 않는다. 1분마다 날짜를 확인해서
+  // 마감 없는 어제 기록이 제때 아카이브로 옮겨지게 한다 (옮기는 일은 loadAppData가 한다).
+  useEffect(() => {
+    const today = getSessionDate(settings.startTime);
+    setAppData(prev => (prev.date === today ? prev : loadAppData(settings.startTime)));
+  }, [tick, settings.startTime]);
+
   const slots = useMemo(() => generateSlots(settings), [settings]);
   const currentSlot = useMemo(
     () => getCurrentSlot(slots, settings.interval, settings.startTime),
