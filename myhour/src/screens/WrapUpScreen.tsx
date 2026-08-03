@@ -3,7 +3,12 @@ import { useApp } from '../appContext';
 import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate } from '../store';
 import type { MoodItem } from '../store';
 import { ensureDiaryFont, fallbackEmojisFor, splitEmojis } from '../scenes';
-import { analyzeDay, hasAIConsent, isAIConfigured, BGM_TRACKS, bgmAssetUrl, pickBgmFile, trackForMood, intensityForTrack } from '../llmDirector';
+import {
+  analyzeDay, hasAIConsent, isAIConfigured, BGM_TRACKS, bgmAssetUrl, pickBgmFile,
+  trackForMood, intensityForTrack, toIntensityLevel, directorKeyFor,
+} from '../llmDirector';
+import { readDirectorCache } from '../directorCache';
+import { hasVideoForDate } from '../videoEntitlement';
 import type { DirectorOutput } from '../llmDirector';
 import { videoGenerationService } from '../services/video-generation-service';
 import { wrapUpService } from '../services/wrap-up-service';
@@ -61,9 +66,14 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     ...fallbackEmojisFor(selectedMood.mood),
   ])].slice(0, 5);
   const activeEmoji = emojiPick ?? emojiChoices[0];
+  // 이 날짜로 이미 영상을 만들었으면 다시 만들 수 없다 (이용권은 날짜당 한 번)
+  const alreadyGenerated = hasVideoForDate(sessionDate);
   // 감정 강도. 안 건드리면 AI가 고른 곡이 그 무드에서 몇 단계인지 되짚어 보여준다.
   const intensity = intensityPick
     ?? (director ? intensityForTrack(selectedMood.mood, director.bgmTrack) : 60);
+  // 캐시 키·AI 재호출은 슬라이더 원값이 아니라 "단계"로 판단한다.
+  // 원값으로 하면 드래그 한 번에 키가 수십 번 바뀌어 API가 그만큼 호출된다.
+  const intensityLevel = toIntensityLevel(intensity);
 
   const TITLE_MAX = 30;
 
@@ -81,18 +91,40 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   // 손글씨 폰트를 미리 데워둬서, 영상 만들기 탭 시점엔 이미 캐시돼 있게
   useEffect(() => { ensureDiaryFont(); }, []);
 
+  // AI 연출은 "캐시에 없을 때만" 부른다.
+  // 예전엔 화면을 열 때마다 무조건 호출하고 결과는 저장만 한 뒤 아무도 읽지 않아서,
+  // 영상을 한 편도 안 만들어도 열어본 횟수만큼 비용이 나갔다.
+  const aiKey = hasAIConsent() && isAIConfigured() && records.length > 0 && !alreadyGenerated
+    ? directorKeyFor(records, sessionDate, intensityLevel)
+    : null;
+
   useEffect(() => {
-    if (!hasAIConsent() || !isAIConfigured() || records.length === 0) return;
+    if (!aiKey) return;
+
+    // 같은 조건으로 이미 받아둔 결과가 있으면 그대로 쓴다 (호출 없음).
+    // 강도를 2 → 4 → 2로 되돌려도 여기서 걸린다.
+    const cached = readDirectorCache(sessionDate, aiKey);
+    if (cached) {
+      setDirector(cached);
+      setAnalyzing(false);
+      setAnalyzeError(null);
+      const chip = MOOD_LIST.find(m => m.mood === cached.moodChip);
+      if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
+      return;
+    }
+
     const controller = new AbortController();
     setAnalyzing(true);
-    analyzeDay(records, `${dateDay} ${dateWeekday}`, controller.signal)
+    setAnalyzeError(null);
+    // analyzeDay가 같은 키의 동시 요청을 하나로 합친다 (연타·재마운트 대비)
+    analyzeDay(records, `${dateDay} ${dateWeekday}`, sessionDate, intensityLevel, controller.signal)
       .then(out => {
+        if (controller.signal.aborted) return;
         setDirector(out);
         setAnalyzing(false);
         // AI가 고른 무드로 칩을 자동 선택 — 단, 사용자가 이미 직접 골랐다면 건드리지 않는다
         const chip = MOOD_LIST.find(m => m.mood === out.moodChip);
         if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
-        try { localStorage.setItem(`hakku_director_v1_${sessionDate}`, JSON.stringify(out)); } catch { /* ignore */ }
       })
       .catch(e => {
         if (controller.signal.aborted) return;
@@ -100,7 +132,9 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
         setAnalyzing(false);
       });
     return () => controller.abort();
-  }, [dateDay, dateWeekday, records, sessionDate]);
+    // aiKey에 설치·날짜·기록해시·강도단계·프롬프트버전이 모두 들어 있다 —
+    // 이 값이 그대로면 다시 부를 이유가 없다.
+  }, [aiKey, sessionDate, dateDay, dateWeekday, records, intensityLevel]);
 
   useEffect(() => () => generationAbortRef.current?.abort(), []);
 
@@ -110,6 +144,10 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
 
   async function handleGenerate() {
     if (records.length === 0 || generating) return;
+    if (alreadyGenerated) {
+      setGenError('이 날짜는 이미 영상을 만들었어요. 아카이브에서 확인할 수 있어요.');
+      return;
+    }
     setGenerating(true);
     setProgress(0);
     setGenError(null);
@@ -345,7 +383,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={records.length === 0}
+              disabled={records.length === 0 || alreadyGenerated}
               aria-label="오늘 기록으로 영상 생성하기"
               style={{ width: '100%', minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: records.length === 0 ? 'default' : 'pointer', opacity: records.length === 0 ? 0.5 : 1, border: 0 }}
             >
@@ -364,7 +402,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
       <div style={{ padding: '12px 22px 30px', display: 'flex', gap: 9 }}>
         <button
           onClick={handleGenerate}
-          disabled={generating || records.length === 0}
+          disabled={generating || records.length === 0 || alreadyGenerated}
           style={{
             flex: 1.5, height: 52, borderRadius: 50,
             background: generating ? 'rgba(26,26,26,0.3)' : '#1A1A1A',
@@ -373,7 +411,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
             fontFamily: 'Inter, sans-serif',
           }}
         >
-          {generating ? '생성 중...' : '영상 만들기'}
+          {generating ? '생성 중...' : alreadyGenerated ? '이미 만든 하루' : '영상 만들기'}
         </button>
         <button
           onClick={handleSkipVideo}
