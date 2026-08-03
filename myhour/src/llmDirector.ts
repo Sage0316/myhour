@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import type { MyRecord } from './store';
+import {
+  dedupe, directorCacheKey, readDirectorCache, stableHash, writeDirectorCache,
+} from './directorCache';
 import { MOOD_LIST } from './store';
 
 const MOOD_NAMES = MOOD_LIST.map(item => item.mood) as unknown as [string, ...string[]];
@@ -8,6 +11,20 @@ const AI_CONSENT_STORAGE = 'hakku_ai_consent_v1';
 const AI_INSTALLATION_STORAGE = 'hakku_ai_installation_v1';
 const AI_TOKEN_STORAGE = 'hakku_ai_token_v1';
 export const AI_WORKER_URL = (import.meta.env.VITE_AI_WORKER_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+
+// 프롬프트나 응답 규격을 바꾸면 이 숫자를 올린다. 캐시 키에 들어가므로
+// 옛 프롬프트로 만든 결과가 새 프롬프트 결과와 섞이지 않는다.
+export const PROMPT_VERSION = 2;
+
+// 감정 강도 라벨 — 캐시 키의 단계(0·1·2)와 워커 프롬프트가 같은 말을 쓰게 한다
+export const INTENSITY_LABELS = ['약하게', '보통', '강하게'] as const;
+export type IntensityLevel = 0 | 1 | 2;
+
+// 슬라이더 원값(0~100) → 단계. 드래그 중 키가 매 픽셀 바뀌지 않도록 여기서 접는다.
+export function toIntensityLevel(intensity: number): IntensityLevel {
+  if (intensity < 40) return 0;
+  return intensity < 70 ? 1 : 2;
+}
 
 export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic' | 'sad';
 
@@ -51,13 +68,8 @@ export const MOOD_TRACKS: Record<string, readonly [BgmTrack, BgmTrack, BgmTrack]
 
 const DEFAULT_MOOD_TRACKS = MOOD_TRACKS['잔잔함'];
 
-function intensityLevel(intensity: number): 0 | 1 | 2 {
-  if (intensity < 40) return 0;
-  return intensity < 70 ? 1 : 2;
-}
-
 export function trackForMood(mood: string, intensity: number): BgmTrack {
-  return (MOOD_TRACKS[mood] ?? DEFAULT_MOOD_TRACKS)[intensityLevel(intensity)];
+  return (MOOD_TRACKS[mood] ?? DEFAULT_MOOD_TRACKS)[toIntensityLevel(intensity)];
 }
 
 // 슬라이더 초깃값 — AI가 고른 곡이 그 무드에서 몇 번째 단계인지 되짚는다.
@@ -126,7 +138,7 @@ export function isAIConfigured(): boolean {
   return AI_WORKER_URL.length > 0;
 }
 
-function getInstallationId(): string {
+export function getInstallationId(): string {
   const existing = localStorage.getItem(AI_INSTALLATION_STORAGE);
   if (existing) return existing;
   const id = crypto.randomUUID();
@@ -172,20 +184,45 @@ function directorError(code: string | undefined, status: number): Error {
   return new Error(`${ERROR_MESSAGES[code] ?? 'AI 분석에 실패했어요.'} (${code})`);
 }
 
-export async function analyzeDay(
+// AI에 실제로 보내는 기록 페이로드. 캐시 해시도 **이 함수 결과**로 만든다 —
+// 보내는 것과 해시 대상이 어긋나면 캐시가 거짓말을 하기 때문이다.
+export function directorRecordsPayload(records: MyRecord[]) {
+  return records.slice(0, 96).map(record => ({
+    slotTime: record.slotTime,
+    type: record.type,
+    content: record.type === 'text' ? record.content.slice(0, 2_000) : '',
+    caption: record.caption?.slice(0, 500) ?? '',
+  }));
+}
+
+export function directorKeyFor(
+  records: MyRecord[],
+  date: string,
+  intensityLevel: IntensityLevel,
+): string {
+  return directorCacheKey({
+    installationId: getInstallationId(),
+    date,
+    recordsHash: stableHash(JSON.stringify(directorRecordsPayload(records))),
+    intensityLevel,
+    promptVersion: PROMPT_VERSION,
+  });
+}
+
+async function requestDirector(
   records: MyRecord[],
   dateStr: string,
+  intensityLevel: IntensityLevel,
   signal?: AbortSignal,
 ): Promise<DirectorOutput> {
   if (!hasAIConsent()) throw new Error('AI 분석 동의가 필요해요.');
   const payload = JSON.stringify({
     date: dateStr.slice(0, 40),
-    records: records.slice(0, 96).map(record => ({
-      slotTime: record.slotTime,
-      type: record.type,
-      content: record.type === 'text' ? record.content.slice(0, 2_000) : '',
-      caption: record.caption?.slice(0, 500) ?? '',
-    })),
+    records: directorRecordsPayload(records),
+    // 강도를 보내야 제목·마무리·선곡이 강도를 반영한다. 예전엔 강도가 로컬에서
+    // 곡 풀만 골랐고 AI는 강도를 아예 몰랐다.
+    intensity: INTENSITY_LABELS[intensityLevel],
+    promptVersion: PROMPT_VERSION,
   });
   const post = async (token: string) => fetch(`${AI_WORKER_URL}/v1/direct`, {
     method: 'POST',
@@ -208,4 +245,25 @@ export async function analyzeDay(
   const body = await response.json().catch(() => ({})) as { result?: unknown; error?: string };
   if (!response.ok) throw directorError(body.error, response.status);
   return directorOutputSchema.parse(body.result);
+}
+
+/**
+ * 캐시 우선 AI 연출. 같은 (설치 · 날짜 · 기록 · 강도 단계 · 프롬프트 버전)이면
+ * API를 부르지 않고 저장된 결과를 돌려준다. 같은 키의 동시 요청은 하나로 합쳐진다.
+ */
+export async function analyzeDay(
+  records: MyRecord[],
+  dateStr: string,
+  date: string,
+  intensityLevel: IntensityLevel,
+  signal?: AbortSignal,
+): Promise<DirectorOutput> {
+  const key = directorKeyFor(records, date, intensityLevel);
+  const cached = readDirectorCache(date, key);
+  if (cached) return cached;
+  return dedupe(key, async () => {
+    const result = await requestDirector(records, dateStr, intensityLevel, signal);
+    writeDirectorCache(date, key, result);
+    return result;
+  });
 }

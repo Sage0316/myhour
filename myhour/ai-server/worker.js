@@ -67,8 +67,12 @@ const RECORD_TYPES = ['text', 'photo', 'video', 'audio', 'meme'];
 const BGM_TRACKS = ['calm', 'bright', 'emotional', 'piano', 'ukulele', 'nostalgic', 'sad'];
 const MOOD_CHIPS = ['잔잔함', '뿌듯함', '감성', '웃김', '정신없음', '슬픔', '짜증', '지침'];
 
+const INTENSITY_LABELS = ['약하게', '보통', '강하게'];
+
 function validRequest(body) {
   if (!body || typeof body !== 'object' || typeof body.date !== 'string' || body.date.length > 40) return false;
+  // 구버전 앱은 intensity를 안 보낸다 — 없으면 '보통'으로 본다
+  if (body.intensity !== undefined && !INTENSITY_LABELS.includes(body.intensity)) return false;
   if (!Array.isArray(body.records) || body.records.length < 1 || body.records.length > 96) return false;
   return body.records.every(record =>
     record && typeof record === 'object'
@@ -171,6 +175,10 @@ function buildPrompt(body) {
   }).join('\n');
 
   return `당신은 일상 브이로그 영상의 편집자입니다. 오늘(${body.date})의 기록으로 짧은 회고 영상을 편집합니다.
+
+오늘의 감정 강도: **${INTENSITY_LABELS.includes(body.intensity) ? body.intensity : '보통'}**
+이 강도는 사용자가 직접 고른 값입니다. 제목·closing·mood·bgmTrack이 이 강도를 반영해야 합니다.
+약하게면 담백하고 절제된 쪽으로, 강하게면 그 감정에 더 깊이 잠긴 쪽으로 씁니다.
 
 아래 기록은 시간순입니다 (번호가 빠를수록 먼저 일어난 일).
 타입 안내: meme는 사용자가 앨범에서 고른 이미지(짤·밈이나 저장해둔 사진)로 그 순간의 기분이나 장면을 표현한 것이고, 캡션이 그 설명입니다.
