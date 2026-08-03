@@ -3,7 +3,7 @@ import { useApp } from '../appContext';
 import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate } from '../store';
 import type { MoodItem } from '../store';
 import { ensureDiaryFont, fallbackEmojisFor, splitEmojis } from '../scenes';
-import { analyzeDay, hasAIConsent, isAIConfigured, BGM_TRACKS, bgmAssetUrl, pickBgmFile } from '../llmDirector';
+import { analyzeDay, hasAIConsent, isAIConfigured, BGM_TRACKS, bgmAssetUrl, pickBgmFile, trackForMood, intensityForTrack } from '../llmDirector';
 import type { DirectorOutput } from '../llmDirector';
 import { videoGenerationService } from '../services/video-generation-service';
 import { wrapUpService } from '../services/wrap-up-service';
@@ -15,12 +15,6 @@ interface WrapUpScreenProps {
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
-
-// BGM 무드 → 슬라이더 초깃값. AI가 고른 곡 분위기를 슬라이더에 비춰준다.
-// 예전엔 무조건 72로 시작해서, 슬픈 날에도 슬라이더가 남의 값처럼 걸려 있었다.
-const CALMNESS_BY_TRACK: Record<string, number> = {
-  calm: 85, piano: 80, nostalgic: 76, sad: 74, emotional: 66, ukulele: 30, bright: 25,
-};
 
 export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
@@ -37,7 +31,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   // 예전엔 고정 초깃값(😌, 72)이 들어가 있고 생성할 땐 AI 값이 무조건 이겨서,
   // 무슨 칩을 눌러도 영상이 그대로였다 — 그래서 "에러 나서 기본값에 걸린" 것처럼 보였다.
   const [emojiPick, setEmojiPick] = useState<string | null>(null);
-  const [calmnessPick, setCalmnessPick] = useState<number | null>(null);
+  const [intensityPick, setIntensityPick] = useState<number | null>(null);
   // 기본은 접어둔다 — 늘 펼쳐져 있으면서 "더 정확하게 · 선택"이라고만 적혀 있으니
   // 뭘 하는 칸인지, 눌러도 되는 건지 알 수 없었다
   const [tuningOpen, setTuningOpen] = useState(false);
@@ -67,8 +61,9 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     ...fallbackEmojisFor(selectedMood.mood),
   ])].slice(0, 5);
   const activeEmoji = emojiPick ?? emojiChoices[0];
-  const calmness = calmnessPick
-    ?? (director ? CALMNESS_BY_TRACK[director.bgmTrack] ?? 72 : 72);
+  // 감정 강도. 안 건드리면 AI가 고른 곡이 그 무드에서 몇 단계인지 되짚어 보여준다.
+  const intensity = intensityPick
+    ?? (director ? intensityForTrack(selectedMood.mood, director.bgmTrack) : 60);
 
   const TITLE_MAX = 30;
 
@@ -121,10 +116,11 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     const abortController = new AbortController();
     generationAbortRef.current = abortController;
     try {
-      // 슬라이더를 직접 움직였으면 그 선택이 AI가 고른 곡보다 우선한다
-      const bgmTrack = calmnessPick !== null
-        ? (calmnessPick >= 60 ? 'calm' : 'bright')
-        : director?.bgmTrack ?? (calmness >= 60 ? 'calm' : 'bright');
+      // 슬라이더를 직접 움직였으면 그 강도로 무드에 맞는 곡을 고른다.
+      // AI가 고른 곡을 calm/bright 둘로 접어버리던 예전 방식은 분위기를 뭉갰다.
+      const bgmTrack = intensityPick !== null
+        ? trackForMood(selectedMood.mood, intensityPick)
+        : director?.bgmTrack ?? trackForMood(selectedMood.mood, intensity);
       const bgmFile = pickBgmFile(bgmTrack);
       const bgmUrl = bgmAssetUrl(bgmFile);
       const warnings: string[] = [];
@@ -284,7 +280,7 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>AI가 정한 거 바꾸기</span>
               {/* 접힌 채로도 지금 값이 보이게 — 펼쳐야만 알 수 있으면 접은 의미가 없다 */}
               <span style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', whiteSpace: 'nowrap' }}>
-                {activeEmoji} · {selectedMood.mood} {calmness}
+                {activeEmoji} · {selectedMood.mood} {intensity}
               </span>
               <span aria-hidden="true" style={{
                 fontSize: 11, color: 'rgba(26,26,26,0.4)',
@@ -320,9 +316,9 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>
-                <span>{selectedMood.mood}</span><span style={MONO}>{calmness}</span>
+                <span>{selectedMood.mood}</span><span style={MONO}>{intensity}</span>
               </div>
-              <input type="range" min={0} max={100} value={calmness} onChange={e => setCalmnessPick(Number(e.target.value))} aria-label={`${selectedMood.mood} 정도`} style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
+              <input type="range" min={0} max={100} value={intensity} onChange={e => setIntensityPick(Number(e.target.value))} aria-label={`${selectedMood.mood} 정도`} style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
             </div>
             </div>
           </div>
