@@ -392,8 +392,14 @@ export type ArchiveEntry = JournalArchiveEntry;
 // 영상이 만들어졌거나 3일이 지난 항목은 무거운 원본(사진/음성/클립)을 비우고
 // 글 텍스트·시간·캡션만 남긴다.
 
+// 영상 없이 마감한 하루의 원본을 며칠까지 들고 있을지. 이 날이 지나면 사진·음성이 지워지고
+// "영상 만들기"도 더 이상 뜨지 않는다 — 만들 재료가 없어서다.
+export const TRIM_AFTER_DAYS = 3;
+
+// 글은 남기고 무거운 원본만 비운다. mediaId를 지워야 useMediaSrc·hasMedia가 "없음"으로 본다.
 function stripRecordMedia(r: MyRecord): MyRecord {
-  return { ...r };
+  if (r.type === 'text') return { ...r };
+  return { ...r, content: '', mediaId: undefined, videoKey: undefined };
 }
 
 export function trimRecords(records: MyRecord[]): MyRecord[] {
@@ -407,8 +413,41 @@ export function deleteRecordMedia(records: MyRecord[]) {
   }
 }
 
+// 'YYYY-MM-DD' 두 개의 날짜 차이(일). 정오 기준으로 파싱해 서머타임·타임존 경계를 피한다.
+export function daysBetween(from: string, to: string): number {
+  const a = new Date(from + 'T12:00:00').getTime();
+  const b = new Date(to + 'T12:00:00').getTime();
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.round((b - a) / 86400000);
+}
+
+// 정리까지 남은 날. 0이면 오늘이 마지막 날, 음수면 이미 정리 대상이다.
+export function daysUntilTrim(entry: ArchiveEntry, today: string): number {
+  return TRIM_AFTER_DAYS - daysBetween(entry.date, today);
+}
+
+// 정리 예고를 띄워야 하는 항목인지. 영상이 있거나 이미 정리된 항목은 대상이 아니다.
+export function needsTrimNotice(entry: ArchiveEntry): boolean {
+  return !entry.isWrapped && !entry.trimmed && entry.records.some(hasMedia);
+}
+
+// 영상 없이 마감한 지 TRIM_AFTER_DAYS가 지난 항목의 원본을 정리한다.
+// 앱을 열어야 돌기 때문에 정확히 3일째에 지워진다는 보장은 없다 — 다음에 앱을 열 때 지워진다.
 export function sweepArchive() {
-  // 하꾸는 사용자의 원본을 자동 삭제하지 않는다. 저장공간 정리는 명시적인 사용자 작업으로만 수행한다.
+  const today = getSessionDate(loadSettings().startTime);
+  const entries = loadArchive();
+  let changed = false;
+
+  const swept = entries.map(entry => {
+    if (!needsTrimNotice(entry)) return entry;
+    if (daysUntilTrim(entry, today) > 0) return entry;
+    // 지우기 전에 IDB부터 비운다. 여기서 실패해도 blob은 cleanupOrphanMedia가 나중에 회수한다.
+    deleteRecordMedia(entry.records);
+    changed = true;
+    return { ...entry, records: trimRecords(entry.records), trimmed: true };
+  });
+
+  if (changed) saveArchive(swept);
 }
 
 // 아카이브에서 뒤늦게 영상을 만들었을 때: 항목을 완성 상태로 바꾸고 원본 정리
