@@ -536,8 +536,19 @@ export async function generateVideo(
   }
 
   onProgress?.(1);
+  // 마지막 프레임까지 chunks에 밀어넣고 정지한다. requestData 없이 바로 stop()하면
+  // 브라우저에 따라 (특히 iOS) 마지막 조각이 못 나온 채로 stop이 지연되는 경우가 있다.
+  if (recorder.state === 'recording') {
+    try { recorder.requestData(); } catch { /* 일부 브라우저는 미지원 — stop()이 알아서 flush한다 */ }
+  }
   recorder.stop();
-  await new Promise<void>(res => { recorder.onstop = () => res(); });
+  // onstop이 안 오면 화면이 "생성 중... 100%"에서 영원히 멈춘다 (iOS에서 실제로 관찰됨).
+  // 이미 쌓인 chunks로 마무리하는 게 무한 대기보다 낫다.
+  await Promise.race([
+    new Promise<void>(res => { recorder.onstop = () => res(); }),
+    new Promise<void>(res => setTimeout(res, 4000)),
+  ]);
+  if (chunks.length === 0) throw new Error('영상 데이터를 만들지 못했어요. 다시 시도해 주세요.');
 
     return new Blob(chunks, { type: mimeType });
   } finally {
