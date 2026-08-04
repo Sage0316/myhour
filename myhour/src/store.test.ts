@@ -200,3 +200,53 @@ describe('3일 뒤 원본 정리 (sweepArchive)', () => {
     expect(needsTrimNotice(archived('2026-08-03', { records: [record()] }))).toBe(false);
   });
 });
+
+describe('마감한 하루는 다시 기록할 수 없다', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers();
+  });
+
+  // 마감 후 isWrapped를 false로 되돌려서 같은 날짜에 다시 기록이 쌓였고,
+  // 아카이브에 8.4가 두 개 생겼다. 두 번째 항목은 이용권이 이미 차감돼 영상도 못 만들었다.
+  it('마감 상태가 저장돼서 다시 읽어도 유지된다', () => {
+    vi.setSystemTime(new Date('2026-08-04T22:00:00'));
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [],
+      isWrapped: true,
+      date: '2026-08-04',
+    });
+
+    expect(loadAppData('09:00').isWrapped).toBe(true);
+  });
+
+  it('다음 하루가 시작되면 마감 상태가 풀린다', () => {
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [],
+      isWrapped: true,
+      date: '2026-08-04',
+    });
+
+    vi.setSystemTime(new Date('2026-08-05T10:00:00'));
+    const fresh = loadAppData('09:00');
+
+    expect(fresh.date).toBe('2026-08-05');
+    expect(fresh.isWrapped).toBe(false);
+  });
+
+  // 마감한 하루는 기록이 비어 있으므로 rollover가 빈 항목을 아카이브에 또 넣으면 안 된다
+  it('마감한 하루는 날짜가 넘어가도 아카이브에 다시 들어가지 않는다', () => {
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [],
+      isWrapped: true,
+      date: '2026-08-04',
+    });
+    vi.setSystemTime(new Date('2026-08-05T10:00:00'));
+
+    loadAppData('09:00');
+    expect(loadArchive()).toHaveLength(0);
+  });
+});

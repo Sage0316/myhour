@@ -73,6 +73,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } : {}),
     };
     setAppData(prev => {
+      // 마감한 하루엔 더 담지 않는다. UI에서도 막지만, 마감 직전에 열어둔 화면으로
+      // 저장이 들어올 수 있어 여기가 최종 방어선이다.
+      if (prev.isWrapped) {
+        setTimeout(() => alert('오늘은 이미 마감했어요. 다음 하루가 시작되면 다시 기록할 수 있어요.'), 0);
+        if (media) void deleteVideoFromIDB(media.key);
+        return prev;
+      }
       const next = { ...prev, records: [...prev.records, record] };
       try {
         saveAppData(next);
@@ -105,9 +112,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // 하루를 마감한 뒤 호출된다. isWrapped를 남겨야 같은 날짜에 다시 기록해서
+  // 아카이브에 8.4가 두 개 생기는 일이 없다. 다음 세션 날짜가 되면 loadAppData가 빈 하루로 되돌린다.
   const reset = useCallback(() => {
     const date = getSessionDate(settings.startTime);
-    const fresh: AppData = { schemaVersion: 2, records: [], isWrapped: false, date };
+    const fresh: AppData = { schemaVersion: 2, records: [], isWrapped: true, date };
     saveAppData(fresh);
     setAppData(fresh);
   }, [settings.startTime]);
@@ -115,6 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       records: appData.records,
+      isWrapped: appData.isWrapped,
       settings,
       slots,
       currentSlot,

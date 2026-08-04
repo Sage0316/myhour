@@ -90,7 +90,7 @@ function TimelineRow({ time, status, record }: { time: string; status: 'filled' 
 }
 
 function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () => void }) {
-  const { records, settings } = useApp();
+  const { records, settings, isWrapped } = useApp();
   const { dateDay, dateWeekday } = getDateStrings(getSessionDate(settings.startTime));
   const sorted = [...records].sort((a, b) => a.createdAt - b.createdAt);
 
@@ -124,14 +124,23 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
         )}
       </div>
 
-      <div style={{ padding: '10px 0 12px', display: 'flex', gap: 9 }}>
-        <button data-modal-trigger="record" onClick={onRecord} style={{ flex: 1, height: 48, borderRadius: 50, background: '#F0F0EE', color: '#1A1A1A', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
-          + 기록하기
-        </button>
-        <button data-modal-trigger="wrapup" onClick={onWrapUp} style={{ flex: 1.5, height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
-          하루 마감
-        </button>
-      </div>
+      {/* 마감한 하루는 더 기록할 수 없다 — 같은 날짜로 아카이브 항목이 두 개 생기던 원인이다 */}
+      {isWrapped ? (
+        <div style={{ padding: '10px 0 12px' }}>
+          <div style={{ height: 48, borderRadius: 50, background: '#F0F0EE', color: 'rgba(26,26,26,0.5)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            오늘은 마감했어요 · 내일 다시 만나요
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: '10px 0 12px', display: 'flex', gap: 9 }}>
+          <button data-modal-trigger="record" onClick={onRecord} style={{ flex: 1, height: 48, borderRadius: 50, background: '#F0F0EE', color: '#1A1A1A', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+            + 기록하기
+          </button>
+          <button data-modal-trigger="wrapup" onClick={onWrapUp} style={{ flex: 1.5, height: 48, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: 'pointer', border: 'none', fontFamily: 'Inter, sans-serif' }}>
+            하루 마감
+          </button>
+        </div>
+      )}
     </div>
   );
 }
