@@ -4,6 +4,7 @@ import HomeScreen from './screens/HomeScreen';
 import TodayScreen from './screens/TodayScreen';
 import RecordScreen from './screens/RecordScreen';
 import ArchiveScreen from './screens/ArchiveScreen';
+import type { ArchiveEntry } from './store';
 import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
 import { AppProvider } from './context';
@@ -32,6 +33,8 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [modal, setModal] = useState<ModalScreen>(null);
   const [restoreFocusTo, setRestoreFocusTo] = useState<Exclude<ModalScreen, null> | null>(null);
+  // 아카이브 항목으로 영상을 만드는 중이면 그 항목. 마감 화면이 이 항목 모드로 열린다.
+  const [videoEntry, setVideoEntry] = useState<ArchiveEntry | null>(null);
   const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(() => {
     const match = window.location.hash.match(/^#archive=(.+)$/);
     return match ? decodeURIComponent(match[1]) : null;
@@ -81,7 +84,13 @@ function AppContent() {
         />
       );
       case 'today': return <TodayScreen onTabChange={setActiveTab} onWrapUp={() => openModal('wrapup')} />;
-      case 'archive': return <ArchiveScreen onTabChange={setActiveTab} initialArchiveId={selectedArchiveId} />;
+      case 'archive': return (
+        <ArchiveScreen
+          onTabChange={setActiveTab}
+          initialArchiveId={selectedArchiveId}
+          onMakeVideo={entry => { setVideoEntry(entry); openModal('wrapup'); }}
+        />
+      );
       case 'settings': return <SettingsScreen onTabChange={setActiveTab} />;
     }
   }
@@ -92,7 +101,11 @@ function AppContent() {
       onSave={(type, content, caption, media) => { addRecord(type, content, caption, media); setModal(null); }}
     />
   ) : modal === 'wrapup' ? (
-    <WrapUpScreen onClose={closeModal} onSave={handleSave} />
+    <WrapUpScreen
+      onClose={() => { setVideoEntry(null); closeModal(); }}
+      onSave={id => { setVideoEntry(null); handleSave(id); }}
+      entry={videoEntry ?? undefined}
+    />
   ) : renderMain();
 
   if (isMobile) {

@@ -11,20 +11,30 @@ import { readDirectorCache } from '../directorCache';
 import { hasVideoForDate } from '../videoEntitlement';
 import type { DirectorOutput } from '../llmDirector';
 import { videoGenerationService } from '../services/video-generation-service';
+import { archiveVideoKey, markArchiveGenerated, saveVideoToIDB } from '../store';
+import type { ArchiveEntry } from '../store';
+import { consumeVideoForDate } from '../videoEntitlement';
 import { wrapUpService } from '../services/wrap-up-service';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 
 interface WrapUpScreenProps {
   onClose: () => void;
   onSave: (archiveId: string) => void;
+  /**
+   * 지난 날짜의 아카이브 항목으로 영상을 만드는 모드.
+   * 없으면 "오늘 하루 마감" 모드로, 오늘 기록을 새 아카이브 항목으로 만든다.
+   */
+  entry?: ArchiveEntry;
 }
 
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
-export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
+export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenProps) {
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
-  const { records, settings } = useApp();
-  const sessionDate = getSessionDate(settings.startTime);
+  const { records: todayRecords, settings } = useApp();
+  // 아카이브 모드면 그 항목의 기록과 날짜를 쓴다. 아니면 오늘 것.
+  const records = entry ? entry.records : todayRecords;
+  const sessionDate = entry ? entry.date : getSessionDate(settings.startTime);
   const { dateShort, dateDay, dateWeekday } = getDateStrings(sessionDate);
 
   const autoMood = guessMood(records);
@@ -189,8 +199,16 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
         recordEmojis: director?.recordEmojis,
       }, msg => warnings.push(msg), abortController.signal);
       if (warnings.length > 0) alert('영상은 생성됐지만 문제가 있었어요:\n\n' + warnings.join('\n'));
-      const result = await wrapUpService.complete(sessionDate, records, blob, title);
-      onSave(result.archiveId);
+      if (entry) {
+        // 아카이브 모드: 새 항목을 만들지 않고 기존 항목에 영상을 붙인다
+        await saveVideoToIDB(archiveVideoKey(entry), blob);
+        markArchiveGenerated(entry);
+        consumeVideoForDate(entry.date);
+        onSave(entry.id);
+      } else {
+        const result = await wrapUpService.complete(sessionDate, records, blob, title);
+        onSave(result.archiveId);
+      }
     } catch (e) {
       const msg = e instanceof DOMException && e.name === 'AbortError'
         ? '영상 생성을 취소했어요. 원본 기록은 그대로 보존됐어요.'
@@ -212,17 +230,17 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
   }
 
   return (
-    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="하루 마감" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={entry ? '지난 날짜 영상 만들기' : '하루 마감'} style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
       <div style={{ flex: 1, padding: '58px 22px 0', display: 'flex', flexDirection: 'column', gap: 13, overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>
             Wrap up · {dateShort}
           </div>
-          <button onClick={onClose} aria-label="하루 마감 닫기" style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} aria-label={entry ? '영상 만들기 닫기' : '하루 마감 닫기'} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>✕</button>
         </div>
 
         <div style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.5px', lineHeight: 1.25 }}>
-          오늘을 영상으로 마무리해요
+          {entry ? '이 날을 영상으로 만들어요' : '오늘을 영상으로 마무리해요'}
         </div>
 
         <div>
@@ -456,20 +474,23 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
         >
           {generating ? '생성 중...' : alreadyGenerated ? '이미 만든 하루' : '영상 만들기'}
         </button>
-        <button
-          onClick={handleSkipVideo}
-          disabled={generating}
-          style={{
-            flex: 1, height: 52, borderRadius: 50,
-            background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)',
-            fontSize: 14, fontWeight: 500,
-            cursor: generating ? 'default' : 'pointer',
-            color: 'rgba(26,26,26,0.5)',
-            fontFamily: 'Inter, sans-serif',
-          }}
-        >
-          영상 없이 마감
-        </button>
+        {/* 아카이브 항목은 이미 저장돼 있으므로 "영상 없이 마감"이 할 일이 없다 */}
+        {!entry && (
+          <button
+            onClick={handleSkipVideo}
+            disabled={generating}
+            style={{
+              flex: 1, height: 52, borderRadius: 50,
+              background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)',
+              fontSize: 14, fontWeight: 500,
+              cursor: generating ? 'default' : 'pointer',
+              color: 'rgba(26,26,26,0.5)',
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
+            영상 없이 마감
+          </button>
+        )}
       </div>
     </div>
   );

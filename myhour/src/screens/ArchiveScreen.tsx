@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, markArchiveGenerated } from '../store';
+import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
-import { generateVideo } from '../videoGenerator';
-import { consumeVideoForDate, hasVideoForDate } from '../videoEntitlement';
 import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
@@ -10,6 +8,8 @@ import { useDialogFocus } from '../accessibility/useDialogFocus';
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
 interface ArchiveScreenProps {
+  /** 아카이브 항목으로 영상 만들기 — 마감 화면을 그 항목 모드로 연다 */
+  onMakeVideo: (entry: ArchiveEntry) => void;
   onTabChange: (tab: Tab) => void;
   initialArchiveId?: string | null;
 }
@@ -237,17 +237,15 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
   );
 }
 
-function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveEntry; onDelete: () => void; initialOpen?: boolean }) {
+function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { entry: ArchiveEntry; onDelete: () => void; onMakeVideo: (entry: ArchiveEntry) => void; initialOpen?: boolean }) {
   const mood = guessMood(entry.records);
   // 영상에 실제로 들어간 제목을 우선 — 없으면(구버전 항목) 기록에서 만들어 쓴다
   const title = entry.title?.trim() || generateTitle(entry.records);
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
-  const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
     // blob까지 들고 있어야 다운로드(공유) 버튼이 await 없이 바로 share()를 부를 수 있다
@@ -272,33 +270,6 @@ function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveE
     ?? entry.records[0];
 
   const fallbackBg = lead ? TYPE_COLORS[lead.type] : '#E2DBF0';
-
-  async function handleGenerate() {
-    // 마감 화면과 같은 규칙: 한 날짜의 영상은 한 번만 만든다
-    if (hasVideoForDate(entry.date)) {
-      setGenError('이 날짜는 이미 영상을 만들었어요.');
-      return;
-    }
-    setGenState('generating');
-    setProgress(0);
-    setGenError(null);
-    try {
-      const [, m, d] = entry.date.split('-');
-      const dateStr = `${Number(m)}월 ${Number(d)}일`;
-      const blob = await generateVideo(entry.records, dateStr, (pct) => setProgress(pct));
-      await saveVideoToIDB(archiveVideoKey(entry), blob);
-      markArchiveGenerated(entry);
-      // 차감은 영상과 저장이 모두 성공한 뒤에 한 번만 (마감 화면과 동일)
-      consumeVideoForDate(entry.date);
-      setVideoUrl(URL.createObjectURL(blob));
-      setVideoBlob(blob);
-      setGenState('done');
-      setFullscreen(true);
-    } catch (e) {
-      setGenError(e instanceof Error ? e.message : '오류가 발생했어요');
-      setGenState('idle');
-    }
-  }
 
   return (
     <>
@@ -358,14 +329,6 @@ function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveE
             </button>
           )}
 
-          {genState === 'generating' && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-              <div style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>생성 중... {Math.round(progress * 100)}%</div>
-              <div style={{ width: '70%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.round(progress * 100)}%`, background: '#fff', borderRadius: 2, transition: 'width 0.1s' }} />
-              </div>
-            </div>
-          )}
         </div>
 
         <div>
@@ -397,23 +360,20 @@ function ArchiveCard({ entry, onDelete, initialOpen = false }: { entry: ArchiveE
           {/* 영상이 아직 없는 항목에서만 보인다. 이미 만든 날은 버튼 자체가 없다 —
               한 날짜의 영상은 한 번만 만든다는 정책이라 "다시 만들기"는 두지 않는다. */}
           {genState === 'idle' && !entry.trimmed && (
-            <button onClick={handleGenerate} style={{
+            <button onClick={() => onMakeVideo(entry)} style={{
               marginTop: 8, width: '100%', padding: '11px 0', borderRadius: 12,
               background: '#1A1A1A', color: '#fff', border: 'none',
               fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
             }}>영상 만들기</button>
           )}
 
-          {genError && (
-            <div style={{ marginTop: 6, fontSize: 10, color: '#E5533C', lineHeight: 1.4 }}>{genError}</div>
-          )}
         </div>
       </div>
     </>
   );
 }
 
-export default function ArchiveScreen({ onTabChange, initialArchiveId }: ArchiveScreenProps) {
+export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVideo }: ArchiveScreenProps) {
   const [entries, setEntries] = useState<ArchiveEntry[]>(() => { sweepArchive(); return loadArchive(); });
 
   function handleDelete(entry: ArchiveEntry) {
@@ -485,7 +445,7 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId }: Archive
         gap: 14, alignContent: 'start',
       }}>
         {filtered.map(entry => (
-          <ArchiveCard key={entry.id} entry={entry} initialOpen={entry.id === initialArchiveId} onDelete={() => handleDelete(entry)} />
+          <ArchiveCard key={entry.id} entry={entry} initialOpen={entry.id === initialArchiveId} onDelete={() => handleDelete(entry)} onMakeVideo={onMakeVideo} />
         ))}
       </div>
 
