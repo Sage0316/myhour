@@ -109,12 +109,27 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
     if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
   }
 
+  // 처음 열었을 때 자동 호출을 이미 시도했는가.
+  // 그 뒤 강도를 바꾸면 자동으로 부르지 않고 확정 버튼을 누르게 한다.
+  const autoTriedRef = useRef(false);
+
   // 저장된 결과가 있으면 호출 없이 그대로 붙인다.
   // 강도를 2 → 4 → 2로 되돌린 경우도 여기서 걸려서 버튼을 누를 필요가 없다.
   useEffect(() => {
     if (!aiKey || directorKey === aiKey) return;
     const cached = readDirectorCache(sessionDate, aiKey);
-    if (cached) applyDirector(cached, aiKey);
+    if (cached) {
+      applyDirector(cached, aiKey);
+      autoTriedRef.current = true;
+      return;
+    }
+    // 화면을 처음 열었고 저장된 결과도 없을 때만 자동으로 부른다.
+    // 한 번 받아두면 다시 열어도 캐시에서 나오므로 호출은 하루 한 번으로 끝난다.
+    // 강도를 바꾼 뒤에는 여기서 부르지 않는다 — 그건 확정 버튼의 몫이다.
+    if (!autoTriedRef.current) {
+      autoTriedRef.current = true;
+      void confirmDirector();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiKey, sessionDate, directorKey]);
 
@@ -324,12 +339,6 @@ export default function WrapUpScreen({ onClose, onSave }: WrapUpScreenProps) {
                     ? '바뀐 강도로 다시 연출하기'
                     : 'AI에게 연출 맡기기'}
             </button>
-          )}
-
-          {aiAvailable && !director && !analyzing && (
-            <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.45)', lineHeight: 1.5, marginTop: -4 }}>
-              누르지 않으면 AI를 부르지 않아요. 지금 제목과 마무리는 기록에서 만든 문장이에요.
-            </div>
           )}
 
           {analyzeError && (
