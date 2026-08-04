@@ -158,6 +158,9 @@ AI Gateway 로그(`/accounts/{acc}/ai-gateway/gateways/sage/logs`)가 요청별 
 - **마감한 하루는 그 날짜로 더 기록할 수 없다** (2026-08-04). `reset()`이 `isWrapped: true`를 남기고
   `addRecord`가 그 상태에서 저장을 거부한다. 예전엔 `isWrapped: false`로 되돌려서 마감 후에도 기록이
   쌓였고, 같은 날짜 아카이브 항목이 두 개 생겼다. 두 번째 항목은 이용권이 이미 차감돼 영상도 못 만들었다
+- **잠금 근거도 두 가지다** (`context.tsx`의 `isDayWrapped`): 그 하루의 `isWrapped` 플래그 **또는**
+  그 날짜의 영상 이용권 기록(`hasVideoForDate`). 플래그만 보면 예전 빌드에서 마감한 하루가 안 잠긴다 —
+  그 빌드가 플래그를 false로 되돌려놨기 때문이다. 이용권은 "영상이 실제로 만들어졌다"는 사실이라 더 단단하다
 - **"이미 만든 하루" 판정 기준이 두 가지다**: 오늘 마감은 날짜 이용권(`hasVideoForDate`), 아카이브 항목은
   그 항목의 `isWrapped`. 같은 날짜에 항목이 두 개 남은 사용자를 날짜로 막으면 영영 못 만든다
 - **영상 자동 생성은 불가능하다** — Canvas + MediaRecorder가 포그라운드에서만 돌고 AudioContext는 탭
