@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateClosing, guessMood, loadAppData, loadArchive, type MyRecord } from './store';
+import {
+  addToArchive, daysUntilTrim, generateClosing, guessMood, loadAppData, loadArchive,
+  needsTrimNotice, sweepArchive, type ArchiveEntry, type MyRecord,
+} from './store';
 import { journalRepository } from './repositories/journalRepository';
 
 afterEach(() => {
@@ -130,6 +133,118 @@ describe('날짜 넘어감 (rollover)', () => {
       date: '2026-08-03',
     });
     vi.setSystemTime(new Date('2026-08-04T10:00:00'));
+
+    loadAppData('09:00');
+    expect(loadArchive()).toHaveLength(0);
+  });
+});
+
+describe('3일 뒤 원본 정리 (sweepArchive)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-04T10:00:00'));
+  });
+
+  function archived(date: string, overrides: Partial<ArchiveEntry> = {}): ArchiveEntry {
+    return {
+      id: `archive-${date}`,
+      date,
+      records: [
+        record({ id: 'r-photo', type: 'photo', content: '', mediaId: 'media_1' }),
+        record({ id: 'r-text', type: 'text', content: '오늘은 라면' }),
+      ],
+      isWrapped: false,
+      trimmed: false,
+      ...overrides,
+    };
+  }
+
+  it('3일이 지난 미마감 항목의 사진을 비우고 글은 남긴다', () => {
+    addToArchive(archived('2026-08-01'));
+    sweepArchive();
+
+    const [entry] = loadArchive();
+    expect(entry.trimmed).toBe(true);
+    expect(entry.records.find(r => r.id === 'r-photo')?.mediaId).toBeUndefined();
+    expect(entry.records.find(r => r.id === 'r-text')?.content).toBe('오늘은 라면');
+  });
+
+  it('아직 3일이 안 된 항목은 그대로 둔다', () => {
+    addToArchive(archived('2026-08-02'));
+    sweepArchive();
+
+    const [entry] = loadArchive();
+    expect(entry.trimmed).toBe(false);
+    expect(entry.records.find(r => r.id === 'r-photo')?.mediaId).toBe('media_1');
+  });
+
+  // 영상이 있는 항목은 이미 완성품이 있으므로 이 정책의 대상이 아니다
+  it('영상까지 만든 항목은 며칠이 지나도 건드리지 않는다', () => {
+    addToArchive(archived('2026-07-01', { isWrapped: true }));
+    sweepArchive();
+    expect(loadArchive()[0].trimmed).toBe(false);
+  });
+
+  it('남은 날짜를 세어 배지에 쓸 수 있다', () => {
+    expect(daysUntilTrim(archived('2026-08-03'), '2026-08-04')).toBe(2);
+    expect(daysUntilTrim(archived('2026-08-02'), '2026-08-04')).toBe(1);
+    expect(daysUntilTrim(archived('2026-08-01'), '2026-08-04')).toBe(0);
+  });
+
+  it('정리된 항목과 영상이 있는 항목엔 예고를 띄우지 않는다', () => {
+    expect(needsTrimNotice(archived('2026-08-03'))).toBe(true);
+    expect(needsTrimNotice(archived('2026-08-03', { trimmed: true }))).toBe(false);
+    expect(needsTrimNotice(archived('2026-08-03', { isWrapped: true }))).toBe(false);
+    // 글만 있는 하루는 지울 원본이 없다
+    expect(needsTrimNotice(archived('2026-08-03', { records: [record()] }))).toBe(false);
+  });
+});
+
+describe('마감한 하루는 다시 기록할 수 없다', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers();
+  });
+
+  // 마감 후 isWrapped를 false로 되돌려서 같은 날짜에 다시 기록이 쌓였고,
+  // 아카이브에 8.4가 두 개 생겼다. 두 번째 항목은 이용권이 이미 차감돼 영상도 못 만들었다.
+  it('마감 상태가 저장돼서 다시 읽어도 유지된다', () => {
+    vi.setSystemTime(new Date('2026-08-04T22:00:00'));
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [],
+      isWrapped: true,
+      date: '2026-08-04',
+    });
+
+    expect(loadAppData('09:00').isWrapped).toBe(true);
+  });
+
+  it('다음 하루가 시작되면 마감 상태가 풀린다', () => {
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [],
+      isWrapped: true,
+      date: '2026-08-04',
+    });
+
+    vi.setSystemTime(new Date('2026-08-05T10:00:00'));
+    const fresh = loadAppData('09:00');
+
+    expect(fresh.date).toBe('2026-08-05');
+    expect(fresh.isWrapped).toBe(false);
+  });
+
+  // 마감한 하루는 기록이 비어 있으므로 rollover가 빈 항목을 아카이브에 또 넣으면 안 된다
+  it('마감한 하루는 날짜가 넘어가도 아카이브에 다시 들어가지 않는다', () => {
+    journalRepository.saveCurrent({
+      schemaVersion: 2,
+      records: [],
+      isWrapped: true,
+      date: '2026-08-04',
+    });
+    vi.setSystemTime(new Date('2026-08-05T10:00:00'));
 
     loadAppData('09:00');
     expect(loadArchive()).toHaveLength(0);

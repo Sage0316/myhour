@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive } from '../store';
+import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, needsTrimNotice, daysUntilTrim, getSessionDate, loadSettings } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
@@ -264,6 +264,15 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id, entry.date, initialOpen]);
 
+  // 남은 날짜는 카드가 그려질 때 계산한다. 자정을 넘겨 앱을 켜둬도 다음 렌더에서 갱신된다.
+  const trimNotice = (() => {
+    if (!needsTrimNotice(entry)) return null;
+    const left = daysUntilTrim(entry, getSessionDate(loadSettings().startTime));
+    if (left <= 0) return { text: '사진과 음성이 곧 정리돼요. 남기려면 오늘 영상으로 만들어 주세요.', urgent: true };
+    if (left === 1) return { text: '내일이면 사진과 음성이 정리돼요.', urgent: true };
+    return { text: `${left}일 뒤 사진과 음성이 정리돼요. 글은 남아요.`, urgent: false };
+  })();
+
   const lead = entry.records.find(r => (r.type === 'photo' || r.type === 'meme') && hasMedia(r))
     ?? entry.records.find(r => r.type === 'video' && hasMedia(r))
     ?? entry.records.find(r => r.type === 'text')
@@ -356,6 +365,19 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
 
           <div style={{ fontSize: 10, color: 'rgba(26,26,26,0.35)', marginTop: 3 }}>기록 보기 ›</div>
           </button>
+
+          {/* 정리 예고. 푸시는 쓰지 않으므로 이 배지가 유일한 알림 수단이다 —
+              앱을 열면 반드시 보이도록 버튼 바로 위에 둔다. */}
+          {genState === 'idle' && trimNotice && (
+            <div style={{
+              marginTop: 8, padding: '7px 10px', borderRadius: 10,
+              background: trimNotice.urgent ? 'rgba(217,116,63,0.12)' : 'rgba(26,26,26,0.05)',
+              color: trimNotice.urgent ? '#A8552A' : 'rgba(26,26,26,0.55)',
+              fontSize: 11, lineHeight: 1.4,
+            }}>
+              {trimNotice.text}
+            </div>
+          )}
 
           {/* 영상이 아직 없는 항목에서만 보인다. 이미 만든 날은 버튼 자체가 없다 —
               한 날짜의 영상은 한 번만 만든다는 정책이라 "다시 만들기"는 두지 않는다. */}

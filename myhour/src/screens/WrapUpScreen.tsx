@@ -79,8 +79,10 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
     ...fallbackEmojisFor(selectedMood.mood),
   ])].slice(0, 5);
   const activeEmoji = emojiPick ?? emojiChoices[0];
-  // 이 날짜로 이미 영상을 만들었으면 다시 만들 수 없다 (이용권은 날짜당 한 번)
-  const alreadyGenerated = hasVideoForDate(sessionDate);
+  // 오늘 마감할 때는 날짜당 한 번이라는 이용권 규칙을 그대로 쓴다.
+  // 아카이브 항목을 열었을 때는 "그 항목에 영상이 있는가"로 본다 — 같은 날짜에 항목이 두 개
+  // 남아 있던 사용자는 날짜 기준으로 막으면 두 번째 항목의 영상을 영영 만들 수 없다.
+  const alreadyGenerated = entry ? entry.isWrapped : hasVideoForDate(sessionDate);
   // 감정 강도. 안 건드리면 AI가 고른 곡이 그 무드에서 몇 단계인지 되짚어 보여준다.
   const intensity = intensityPick
     ?? (director ? intensityForTrack(selectedMood.mood, director.bgmTrack) : 60);

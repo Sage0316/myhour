@@ -91,7 +91,7 @@ function RecordTile({ record, onDelete }: { record: MyRecord; onDelete: () => vo
 }
 
 export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps) {
-  const { records, deleteRecord, settings } = useApp();
+  const { records, deleteRecord, settings, isWrapped } = useApp();
   const sessionDate = getSessionDate(settings.startTime);
   const { dateShort, weekdayEn } = getDateStrings(sessionDate);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -125,8 +125,8 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
       <div style={{ flex: 1, overflow: 'auto', padding: '0 22px' }}>
         {sortedRecords.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 10, opacity: 0.5 }}>
-            <div style={{ fontSize: 14, color: 'rgba(26,26,26,0.6)', textAlign: 'center', lineHeight: 1.6 }}>
-              아직 기록이 없어요
+            <div style={{ fontSize: 14, color: 'rgba(26,26,26,0.6)', textAlign: 'center', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+              {isWrapped ? '오늘은 마감했어요.\n아카이브에서 영상을 볼 수 있어요.' : '아직 기록이 없어요'}
             </div>
           </div>
         ) : (
@@ -140,7 +140,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
         <div style={{ height: 16 }} />
       </div>
 
-      {records.length > 0 && (
+      {records.length > 0 && !isWrapped && (
         <div style={{ padding: '10px 22px 12px', background: '#F7F7F5' }}>
           <button data-modal-trigger="wrapup" onClick={onWrapUp} style={{ width: '100%', height: 50, borderRadius: 50, background: '#1A1A1A', color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
             하루 마감하고 영상 만들기

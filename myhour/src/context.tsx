@@ -8,6 +8,15 @@ import {
 import { createStableId } from './domain/model';
 import { AppContext, type RecordMedia } from './appContext';
 import { cleanupOrphanMedia } from './media/cleanup';
+import { hasVideoForDate } from './videoEntitlement';
+
+// 하루가 마감됐는지는 두 곳에서 온다:
+// ① 이 하루의 isWrapped 플래그, ② 그 날짜로 이미 영상을 만들었다는 이용권 기록.
+// ②가 필요한 이유: 플래그를 false로 되돌리던 예전 버전에서 마감한 하루는 ①이 비어 있다.
+// 이용권은 영상이 실제로 만들어진 사실이라 나중에 지워지지 않는다 — 이쪽이 더 단단한 근거다.
+function isDayWrapped(data: Pick<AppData, 'isWrapped' | 'date'>): boolean {
+  return data.isWrapped || hasVideoForDate(data.date);
+}
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
@@ -73,6 +82,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } : {}),
     };
     setAppData(prev => {
+      // 마감한 하루엔 더 담지 않는다. UI에서도 막지만, 마감 직전에 열어둔 화면으로
+      // 저장이 들어올 수 있어 여기가 최종 방어선이다.
+      if (isDayWrapped(prev)) {
+        setTimeout(() => alert('오늘은 이미 마감했어요. 다음 하루가 시작되면 다시 기록할 수 있어요.'), 0);
+        if (media) void deleteVideoFromIDB(media.key);
+        return prev;
+      }
       const next = { ...prev, records: [...prev.records, record] };
       try {
         saveAppData(next);
@@ -105,9 +121,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // 하루를 마감한 뒤 호출된다. isWrapped를 남겨야 같은 날짜에 다시 기록해서
+  // 아카이브에 8.4가 두 개 생기는 일이 없다. 다음 세션 날짜가 되면 loadAppData가 빈 하루로 되돌린다.
   const reset = useCallback(() => {
     const date = getSessionDate(settings.startTime);
-    const fresh: AppData = { schemaVersion: 2, records: [], isWrapped: false, date };
+    const fresh: AppData = { schemaVersion: 2, records: [], isWrapped: true, date };
     saveAppData(fresh);
     setAppData(fresh);
   }, [settings.startTime]);
@@ -115,6 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       records: appData.records,
+      isWrapped: isDayWrapped(appData),
       settings,
       slots,
       currentSlot,

@@ -9,6 +9,8 @@ export interface RecordMedia {
 
 export interface AppContextValue {
   records: MyRecord[];
+  /** 오늘을 이미 마감했는가. true면 이 날짜로는 더 기록할 수 없다. */
+  isWrapped: boolean;
   settings: AppSettings;
   slots: string[];
   currentSlot: string;
