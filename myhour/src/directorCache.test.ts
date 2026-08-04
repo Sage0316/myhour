@@ -108,3 +108,22 @@ describe('영상 이용권', () => {
     expect(hasVideoForDate('2026-08-04')).toBe(false);
   });
 });
+
+describe('자동 호출 1회 + 재사용', () => {
+  // 처음 열 때 자동으로 부르고, 그 결과를 캐시에 넣는다.
+  // 다시 열면 같은 키가 캐시에 있으므로 API를 부르지 않는다 — 이게 비용이 안 늘어나는 이유다.
+  it('같은 조건으로 다시 열면 저장된 결과가 나와서 부를 필요가 없다', () => {
+    const key = directorCacheKey(parts);
+    expect(readDirectorCache(parts.date, key)).toBeNull();   // 첫 열기: 캐시 없음 → 자동 호출
+
+    writeDirectorCache(parts.date, key, result);             // 호출 결과 저장
+
+    expect(readDirectorCache(parts.date, key)).toEqual(result); // 다시 열기: 캐시 적중 → 호출 없음
+  });
+
+  it('강도를 바꾸면 캐시가 비어 있어 확정 버튼이 필요하다', () => {
+    writeDirectorCache(parts.date, directorCacheKey(parts), result);
+    // 다른 강도 단계는 아직 받아둔 결과가 없다
+    expect(readDirectorCache(parts.date, directorCacheKey({ ...parts, intensityLevel: 2 }))).toBeNull();
+  });
+});
