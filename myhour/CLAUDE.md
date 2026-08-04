@@ -143,8 +143,9 @@ AI Gateway 로그(`/accounts/{acc}/ai-gateway/gateways/sage/logs`)가 요청별 
 현재 `CLOUDFLARE_API_TOKEN`에 AI Gateway 읽기 권한이 없어 10000 Authentication error가 난다 — 권한을 추가하면
 프로바이더 응답을 직접 확인할 수 있다.
 
-**미검증으로 남은 것** (workers.dev가 막혀서 이 세션에서 확인 못 함): `hakku-media` 워커의 실제 응답,
-그리고 R2 경유 BGM이 생성된 영상에 실제로 들어가는지 — 사용자 폰 또는 위 도메인 허용 후 확인이 필요하다.
+**2026-08-04 해소됨**: 사용자 아이폰에서 아카이브 항목의 "영상 만들기"로 영상이 생성됐고 **BGM도 들렸다.**
+`hakku-media` 워커 → R2 → CORS 응답 → `fetch`/`decodeAudioData` 경로가 실기기에서 통째로 동작한다는 뜻이다.
+(개발 세션에서는 workers.dev가 네트워크 정책에 막혀 직접 확인할 수 없다 — 이 경로는 폰으로만 검증된다.)
 
 ## 하루 마감과 날짜 넘김 (2026-08-03)
 마감하지 않은 하루는 **버리지 않고 아카이브로 옮긴다** (`loadAppData` → `rolloverUnwrappedDay`).
