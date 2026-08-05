@@ -8,7 +8,7 @@ import {
 import { createStableId } from './domain/model';
 import { AppContext, type RecordMedia } from './appContext';
 import { cleanupOrphanMedia } from './media/cleanup';
-import { hasVideoForDate } from './videoEntitlement';
+import { hasVideoForDate, releaseVideoForDate } from './videoEntitlement';
 
 // 하루가 마감됐는지는 두 곳에서 온다:
 // ① 이 하루의 isWrapped 플래그, ② 그 날짜로 이미 영상을 만들었다는 이용권 기록.
@@ -130,6 +130,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAppData(fresh);
   }, [settings.startTime]);
 
+  // 테스트 도구 전용. 오늘의 마감 잠금을 풀어 같은 날 다시 기록·영상 생성을 해볼 수 있게 한다.
+  // 잠금 근거가 둘(플래그 + 이용권)이라 둘 다 풀어야 실제로 열린다.
+  const unlockToday = useCallback(() => {
+    const date = getSessionDate(settings.startTime);
+    releaseVideoForDate(date);
+    setAppData(prev => {
+      if (prev.date !== date) return prev;
+      const next = { ...prev, isWrapped: false };
+      saveAppData(next);
+      return next;
+    });
+  }, [settings.startTime]);
+
   return (
     <AppContext.Provider value={{
       records: appData.records,
@@ -141,6 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       deleteRecord,
       updateSettings,
       reset,
+      unlockToday,
     }}>
       {children}
     </AppContext.Provider>
