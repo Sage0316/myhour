@@ -78,6 +78,11 @@ pnpm test:e2e
 - BGM 파일명은 `llmDirector.BGM_FILES`와 public/bgm이 정확히 일치해야 한다 — 어긋나면 fetch가 404 나고 영상에 음악만 조용히 빠진다. llmDirector.test.ts가 카탈로그 21곡의 실제 파일 존재를 검사한다
 - 음성 녹음은 16kHz WAV 직접 인코딩 (iOS mp4는 decodeAudioData 실패하는 버그 회피)
 - AudioContext는 탭 제스처 직후 생성 필수 (iOS suspended 버그), 폰트/디코딩엔 타임아웃, 생성 실패 시 onWarn으로 폰에 에러 표시
+- **iOS 화면 확대 방지 (2026-08-04)**: ① 입력창 글자가 16px 미만이면 포커스 시 Safari가 화면을 자동 확대한다 —
+  끌 수 없어서 `index.css`가 `input, textarea, select { font-size: max(16px, 1em) }`로 바닥을 깐다.
+  개별 컴포넌트에서 15px 같은 값을 다시 주면 그 화면만 조용히 확대된다. ② 버튼 더블탭 확대는
+  `touch-action: manipulation`으로 막는다. PWA는 주소창이 없어 확대된 배율을 되돌릴 방법이 마땅치 않다.
+  핀치 확대는 살려둔다(접근성). 실제로 캡션 입력창(RecordScreen 15px)에서 음성 녹음 후 확대되는 증상이 있었다
 - 녹화/녹음 UI: 5초 넘으면 "앞 5초만 담겨요" 안내 + 영상 미리보기 회색 전환
 - 미리보기 루프: `npm run dev -- --port 5199` 후 /myhour/preview.html (장면 스크린샷), /myhour/gentest.html (생성 통합테스트, window.__blob으로 오디오 검증). Playwright는 playwright-core + executablePath '/opt/pw-browsers/chromium'
 - 개발 컨테이너에 설치된 크로미움 버전이 playwright가 원하는 빌드와 다를 때(`Executable doesn't exist`) `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`을 주면 playwright.config.ts와 scripts/browser-verify.mjs가 그 바이너리를 쓴다. CI에서는 비어 있어 기본 동작 그대로. `playwright install`은 돌리지 말 것
@@ -143,8 +148,9 @@ AI Gateway 로그(`/accounts/{acc}/ai-gateway/gateways/sage/logs`)가 요청별 
 현재 `CLOUDFLARE_API_TOKEN`에 AI Gateway 읽기 권한이 없어 10000 Authentication error가 난다 — 권한을 추가하면
 프로바이더 응답을 직접 확인할 수 있다.
 
-**미검증으로 남은 것** (workers.dev가 막혀서 이 세션에서 확인 못 함): `hakku-media` 워커의 실제 응답,
-그리고 R2 경유 BGM이 생성된 영상에 실제로 들어가는지 — 사용자 폰 또는 위 도메인 허용 후 확인이 필요하다.
+**2026-08-04 해소됨**: 사용자 아이폰에서 아카이브 항목의 "영상 만들기"로 영상이 생성됐고 **BGM도 들렸다.**
+`hakku-media` 워커 → R2 → CORS 응답 → `fetch`/`decodeAudioData` 경로가 실기기에서 통째로 동작한다는 뜻이다.
+(개발 세션에서는 workers.dev가 네트워크 정책에 막혀 직접 확인할 수 없다 — 이 경로는 폰으로만 검증된다.)
 
 ## 하루 마감과 날짜 넘김 (2026-08-03)
 마감하지 않은 하루는 **버리지 않고 아카이브로 옮긴다** (`loadAppData` → `rolloverUnwrappedDay`).

@@ -439,7 +439,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
           onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}
           placeholder={type === 'meme' ? '딱 이 기분이었음 ㅋㅋ' : '점심 도시락, 오후 산책...'}
           autoFocus
-          style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 15, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
+          style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 16, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
         />
       </div>
 
