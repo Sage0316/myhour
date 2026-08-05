@@ -347,8 +347,12 @@ function DataSection() {
 }
 
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
-  const { settings, updateSettings } = useApp();
+  const { settings, updateSettings, isWrapped, unlockToday } = useApp();
   const [openRow, setOpenRow] = useState<string | null>(null);
+  // 빌드 버전을 일곱 번 두드리면 테스트 도구가 열린다. 실사용자가 우연히 발견할 일은 없고,
+  // 개발자는 하루 마감 잠금 때문에 다음 날까지 기다리지 않아도 된다.
+  const [versionTaps, setVersionTaps] = useState(0);
+  const devToolsOpen = versionTaps >= 7;
 
   function toggle(id: string) {
     setOpenRow(prev => prev === id ? null : id);
@@ -453,9 +457,45 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
         <AISection />
 
-        <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(26,26,26,0.3)', fontFamily: "'JetBrains Mono', monospace", padding: '8px 0' }}>
-          하꾸 · HAKKU {__BUILD_VERSION__}
-        </div>
+        {devToolsOpen && (
+          <>
+            <SectionHeader label="테스트 도구" />
+            <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 12 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirm('오늘의 마감 잠금을 풀까요?\n\n다시 기록하고 영상도 만들 수 있게 됩니다.\n이미 만든 영상과 아카이브 항목은 그대로 남습니다.')) return;
+                  unlockToday();
+                }}
+                disabled={!isWrapped}
+                style={{
+                  width: '100%', minHeight: 50, padding: '0 16px', display: 'flex', alignItems: 'center',
+                  background: 'none', border: 'none', textAlign: 'left', fontFamily: 'Inter, sans-serif',
+                  opacity: isWrapped ? 1 : 0.4, cursor: isWrapped ? 'pointer' : 'default',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15 }}>오늘 마감 잠금 풀기</div>
+                  <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>
+                    {isWrapped ? '같은 날 다시 기록·영상 생성을 해볼 수 있어요' : '오늘은 아직 마감하지 않았어요'}
+                  </div>
+                </div>
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', padding: '0 16px 12px', lineHeight: 1.5 }}>
+              테스트용입니다. 실제 사용에서는 하루에 영상 하나가 정책이에요.
+            </div>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setVersionTaps(n => n + 1)}
+          aria-label="빌드 버전"
+          style={{ display: 'block', width: '100%', textAlign: 'center', fontSize: 11, color: 'rgba(26,26,26,0.3)', fontFamily: "'JetBrains Mono', monospace", padding: '8px 0', background: 'none', border: 'none' }}
+        >
+          하꾸 · HAKKU {__BUILD_VERSION__}{devToolsOpen ? ' · DEV' : ''}
+        </button>
 
         <div style={{ height: 20 }} />
       </div>

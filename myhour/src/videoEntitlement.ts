@@ -56,3 +56,19 @@ export function consumeVideoForDate(date: string): boolean {
 export function consumedDates(): string[] {
   return Object.keys(readLedger().consumed).sort();
 }
+
+/**
+ * 차감을 되돌린다. **테스트 도구 전용** — 정상 흐름에서는 절대 호출하지 않는다.
+ * 실제 과금이 붙으면 이 함수는 서버 판정으로 대체되거나 사라져야 한다.
+ */
+export function releaseVideoForDate(date: string): boolean {
+  const ledger = readLedger();
+  if (!ledger.consumed[date]) return false;
+  delete ledger.consumed[date];
+  try {
+    writeLedger(ledger);
+  } catch {
+    return false;
+  }
+  return true;
+}
