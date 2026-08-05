@@ -7,6 +7,22 @@ html, body {
   background: #EAEAE7;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* 가로 회전이나 입력 포커스 뒤 iOS가 글자를 임의로 키우지 않게 한다 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iOS의 더블탭 확대를 끈다. 버튼을 빠르게 두 번 누르면 화면이 확대된 채로 남는데,
+   PWA에는 주소창이 없어서 사용자가 원래 배율로 되돌릴 방법이 마땅치 않다.
+   핀치 확대는 그대로 살아 있으므로 접근성은 유지된다. */
+button, [role="button"], a, label, input, textarea, select {
+  touch-action: manipulation;
+}
+
+/* iOS Safari는 글자가 16px보다 작은 입력창에 포커스가 가면 화면을 자동 확대한다.
+   끌 수 없는 동작이라 16px 이상을 지키는 것이 유일한 방법이다. */
+input, textarea, select {
+  font-size: max(16px, 1em);
 }
 
 #root {
