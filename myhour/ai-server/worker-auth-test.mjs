@@ -122,3 +122,30 @@ const badOutput = await directWith(async () => new Response(JSON.stringify({
 assert.equal(badOutput.body.error, 'invalid_provider_output', '모델이 JSON을 안 주면 형식 오류로 구분해야 한다');
 
 console.log('✅ AI ERROR CODES OK');
+
+// ── 감정 강도가 무드를 바꾸면 안 된다 ────────────────────────────────────────
+// 강도를 올렸더니 '잔잔함'이 '분노'로 바뀌던 문제. 프롬프트로 부탁만 하면 모델이
+// 어길 수 있어서, 사용자가 무드를 고정해 보내면 서버가 응답을 덮어쓴다.
+{
+  const angry = { ...directorBase, moodChip: '짜증' };
+
+  assert.equal(
+    normalizeResult(angry, records, '잔잔함').moodChip,
+    '잔잔함',
+    '고정한 무드가 모델 응답을 이겨야 한다',
+  );
+
+  assert.equal(
+    normalizeResult(angry, records, undefined).moodChip,
+    '짜증',
+    '고정이 없으면 모델이 정한 무드를 그대로 쓴다',
+  );
+
+  assert.equal(
+    normalizeResult(angry, records, '없는무드').moodChip,
+    '짜증',
+    '목록에 없는 무드로 고정 시도하면 무시한다',
+  );
+
+  console.log('✅ MOOD LOCK OK (강도가 무드를 바꾸지 못한다)');
+}

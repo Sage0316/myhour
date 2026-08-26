@@ -73,6 +73,8 @@ function validRequest(body) {
   if (!body || typeof body !== 'object' || typeof body.date !== 'string' || body.date.length > 40) return false;
   // 구버전 앱은 intensity를 안 보낸다 — 없으면 '보통'으로 본다
   if (body.intensity !== undefined && !INTENSITY_LABELS.includes(body.intensity)) return false;
+  // mood는 선택값. 강도만 바꿔 다시 부를 때 무드가 튀지 않도록 화면에 보이는 값을 고정한다
+  if (body.mood !== undefined && !MOOD_CHIPS.includes(body.mood)) return false;
   if (!Array.isArray(body.records) || body.records.length < 1 || body.records.length > 96) return false;
   return body.records.every(record =>
     record && typeof record === 'object'
@@ -127,7 +129,7 @@ function isGenericClosing(closing) {
   return CLICHE_CLOSING_PATTERNS.some(pattern => pattern.test(closing));
 }
 
-export function normalizeResult(value, records) {
+export function normalizeResult(value, records, lockedMood) {
   const recordCount = records.length;
   if (!value || typeof value !== 'object') return value;
   const trimAll = (list, max) => (Array.isArray(list) ? list : [])
@@ -142,7 +144,10 @@ export function normalizeResult(value, records) {
     title: String(value.title ?? '').trim().slice(0, 30),
     closing,
     mood: String(value.mood ?? '').trim().slice(0, 40),
-    moodChip: MOOD_CHIPS.includes(value.moodChip) ? value.moodChip : undefined,
+    // 사용자가 무드를 고정해 보냈으면 모델 응답보다 그쪽이 우선이다.
+    // 프롬프트로만 부탁하면 모델이 어길 수 있고, 그러면 강도만 올렸는데 무드가 튄다.
+    moodChip: MOOD_CHIPS.includes(lockedMood) ? lockedMood
+      : MOOD_CHIPS.includes(value.moodChip) ? value.moodChip : undefined,
     emojis: String(value.emojis ?? '').trim().slice(0, 20),
     bgMusic: String(value.bgMusic ?? '').trim().slice(0, 60),
     bgmTrack: BGM_TRACKS.includes(value.bgmTrack) ? value.bgmTrack : 'calm',
@@ -174,11 +179,19 @@ function buildPrompt(body) {
     return parts.join(' / ');
   }).join('\n');
 
+  // 사용자가 화면에서 보고 있는 무드. 강도만 바꿔 다시 부를 때 무드가 튀지 않도록 고정한다.
+  const moodLock = body.mood
+    ? `\n- **이번 요청은 moodChip을 반드시 "${body.mood}"로 유지하세요.** 사용자가 이미 그 무드로 보고 있습니다`
+    : '';
+
   return `당신은 일상 브이로그 영상의 편집자입니다. 오늘(${body.date})의 기록으로 짧은 회고 영상을 편집합니다.
 
 오늘의 감정 강도: **${INTENSITY_LABELS.includes(body.intensity) ? body.intensity : '보통'}**
-이 강도는 사용자가 직접 고른 값입니다. 제목·closing·mood·bgmTrack이 이 강도를 반영해야 합니다.
-약하게면 담백하고 절제된 쪽으로, 강하게면 그 감정에 더 깊이 잠긴 쪽으로 씁니다.
+이 강도는 사용자가 직접 고른 값이며, **감정의 세기만 뜻합니다. 감정의 종류를 바꾸라는 뜻이 아닙니다.**
+- 강도가 반영되는 곳: 제목·closing의 문체 온도, bgmTrack의 무게
+- 강도가 **절대 바꾸지 못하는 것: mood와 moodChip**. 이 둘은 기록 내용만으로 정합니다
+- 약하게면 담백하고 절제된 쪽으로, 강하게면 **같은 감정 안에서** 더 깊이 잠긴 쪽으로 씁니다
+- 예: '잔잔함'에서 강도를 올려도 '분노'가 되지 않습니다. 잔잔함을 더 짙게 쓸 뿐입니다${moodLock}
 
 아래 기록은 시간순입니다 (번호가 빠를수록 먼저 일어난 일).
 타입 안내: meme는 사용자가 앨범에서 고른 이미지(짤·밈이나 저장해둔 사진)로 그 순간의 기분이나 장면을 표현한 것이고, 캡션이 그 설명입니다.
@@ -253,7 +266,7 @@ async function callProvider(body, env) {
     console.error('provider_output_not_json', text.slice(0, 500));
     throw new Error('invalid_provider_output');
   }
-  const result = normalizeResult(JSON.parse(match[0]), body.records);
+  const result = normalizeResult(JSON.parse(match[0]), body.records, body.mood);
   if (!validResult(result, body.records.length)) {
     console.error('provider_output_invalid', JSON.stringify(result).slice(0, 500));
     throw new Error('invalid_provider_output');

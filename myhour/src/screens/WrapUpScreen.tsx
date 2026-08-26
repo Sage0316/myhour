@@ -42,6 +42,8 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   // 사용자가 직접 무드를 고른 뒤에는 AI 분석 결과로 덮어쓰지 않는다
   const userPickedMoodRef = useRef(false);
+  // 첫 AI 결과를 이미 화면에 붙였는가. 두 번째부터는 무드를 덮어쓰지 않는다.
+  const firstDirectorAppliedRef = useRef(false);
   // 이모지·정도는 "사용자가 고쳤을 때만" AI 결과를 이긴다. null이면 아직 안 건드린 상태.
   // 예전엔 고정 초깃값(😌, 72)이 들어가 있고 생성할 땐 AI 값이 무조건 이겨서,
   // 무슨 칩을 눌러도 영상이 그대로였다 — 그래서 "에러 나서 기본값에 걸린" 것처럼 보였다.
@@ -89,6 +91,12 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
   // 캐시 키·AI 재호출은 슬라이더 원값이 아니라 "단계"로 판단한다.
   // 원값으로 하면 드래그 한 번에 키가 수십 번 바뀌어 API가 그만큼 호출된다.
   const intensityLevel = toIntensityLevel(intensity);
+  // 첫 호출은 무드를 비워 보내 AI가 기록만 보고 정하게 한다.
+  // 그 뒤 강도를 바꿔 다시 부를 때는 화면에 보이는 무드를 고정해서 보낸다 —
+  // 그러지 않으면 강도만 올렸는데 '잔잔함'이 '분노'로 바뀐다.
+  const moodLock = firstDirectorAppliedRef.current || userPickedMoodRef.current
+    ? selectedMood.mood
+    : undefined;
 
   const TITLE_MAX = 30;
 
@@ -109,16 +117,19 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
   // AI는 **사용자가 확정 버튼을 누를 때만** 부른다.
   // 화면을 열었다는 이유로 부르면, "영상 없이 마감"만 눌러도 비용이 나간다.
   const aiAvailable = hasAIConsent() && isAIConfigured() && records.length > 0 && !alreadyGenerated;
-  const aiKey = aiAvailable ? directorKeyFor(records, sessionDate, intensityLevel) : null;
+  const aiKey = aiAvailable ? directorKeyFor(records, sessionDate, intensityLevel, moodLock) : null;
   // 이 강도의 결과가 이미 화면에 적용돼 있는가
   const directorIsCurrent = aiKey !== null && directorKey === aiKey;
 
   function applyDirector(out: DirectorOutput, key: string) {
     setDirector(out);
     setDirectorKey(key);
-    // AI가 고른 무드로 칩을 자동 선택 — 단, 사용자가 이미 직접 골랐다면 건드리지 않는다
+    // AI가 고른 무드로 칩을 자동 선택하는 건 **첫 결과일 때뿐**이다.
+    // 강도만 바꿔 다시 부른 결과로 무드를 덮어쓰면, 사용자가 보고 있던 '잔잔함'이
+    // 말없이 '분노'로 바뀐다. 강도는 감정의 세기지 감정의 종류가 아니다.
     const chip = MOOD_LIST.find(m => m.mood === out.moodChip);
-    if (chip && !userPickedMoodRef.current) setSelectedMood(chip);
+    if (chip && !userPickedMoodRef.current && !firstDirectorAppliedRef.current) setSelectedMood(chip);
+    firstDirectorAppliedRef.current = true;
   }
 
   // 처음 열었을 때 자동 호출을 이미 시도했는가.
@@ -156,7 +167,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
     setAnalyzeError(null);
     try {
       // analyzeDay가 캐시 확인과 동시요청 합치기를 모두 처리한다
-      const out = await analyzeDay(records, `${dateDay} ${dateWeekday}`, sessionDate, intensityLevel, controller.signal);
+      const out = await analyzeDay(records, `${dateDay} ${dateWeekday}`, sessionDate, intensityLevel, moodLock, controller.signal);
       applyDirector(out, aiKey);
     } catch (e) {
       if (!controller.signal.aborted) {
