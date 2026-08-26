@@ -199,11 +199,13 @@ export function directorKeyFor(
   records: MyRecord[],
   date: string,
   intensityLevel: IntensityLevel,
+  mood?: string,
 ): string {
   return directorCacheKey({
     installationId: getInstallationId(),
     date,
-    recordsHash: stableHash(JSON.stringify(directorRecordsPayload(records))),
+    // 무드도 키에 넣는다. 무드를 고정해서 부른 결과와 고정 없이 부른 결과는 다른 응답이다.
+    recordsHash: stableHash(JSON.stringify({ r: directorRecordsPayload(records), m: mood ?? '' })),
     intensityLevel,
     promptVersion: PROMPT_VERSION,
   });
@@ -213,6 +215,7 @@ async function requestDirector(
   records: MyRecord[],
   dateStr: string,
   intensityLevel: IntensityLevel,
+  mood?: string,
   signal?: AbortSignal,
 ): Promise<DirectorOutput> {
   if (!hasAIConsent()) throw new Error('AI 분석 동의가 필요해요.');
@@ -222,6 +225,9 @@ async function requestDirector(
     // 강도를 보내야 제목·마무리·선곡이 강도를 반영한다. 예전엔 강도가 로컬에서
     // 곡 풀만 골랐고 AI는 강도를 아예 몰랐다.
     intensity: INTENSITY_LABELS[intensityLevel],
+    // 화면에 보이는 무드를 같이 보내 고정한다. 강도만 올렸는데 잔잔함이 분노로
+    // 바뀌던 문제 때문이다 — 강도는 감정의 세기지 감정의 종류가 아니다.
+    ...(mood ? { mood } : {}),
     promptVersion: PROMPT_VERSION,
   });
   const post = async (token: string) => fetch(`${AI_WORKER_URL}/v1/direct`, {
@@ -256,13 +262,14 @@ export async function analyzeDay(
   dateStr: string,
   date: string,
   intensityLevel: IntensityLevel,
+  mood?: string,
   signal?: AbortSignal,
 ): Promise<DirectorOutput> {
-  const key = directorKeyFor(records, date, intensityLevel);
+  const key = directorKeyFor(records, date, intensityLevel, mood);
   const cached = readDirectorCache(date, key);
   if (cached) return cached;
   return dedupe(key, async () => {
-    const result = await requestDirector(records, dateStr, intensityLevel, signal);
+    const result = await requestDirector(records, dateStr, intensityLevel, mood, signal);
     writeDirectorCache(date, key, result);
     return result;
   });

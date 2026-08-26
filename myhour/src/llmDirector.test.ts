@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BGM_CATALOG, BGM_FILES, DEFAULT_MEDIA_BASE_URL, bgmAssetUrl, trackForMood, intensityForTrack } from './llmDirector';
+import { BGM_CATALOG, BGM_FILES, DEFAULT_MEDIA_BASE_URL, bgmAssetUrl, trackForMood, intensityForTrack, directorKeyFor, MOOD_TRACKS } from './llmDirector';
 import { MOOD_LIST } from './store';
+import type { MyRecord } from './store';
 
 // hakku-media 워커가 받아주는 키 형태 (media-server/worker.js의 KEY_PATTERN과 같아야 한다)
 const MEDIA_KEY_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.mp3$/;
@@ -58,5 +59,35 @@ describe('무드 × 감정 강도 → 곡', () => {
 
   it('그 무드에 없는 곡을 AI가 골랐어도 중간값으로 받아준다', () => {
     expect(intensityForTrack('슬픔', 'ukulele')).toBe(60);
+  });
+});
+
+describe('무드 고정과 캐시 키', () => {
+  const day: MyRecord[] = [
+    { id: 'r1', slotId: '21:00', slotTime: '21:00', capturedAt: '2026-08-05T12:00:00.000Z', createdAt: 1, type: 'text', content: '조용한 하루' } as MyRecord,
+  ];
+
+  // 무드를 고정해서 부른 결과와 고정 없이 부른 결과는 다른 응답이라 같은 칸에 담기면 안 된다
+  it('무드를 고정하면 캐시 키가 달라진다', () => {
+    expect(directorKeyFor(day, '2026-08-05', 1, '잔잔함'))
+      .not.toBe(directorKeyFor(day, '2026-08-05', 1));
+  });
+
+  it('다른 무드로 고정하면 키도 다르다', () => {
+    expect(directorKeyFor(day, '2026-08-05', 1, '잔잔함'))
+      .not.toBe(directorKeyFor(day, '2026-08-05', 1, '슬픔'));
+  });
+
+  it('같은 무드·같은 강도면 키가 같다 — 재호출하지 않는다', () => {
+    expect(directorKeyFor(day, '2026-08-05', 1, '잔잔함'))
+      .toBe(directorKeyFor(day, '2026-08-05', 1, '잔잔함'));
+  });
+
+  // 강도는 무드 안에서 곡만 고른다. 무드가 그대로면 다른 무드의 곡이 나오면 안 된다.
+  it('강도를 바꿔도 그 무드의 곡 안에서만 고른다', () => {
+    const tracks = [0, 1, 2].map(level => trackForMood('슬픔', level === 0 ? 10 : level === 1 ? 50 : 90));
+    for (const track of tracks) {
+      expect(MOOD_TRACKS['슬픔']).toContain(track);
+    }
   });
 });
