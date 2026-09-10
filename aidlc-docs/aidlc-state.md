@@ -1,6 +1,6 @@
 # 하꾸 AI-DLC 상태
 
-최종 갱신: 2026-07-25
+최종 갱신: 2026-09-10
 
 ## 현재 상태
 
@@ -9,9 +9,17 @@
 - 앱 루트: `myhour/`
 - 개발 방식: Brownfield, 로컬 우선 PWA
 - AI-DLC 단계: 설계, Units Generation, U1–U7 구현과 로컬 검증 완료
-- Git 상태: 앱 변경과 AI-DLC 자료가 `main`에 병합됨
-- 배포 상태: 미배포. 기존 `gh-pages` 사이트에는 이번 변경이 반영되지 않음
-- 원격 CI: 최근 `main` 실행이 `pnpm run check` 단계에서 실패하여 원인 확인이 필요함
+- Git 상태: `main` 기준 OpenAI 제공자 전환 변경을 로컬에서 검증 완료, 아직 원격에 게시하지 않음
+- 배포 상태: 기존 GitHub Pages와 Worker는 배포되어 있으나 OpenAI 전환은 미배포
+- 원격 CI: 현재 라이브 버전의 배포 성공을 확인함. OpenAI 전환 커밋의 원격 CI는 아직 실행하지 않음
+
+## 2026-09-10 진행 상태
+
+- U5 AI Worker의 외부 호출을 Anthropic/AI Gateway에서 OpenAI Responses API로 교체했다.
+- 모델은 `gpt-5.6-sol`, reasoning effort는 `low`로 고정했고 Structured Outputs와 `store: false`를 적용했다.
+- `OPENAI_API_KEY`는 2026-09-10 Cloudflare 운영 Worker secret으로 등록했으며 값은 저장소와 문서에 남기지 않았다.
+- `pnpm run check`에서 lint, 단위 테스트 72개, Worker 테스트, 타입 검사와 프로덕션 빌드가 모두 통과했다.
+- 다음 단계는 변경 코드의 GitHub 게시·운영 Worker 배포·실제 최소 호출이며 별도 승인 후 진행한다.
 
 ## 적용된 확장
 
@@ -21,15 +29,15 @@
 
 ## 검증 근거
 
-로컬 구현 완료 시점 기준:
+최신 로컬 구현 기준:
 
 - ESLint zero-warning
-- Vitest 16개 통과
-- Worker 검증 3개 통과
+- Vitest 72개 통과
+- AI·Push·Media Worker 검증 통과
 - 프로덕션 빌드 통과
 - Chromium 핵심 흐름, dialog 포커스 복귀, 콘솔 오류, axe critical 검증 통과
 
-위 결과는 외부 배포 성공을 의미하지 않는다. 이후 커밋의 원격 CI 실패는 별도로 해결해야 한다.
+위 결과는 OpenAI 전환의 외부 배포 성공을 의미하지 않는다.
 
 ## 출시 전 게이트
 

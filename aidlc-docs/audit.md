@@ -65,3 +65,59 @@ git pull --ff-only"
 **Decision**: BGM은 R2(myhour-media) + hakku-media 워커로 서빙. public/bgm 삭제. VITE_MEDIA_BASE_URL이 비면 예전 경로로 폴백
 
 ---
+
+## AI 연출 403 오류 진단
+**Timestamp**: 2026-09-10T12:54:30Z
+**User Input**: "지금 여기서 막혔어"
+**AI Response**: "첨부 화면의 `provider_forbidden` 경로를 조사했다. GitHub Pages 최신 배포, 앱의 AI Worker URL 주입, `hakku-ai` Worker `/health`, 허용 Origin은 정상이다. Worker가 AI Gateway 또는 Anthropic에서 받은 HTTP 403을 동일 오류 코드로 반환하는 외부 AI 권한 단계의 장애로 판정했다."
+**Context**: 첨부 화면 기반 읽기 전용 장애 진단. 코드와 배포 설정은 변경하지 않음
+
+---
+
+## OpenAI 제공자 전환 요청
+**Timestamp**: 2026-09-10T13:02:09Z
+**User Input**: "고쳐줘 그리고 나 api를 지피티껄로 바꾸고 싶어"
+**AI Response**: "기존 Cloudflare Worker의 보안·할당량 경계는 유지하고 외부 공급자를 OpenAI Responses API로 교체하는 변경으로 분류했다. 비용과 구조화 출력 적합성을 근거로 `gpt-5-mini`를 추천하며 구현 전 확인을 요청한다. 실제 배포와 유료 호출은 별도 승인 전 실행하지 않는다."
+**Context**: U5 AI 연출 제공자 마이그레이션 요구사항 확인
+
+---
+
+## OpenAI 모델 품질 우선 재검토
+**Timestamp**: 2026-09-10T13:05:41Z
+**User Input**: "근데 굳이 미니를 쓸 필요가 있을까 나는 좀 더 좋은 모델 쓰고 싶은데"
+**AI Response**: "OpenAI 공식 모델 문서를 기준으로 Mini급보다 높은 품질을 원하는 요구를 반영했다. 최고가 `gpt-6-astra`는 하꾸의 짧은 구조화 연출 작업에 과도하므로, 전문 작업용 플래그십 `gpt-5.6-sol`과 낮은 reasoning effort를 추천하고 확인을 요청한다."
+**Context**: U5 AI 연출 모델 선택 재검토
+
+---
+
+## OpenAI 전환 승인 및 API 키 확인
+**Timestamp**: 2026-09-10T13:12:16Z
+**User Input**: "응 근데 api키가 있어?"
+**AI Response**: "`gpt-5.6-sol` 전환 승인으로 기록했다. 현재 프로세스·사용자·시스템 환경과 저장소 및 GitHub Actions secret 이름을 확인했지만 사용 가능한 `OPENAI_API_KEY`는 없었다. 키 없이 가능한 코드 전환과 모의 테스트만 진행하고, 실제 유료 호출·배포는 새 키를 Worker secret으로 등록한 뒤 별도 승인하에 수행한다."
+**Context**: U5 OpenAI 제공자 전환 구현 승인과 비밀값 경계 확인
+
+---
+
+## OpenAI 제공자 전환 로컬 구현 완료
+**Timestamp**: 2026-09-10T13:20:57Z
+**User Input**: "고쳐줘 그리고 나 api를 지피티껄로 바꾸고 싶어" → `gpt-5.6-sol` 추천에 "응"
+**AI Response**: "기존 Worker의 설치 토큰·Origin·요청 크기·속도·일일 할당량 경계를 유지하면서 외부 호출만 OpenAI Responses API로 교체했다. `gpt-5.6-sol`/low reasoning, Structured Outputs, `store: false`, Bearer 인증과 OpenAI 응답 파싱을 적용했다. 화면 오류 안내와 운영 설정을 갱신하고 `pnpm run check` 전체 검증을 통과했다. 실제 OpenAI 호출과 배포는 하지 않았다."
+**Context**: U5 AI 연출 제공자 마이그레이션 Build/Test 완료, 외부 적용 대기
+
+---
+
+## OpenAI API 키 운영 secret 등록
+**Timestamp**: 2026-09-10T13:42:46Z
+**User Input**: "입력했어" → `Add variable and deploy` 실행 확인에 "ㅇㅇ"
+**AI Response**: "Cloudflare의 운영용 `hakku-ai` Worker에 `OPENAI_API_KEY`를 Secret 유형으로 저장했다. 완료 후 키 값은 읽지 않고 `OPENAI_API_KEY`와 `Value encrypted` 표시만 확인했다. 이 단계에서는 새 OpenAI 코드 게시나 실제 OpenAI 호출을 수행하지 않았다."
+**Context**: 사용자가 직접 입력한 비밀값의 운영 Worker 등록, 최소 범위 외부 변경
+
+---
+
+## OpenAI 전환 운영 배포 승인
+**Timestamp**: 2026-09-10T13:45:34Z
+**User Input**: "ㅇㅇ"
+**AI Response**: "GitHub `main`에 검증된 변경을 게시해 Pages 자동 배포를 시작하고, 해당 커밋의 CI를 확인한 뒤 GitHub Actions로 운영 `hakku-ai` Worker를 배포한다. 운영 전환 후 사용자의 실제 AI 생성 요청부터 OpenAI API 비용이 발생할 수 있다."
+**Context**: GitHub Pages와 Cloudflare AI Worker 운영 배포 승인
+
+---

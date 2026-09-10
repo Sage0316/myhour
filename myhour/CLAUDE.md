@@ -85,7 +85,7 @@ pnpm test:e2e
 - 손글씨 폰트: **개구(Gaegu, OFL)** public/fonts, ensureDiaryFont. 2026-07 크레파스 느낌으로 교체 (이전: 나눔손글씨 펜). 최종 후보였던 감자꽃(Gamja Flower)도 좋았음 — 나중에 폰트 바꿀 일 있으면 참고. 폰트는 fonts.googleapis.com css2 API에서 ttf URL 얻어 fonts.gstatic.com에서 받으면 됨 (이 세션 네트워크에서 열려 있었음)
 - 앨범(meme) 타입: RecordType 'meme'(라벨 '앨범', 색 #F9E9A6). 별도 탭이 아니라 **사진 모드 안에서 "지금 촬영/앨범에서 선택" 두 갈래** — 촬영=photo(풀스크린 장면), 앨범 선택=meme(폴라로이드/스크랩북 장면, 캡션이 손글씨). 앨범 input은 capture 속성 없음(카메라 강제 방지). 정리 정책은 사진과 동일. **주의: seededRnd(LCG)는 이웃 시드의 첫 값이 거의 같아서 Date.now() 기반 id로 분기하려면 rnd() 두 번 버리고 써야 함** (drawMemeScene 참조)
 - `src/llmDirector.ts`: **AI 키는 브라우저에 절대 넣지 않는다.** 클라이언트는 얇은 호출부일 뿐이고, 프롬프트·모델·검증은 전부 `ai-server/worker.js`에 있다. 흐름: 설정에서 AI 동의 → `/v1/install`로 설치 토큰 받기(30일, HMAC 서명) → `/v1/direct`로 {date, records(텍스트·캡션만)} 전송 → 제목·마무리·무드·moodChip·무드이모지·장면 자막·BGM 무드·기록별 이모지(recordEmojis) 수신. 설치당 하루 20회 제한(AI_STATE KV) + Origin 허용목록 + rate limiter. 사진·영상·음성 원본은 전송하지 않는다. **2026-07의 push-server `/director` 프록시는 이 구조로 대체됐다** — AI 경로를 두 개 두지 말 것
-- **ai-server는 `env.PROVIDER_URL`에 Cloudflare AI Gateway 엔드포인트를 넣어야 동작한다.** Workers에서 api.anthropic.com을 직접 부르면 Cloudflare→Cloudflare 봇 방어로 403 "Request not allowed"가 난다(UA 헤더로는 안 풀림). 게이트웨이 인증을 켰으면 `CF_AIG_TOKEN`도 시크릿으로 넣고 `cf-aig-authorization` 헤더로 나간다. 계정 게이트웨이: `https://gateway.ai.cloudflare.com/v1/f68efd92d83fa98ee254ffd8c8a0ab6e/sage/anthropic/v1/messages`
+- **ai-server는 OpenAI Responses API를 직접 호출한다.** 기본 모델은 `gpt-5.6-sol`, reasoning effort는 `low`이며 Structured Outputs와 `store: false`를 사용한다. `OPENAI_API_KEY`는 브라우저·저장소가 아니라 Worker secret에만 넣는다. 2026-09-10 이전의 Anthropic/AI Gateway 구성은 아래 장애 기록에만 남긴다.
 - 프롬프트 규격을 바꿀 때는 **worker.js의 buildPrompt/validResult/normalizeResult와 llmDirector의 zod 스키마를 같이** 손대야 한다. `recordEmojis`가 현재 필드명이고 구버전 응답의 `diaryEmojis`는 normalizeResult에서 받아준다. `meme`이 RECORD_TYPES에 없으면 짤이 든 하루는 서버에서 invalid_request로 전부 거절된다
 - `src/videoGenerator.ts`: 1080×1920 렌더링. **mimeType 우선순위는 mp4를 webm보다 먼저** (2026-07-22 변경) — iOS Safari가 MediaRecorder로 webm '녹화' 자체는 지원해도 사진 앱이 webm을 영상으로 인식 못 해서, 에어드랍/공유해도 파일 앱에만 들어가고 사진 앱엔 저장 안 되는 문제가 있었음. mp4(h264)는 어디서든 정상 저장됨. **절대 webm을 다시 앞으로 올리지 말 것** — 2026-07-25 병합에서 한 번 되돌아갔다. 우선순위는 `videoGenerator.ts`와 `services/video-generation-service.ts`(capabilities) **두 곳**에 있어서 같이 봐야 한다. BGM 무드 7종×3곡(public/bgm, 전곡 CC0, 랜덤 선곡 + `pickAudibleOffset`로 소리 나는 지점에서 시작) + 음성/클립 소리 믹싱(BGM 더킹, 컷 페이드아웃). 영상·음성 장면은 3~5초(MEDIA_MAX)
 - BGM 파일명은 `llmDirector.BGM_FILES`와 public/bgm이 정확히 일치해야 한다 — 어긋나면 fetch가 404 나고 영상에 음악만 조용히 빠진다. llmDirector.test.ts가 카탈로그 21곡의 실제 파일 존재를 검사한다
@@ -128,7 +128,10 @@ iOS 16.4+ PWA 푸시. 워커 배포됨: **https://myhour-push.sage0316.workers.d
 - **배포 job은 main에 push된 CI 실행에서만 돈다.** CI는 pull_request에서도 도는데 그 실행은
   `hakku-dist`가 아니라 `hakku-preview-<n>`을 올려서, 조건이 없으면 PR마다 배포가 떠서 실패한다
 
-## AI 연출: 워커 키는 유효하다 — "키가 손상됐다"는 진단은 틀렸다 (2026-07-26)
+## 과거 AI 연출 장애 기록 — Anthropic 구성 시점 (2026-07-26)
+
+> 2026-09-10 OpenAI Responses API로 전환하기 전 기록이다. 현재 활성 키·제공자 구성으로 해석하지 않는다.
+
 `hakku-ai`의 `ANTHROPIC_API_KEY`는 **정상이다.** AI 연출은 16:20 KST에 실제로 성공했다.
 근거: `AI_STATE` KV의 유일한 키가 `quota:2026-07-26:<installationId>` = 1이고 16:20에 쓰였다.
 `enforceQuota`는 프로바이더 호출 **직전에** 증가하므로 이 값이 곧 그 시각 요청이 그 단계까지 갔다는 뜻이고,
@@ -146,7 +149,7 @@ TTL이 2일이라 07-25에 요청이 있었다면 아직 남아 있어야 하는
 → **시크릿을 재등록하면 기존 설치 토큰이 전부 무효가 된다**는 걸 기억할 것.
 
 **오류 코드 세분화는 2026-08-03에 끝났다.** 이제 워커가 프로바이더 거부를 상태별로 나눠서 돌려준다:
-`provider_auth_failed`(401, 키 거절) / `provider_forbidden`(403, 게이트웨이·봇 방어) /
+`provider_auth_failed`(401, 키 거절) / `provider_forbidden`(403, 공급자 권한 거절) /
 `provider_rate_limited`(429) / `provider_unavailable`(5xx) / `provider_error`(그 외) /
 `provider_not_configured`(키 미설정) / `invalid_provider_output`(모델 출력 형식). `analysis_unavailable`은
 이제 **진짜 미분류 오류에만** 남는다 — 이 코드가 보이면 `wrangler tail`의 `unhandled_error` 로그를 볼 것.

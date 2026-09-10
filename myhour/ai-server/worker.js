@@ -226,49 +226,95 @@ ${lines}
 }`;
 }
 
+function directorResponseSchema() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'title', 'closing', 'mood', 'moodChip', 'emojis',
+      'bgMusic', 'bgmTrack', 'captions', 'recordEmojis',
+    ],
+    properties: {
+      title: { type: 'string' },
+      closing: { type: 'string' },
+      mood: { type: 'string' },
+      moodChip: { type: 'string', enum: MOOD_CHIPS },
+      emojis: { type: 'string' },
+      bgMusic: { type: 'string' },
+      bgmTrack: { type: 'string', enum: BGM_TRACKS },
+      captions: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      recordEmojis: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+    },
+  };
+}
+
 async function callProvider(body, env) {
-  if (!env.ANTHROPIC_API_KEY) throw new Error('provider_not_configured');
-  // Workers에서 api.anthropic.com을 직접 부르면 Cloudflare→Cloudflare 봇 방어로 403
-  // "Request not allowed"가 난다. PROVIDER_URL에 AI Gateway 엔드포인트를 넣어 우회한다
-  // (게이트웨이 인증을 켰다면 CF_AIG_TOKEN도 함께). README 참고.
-  const providerUrl = env.PROVIDER_URL || 'https://api.anthropic.com/v1/messages';
-  const providerResponse = await fetch(providerUrl, {
+  if (!env.OPENAI_API_KEY) throw new Error('provider_not_configured');
+  const supportedEfforts = ['low', 'medium', 'high', 'xhigh'];
+  const reasoningEffort = supportedEfforts.includes(env.OPENAI_REASONING_EFFORT)
+    ? env.OPENAI_REASONING_EFFORT
+    : 'low';
+  const providerResponse = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      ...(env.CF_AIG_TOKEN ? { 'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` } : {}),
+      'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: env.ANTHROPIC_MODEL || 'claude-sonnet-5',
-      max_tokens: 700,
-      // JSON만 받으면 되니 thinking은 명시적으로 꺼서 파싱 실패와 토큰 낭비를 막는다
-      thinking: { type: 'disabled' },
-      messages: [{ role: 'user', content: buildPrompt(body) }],
+      model: env.OPENAI_MODEL || 'gpt-5.6-sol',
+      input: buildPrompt(body),
+      reasoning: { effort: reasoningEffort },
+      max_output_tokens: Math.min(4_000, 1_000 + body.records.length * 30),
+      // 일기 원문은 응답 생성에만 쓰고 OpenAI 측 저장 대상에서 제외한다.
+      store: false,
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'hakku_direction',
+          strict: true,
+          schema: directorResponseSchema(),
+        },
+      },
     }),
   });
   if (!providerResponse.ok) {
     // 거절 이유를 코드로 구분해 둔다. 전부 analysis_unavailable로 뭉개면 "키가 죽었나,
-    // 한도인가, 게이트웨이가 막았나"를 밖에서 구분할 수 없어 오진이 나온다 (README 참고).
-    const detail = await providerResponse.text().catch(() => '');
-    console.error('provider_rejected', providerResponse.status, detail.slice(0, 500));
+    // 한도인가, 권한이 막혔나"를 밖에서 구분할 수 없어 오진이 나온다 (README 참고).
+    // 응답 본문은 사용자 입력을 포함할 수 있으므로 로그에 남기지 않는다.
+    console.error(
+      'provider_rejected',
+      providerResponse.status,
+      providerResponse.headers.get('x-request-id') ?? '',
+    );
     if (providerResponse.status === 401) throw new Error('provider_auth_failed');
     if (providerResponse.status === 403) throw new Error('provider_forbidden');
     if (providerResponse.status === 429) throw new Error('provider_rate_limited');
     if (providerResponse.status >= 500) throw new Error('provider_unavailable');
     throw new Error('provider_error');
   }
-  const providerBody = await providerResponse.json();
-  const text = providerBody.content?.find(part => part.type === 'text')?.text ?? '';
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    console.error('provider_output_not_json', text.slice(0, 500));
+  const providerBody = await providerResponse.json().catch(() => {
+    throw new Error('invalid_provider_output');
+  });
+  const text = providerBody.output
+    ?.filter(item => item.type === 'message')
+    .flatMap(item => item.content ?? [])
+    .find(part => part.type === 'output_text')?.text ?? '';
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    console.error('provider_output_not_json');
     throw new Error('invalid_provider_output');
   }
-  const result = normalizeResult(JSON.parse(match[0]), body.records, body.mood);
+  const result = normalizeResult(parsed, body.records, body.mood);
   if (!validResult(result, body.records.length)) {
-    console.error('provider_output_invalid', JSON.stringify(result).slice(0, 500));
+    console.error('provider_output_invalid');
     throw new Error('invalid_provider_output');
   }
   return result;

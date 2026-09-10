@@ -52,7 +52,7 @@
 
 ## 보안과 개인정보
 
-- Anthropic 등 공급자 키를 클라이언트나 `localStorage`에 저장하지 않는다.
+- OpenAI 등 공급자 키를 클라이언트나 `localStorage`에 저장하지 않는다.
 - AI 전송 전 명시적 동의를 받고 이미지·영상 원본은 전송하지 않는다.
 - Worker는 Origin, 입력 스키마, 본문 크기, 출력 크기, 토큰 만료, 소유권, 멱등성, 일일 할당량을 검증한다.
 - 설치 토큰은 HMAC으로 서명하고 secret은 Worker secret으로만 관리한다.

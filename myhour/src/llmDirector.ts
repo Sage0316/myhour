@@ -14,7 +14,7 @@ export const AI_WORKER_URL = (import.meta.env.VITE_AI_WORKER_URL as string | und
 
 // 프롬프트나 응답 규격을 바꾸면 이 숫자를 올린다. 캐시 키에 들어가므로
 // 옛 프롬프트로 만든 결과가 새 프롬프트 결과와 섞이지 않는다.
-export const PROMPT_VERSION = 2;
+export const PROMPT_VERSION = 3;
 
 // 감정 강도 라벨 — 캐시 키의 단계(0·1·2)와 워커 프롬프트가 같은 말을 쓰게 한다
 export const INTENSITY_LABELS = ['약하게', '보통', '강하게'] as const;
@@ -172,7 +172,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   origin_not_allowed: '허용되지 않은 주소에서 온 요청이에요.',
   provider_not_configured: 'AI 서버에 API 키가 설정되지 않았어요.',
   provider_auth_failed: 'AI 서버의 API 키가 거절됐어요. 키를 다시 등록해 주세요.',
-  provider_forbidden: 'AI 게이트웨이가 요청을 막았어요. 게이트웨이 설정을 확인해 주세요.',
+  provider_forbidden: 'AI 서비스가 요청을 허용하지 않았어요. 모델·프로젝트 권한을 확인해 주세요.',
   provider_rate_limited: 'AI 사용량 한도에 걸렸어요. 잠시 후 다시 시도해 주세요.',
   provider_unavailable: 'AI 서버가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해 주세요.',
   invalid_provider_output: 'AI 응답을 이해하지 못했어요. 다시 시도해 주세요.',

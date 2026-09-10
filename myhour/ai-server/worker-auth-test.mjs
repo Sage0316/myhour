@@ -81,7 +81,7 @@ console.log('✅ AI AUTH/VALIDATION OK');
 
 // ── 프로바이더 오류 코드 구분 ────────────────────────────────────────────────
 // 예전엔 아래 경우가 전부 analysis_unavailable 하나로 뭉개져서, 인증 실패인지
-// 한도 초과인지 게이트웨이 차단인지 밖에서 구분할 수 없었다.
+// 한도 초과인지 공급자 거절인지 밖에서 구분할 수 없었다.
 const directBody = {
   date: '8월 3일 월요일',
   records: [{ slotTime: '21:00', type: 'text', content: '라면 먹고 잤다', caption: '' }],
@@ -95,8 +95,9 @@ async function directWith(providerFetch, extraEnv = {}) {
     const { token: freshToken } = await fresh.json();
     const res = await worker.fetch(request('/v1/direct', directBody, freshToken), {
       ...env,
-      ANTHROPIC_API_KEY: 'test-key',
-      PROVIDER_URL: 'https://provider.example/v1/messages',
+      OPENAI_API_KEY: 'test-key',
+      OPENAI_MODEL: 'gpt-5.6-sol',
+      OPENAI_REASONING_EFFORT: 'low',
       ...extraEnv,
     });
     return { status: res.status, body: await res.json() };
@@ -113,13 +114,38 @@ for (const [status, code] of [[401, 'provider_auth_failed'], [403, 'provider_for
   assert.notEqual(out.body.error, 'analysis_unavailable');
 }
 
-const noKey = await directWith(providerStatus(200), { ANTHROPIC_API_KEY: '' });
+const noKey = await directWith(providerStatus(200), { OPENAI_API_KEY: '' });
 assert.equal(noKey.body.error, 'provider_not_configured', 'API 키 미설정은 따로 알려야 한다');
 
 const badOutput = await directWith(async () => new Response(JSON.stringify({
-  content: [{ type: 'text', text: '음... JSON은 못 주겠어요' }],
+  output: [{ type: 'message', content: [{ type: 'output_text', text: '음... JSON은 못 주겠어요' }] }],
 }), { status: 200 }));
 assert.equal(badOutput.body.error, 'invalid_provider_output', '모델이 JSON을 안 주면 형식 오류로 구분해야 한다');
+
+let capturedProviderRequest;
+const goodOutput = await directWith(async (url, init) => {
+  capturedProviderRequest = { url, init, body: JSON.parse(init.body) };
+  return new Response(JSON.stringify({
+    output: [{
+      type: 'message',
+      content: [{
+        type: 'output_text',
+        text: JSON.stringify({ ...directorBase, closing: '라면 국물을 다 마시고 불을 껐다.' }),
+      }],
+    }],
+  }), { status: 200 });
+});
+assert.equal(goodOutput.status, 200);
+assert.equal(capturedProviderRequest.url, 'https://api.openai.com/v1/responses');
+assert.equal(capturedProviderRequest.init.headers.Authorization, 'Bearer test-key');
+assert.equal(capturedProviderRequest.init.headers['x-api-key'], undefined);
+assert.equal(capturedProviderRequest.body.model, 'gpt-5.6-sol');
+assert.equal(capturedProviderRequest.body.reasoning.effort, 'low');
+assert.equal(capturedProviderRequest.body.store, false, '사용자 기록이 OpenAI에 저장되지 않게 요청해야 한다');
+assert.equal(capturedProviderRequest.body.text.format.type, 'json_schema');
+assert.equal(capturedProviderRequest.body.text.format.strict, true);
+assert.equal(capturedProviderRequest.body.text.format.schema.additionalProperties, false);
+assert.equal(typeof capturedProviderRequest.body.input, 'string');
 
 console.log('✅ AI ERROR CODES OK');
 
