@@ -10,6 +10,14 @@ on:
         options:
           - preview
           - production
+      worker:
+        description: Worker deployment scope
+        required: true
+        default: ai
+        type: choice
+        options:
+          - ai
+          - all
 
 permissions:
   contents: read
@@ -31,6 +39,7 @@ jobs:
         with:
           node-version: 24
       - name: Deploy AI Worker
+        if: inputs.worker == 'ai' || inputs.worker == 'all'
         working-directory: myhour/ai-server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -43,6 +52,7 @@ jobs:
             pnpm dlx wrangler@4.36.0 deploy
           fi
       - name: Deploy Push Worker
+        if: inputs.worker == 'all'
         working-directory: myhour/push-server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -121,3 +121,11 @@ git pull --ff-only"
 **Context**: GitHub Pages와 Cloudflare AI Worker 운영 배포 승인
 
 ---
+
+## AI Worker 전용 배포 범위 승인
+**Timestamp**: 2026-09-10T13:54:50Z
+**User Input**: "ㅇㅇ"
+**AI Response**: "기존 배포 워크플로가 AI와 Push Worker를 함께 배포하므로, 무관한 Push Worker를 건드리지 않도록 `ai`/`all` 범위 선택을 추가한다. 이번 운영 배포는 `worker: ai`로 실행한다."
+**Context**: 최소 변경 원칙에 따른 GitHub Actions Worker 배포 범위 축소
+
+---

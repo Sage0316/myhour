@@ -11,7 +11,7 @@
 
 - GitHub Actions Variables에 `VITE_AI_WORKER_URL`, `VITE_PUSH_SERVER_URL`, `VITE_VAPID_PUBLIC_KEY`를 등록합니다.
 - `Deploy GitHub Pages`에 성공한 `main` CI run ID를 입력합니다. 워크플로는 해당 run의 `hakku-dist`를 내려받아 SHA-256을 검증한 뒤, 다시 빌드하지 않고 그 artifact를 배포합니다.
-- `Deploy Workers`는 `preview`와 `production` 환경을 분리합니다. 각 GitHub Environment에 Cloudflare 자격 증명을 두고, Worker별 KV ID·허용 Origin·모델 ID·secret을 먼저 설정합니다. AI Worker에는 `OPENAI_API_KEY`를 Worker secret으로 등록합니다.
+- `Deploy Workers`는 `preview`와 `production` 환경을 분리하고 `ai` 또는 `all` 배포 범위를 선택합니다. 각 GitHub Environment에 Cloudflare 자격 증명을 두고, Worker별 KV ID·허용 Origin·모델 ID·secret을 먼저 설정합니다. AI Worker에는 `OPENAI_API_KEY`를 Worker secret으로 등록합니다.
 - AI/Push Worker는 Cloudflare rate-limit binding을 사용합니다. 설치 토큰 발급은 연결 IP, 인증된 API는 설치 ID 기준으로 제한합니다.
 
 ## 롤백
