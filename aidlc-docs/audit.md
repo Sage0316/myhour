@@ -129,3 +129,11 @@ git pull --ff-only"
 **Context**: 최소 변경 원칙에 따른 GitHub Actions Worker 배포 범위 축소
 
 ---
+
+## OpenAI 전환 운영 배포 완료
+**Timestamp**: 2026-09-10T13:59:20Z
+**User Input**: 운영 배포와 AI Worker 전용 배포 범위에 각각 "ㅇㅇ"
+**AI Response**: "OpenAI 전환을 `main`에 게시하고 CI 및 GitHub Pages 배포 성공을 확인했다. `worker: ai`로 운영 `hakku-ai`만 배포했으며 Push Worker 단계는 건너뛰었다. 비용 없는 `/health` 확인에서 HTTP 200, `ok: true`, `https://sage0316.github.io` CORS 허용을 확인했다. 실제 OpenAI 생성 호출은 수행하지 않았다."
+**Context**: U5 OpenAI 제공자 마이그레이션 운영 배포와 무과금 상태 검증 완료
+
+---

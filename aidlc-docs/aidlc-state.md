@@ -9,9 +9,9 @@
 - 앱 루트: `myhour/`
 - 개발 방식: Brownfield, 로컬 우선 PWA
 - AI-DLC 단계: 설계, Units Generation, U1–U7 구현과 로컬 검증 완료
-- Git 상태: `main` 기준 OpenAI 제공자 전환 변경을 로컬에서 검증 완료, 아직 원격에 게시하지 않음
-- 배포 상태: 기존 GitHub Pages와 Worker는 배포되어 있으나 OpenAI 전환은 미배포
-- 원격 CI: 현재 라이브 버전의 배포 성공을 확인함. OpenAI 전환 커밋의 원격 CI는 아직 실행하지 않음
+- Git 상태: OpenAI 전환과 AI 전용 배포 범위를 `main` 커밋 `ab1ca7e`까지 게시함
+- 배포 상태: GitHub Pages와 운영 `hakku-ai` Worker에 OpenAI 전환 배포 완료, Push Worker는 재배포하지 않음
+- 원격 CI: `ab1ca7e` CI, Pages, AI Worker 배포 모두 성공
 
 ## 2026-09-10 진행 상태
 
@@ -19,7 +19,8 @@
 - 모델은 `gpt-5.6-sol`, reasoning effort는 `low`로 고정했고 Structured Outputs와 `store: false`를 적용했다.
 - `OPENAI_API_KEY`는 2026-09-10 Cloudflare 운영 Worker secret으로 등록했으며 값은 저장소와 문서에 남기지 않았다.
 - `pnpm run check`에서 lint, 단위 테스트 72개, Worker 테스트, 타입 검사와 프로덕션 빌드가 모두 통과했다.
-- 다음 단계는 변경 코드의 GitHub 게시·운영 Worker 배포·실제 최소 호출이며 별도 승인 후 진행한다.
+- 비용 없는 운영 `/health` 검증은 HTTP 200, `{"ok":true}`, GitHub Pages Origin CORS 허용으로 통과했다.
+- 다음 단계는 사용자의 실제 앱에서 AI 영상 생성 1회를 확인하는 것이다. 이 요청부터 OpenAI API 비용이 발생할 수 있다.
 
 ## 적용된 확장
 

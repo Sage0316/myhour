@@ -12,8 +12,9 @@
 
 - `pnpm run check` 통과: lint, 단위 테스트 72개, Worker 테스트, 타입 검사, 프로덕션 빌드
 - OpenAI 요청은 모의 응답으로 검증했으며 실제 API 호출은 하지 않았다.
-- `OPENAI_API_KEY`는 Cloudflare 운영 Worker secret으로 등록 완료했다. 별도 승인 후 변경 코드를 게시하고 Worker와 앱을 배포한다.
+- `OPENAI_API_KEY`는 Cloudflare 운영 Worker secret으로 등록했고, 승인 후 변경 코드와 Worker 및 앱 배포까지 완료했다.
 - `Deploy Workers`의 `worker: ai` 범위로 운영 AI Worker만 배포하고 Push Worker는 재배포하지 않는다.
+- `ab1ca7e` 기준 CI, GitHub Pages, 운영 AI Worker 배포가 성공했고 `/health`와 CORS 검증도 통과했다.
 
 ## 승인 근거
 
