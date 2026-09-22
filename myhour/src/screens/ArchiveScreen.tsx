@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, needsTrimNotice, daysUntilTrim, getSessionDate, loadSettings } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { useMediaSrc } from '../useMediaSrc';
+import { useDevMode } from '../devMode';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 
@@ -241,6 +242,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
   const mood = guessMood(entry.records);
   // 영상에 실제로 들어간 제목을 우선 — 없으면(구버전 항목) 기록에서 만들어 쓴다
   const title = entry.title?.trim() || generateTitle(entry.records);
+  const devMode = useDevMode();
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
@@ -380,13 +382,21 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
           )}
 
           {/* 영상이 아직 없는 항목에서만 보인다. 이미 만든 날은 버튼 자체가 없다 —
-              한 날짜의 영상은 한 번만 만든다는 정책이라 "다시 만들기"는 두지 않는다. */}
+              한 날짜의 영상은 한 번만 만든다는 정책이라 "다시 만들기"는 두지 않는다.
+              관리자 모드일 때만 이미 만든 항목에도 "다시 만들기"가 나온다. */}
           {genState === 'idle' && !entry.trimmed && (
             <button onClick={() => onMakeVideo(entry)} style={{
               marginTop: 8, width: '100%', padding: '11px 0', borderRadius: 12,
               background: '#1A1A1A', color: '#fff', border: 'none',
               fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
             }}>영상 만들기</button>
+          )}
+          {devMode && genState === 'done' && !entry.trimmed && (
+            <button onClick={() => onMakeVideo(entry)} style={{
+              marginTop: 8, width: '100%', padding: '11px 0', borderRadius: 12,
+              background: 'none', color: '#1A1A1A', border: '1px solid rgba(26,26,26,0.2)',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+            }}>영상 다시 만들기 · DEV</button>
           )}
 
         </div>

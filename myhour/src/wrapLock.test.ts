@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { consumeVideoForDate, hasVideoForDate, releaseVideoForDate } from './videoEntitlement';
+import { isDevMode, setDevMode } from './devMode';
 
 // context.tsx의 isDayWrapped와 같은 규칙. 잠금 근거가 두 개라는 것을 고정한다.
 function isDayWrapped(data: { isWrapped: boolean; date: string }): boolean {
+  if (isDevMode()) return false;
   return data.isWrapped || hasVideoForDate(data.date);
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  // devMode는 값을 메모리에 캐시하므로 localStorage.clear()만으로는 꺼지지 않는다
+  setDevMode(false);
+});
 
 describe('마감 잠금 판정', () => {
   it('마감 플래그가 서 있으면 잠긴다', () => {
@@ -52,5 +58,35 @@ describe('테스트 도구: 마감 잠금 풀기', () => {
     consumeVideoForDate('2026-08-05');
     releaseVideoForDate('2026-08-05');
     expect(hasVideoForDate('2026-08-04')).toBe(true);
+  });
+});
+
+describe('관리자 모드', () => {
+  // 예전엔 설정 화면의 useState에만 있어서 탭을 옮기면 그대로 꺼졌다.
+  it('켜면 저장돼서 화면을 다시 그려도 남는다', () => {
+    setDevMode(true);
+    expect(localStorage.getItem('hakku_dev_mode_v1')).toBe('on');
+    expect(isDevMode()).toBe(true);
+  });
+
+  it('끄면 저장된 값까지 지운다', () => {
+    setDevMode(true);
+    setDevMode(false);
+    expect(localStorage.getItem('hakku_dev_mode_v1')).toBeNull();
+    expect(isDevMode()).toBe(false);
+  });
+
+  // 잠금 근거가 둘이라 한쪽만 건너뛰면 여전히 잠겨 보인다.
+  it('켜져 있으면 플래그와 이용권을 둘 다 건너뛴다', () => {
+    consumeVideoForDate('2026-08-05');
+    setDevMode(true);
+    expect(isDayWrapped({ isWrapped: true, date: '2026-08-05' })).toBe(false);
+  });
+
+  it('끄면 원래 잠금이 그대로 돌아온다', () => {
+    consumeVideoForDate('2026-08-05');
+    setDevMode(true);
+    setDevMode(false);
+    expect(isDayWrapped({ isWrapped: true, date: '2026-08-05' })).toBe(true);
   });
 });

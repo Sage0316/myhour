@@ -5,6 +5,7 @@ import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
 import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush, syncPushSchedule } from '../push';
 import TabBar from '../components/TabBar';
 import { exportCompleteBackup, restoreCompleteBackup, type BackupProgress } from '../backup/backupService';
+import { setDevMode, useDevMode } from '../devMode';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
@@ -347,12 +348,28 @@ function DataSection() {
 }
 
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
-  const { settings, updateSettings, isWrapped, unlockToday } = useApp();
+  const { settings, updateSettings, unlockToday } = useApp();
   const [openRow, setOpenRow] = useState<string | null>(null);
-  // 빌드 버전을 일곱 번 두드리면 테스트 도구가 열린다. 실사용자가 우연히 발견할 일은 없고,
+  // 빌드 버전을 일곱 번 두드리면 관리자 모드가 켜진다. 실사용자가 우연히 발견할 일은 없고,
   // 개발자는 하루 마감 잠금 때문에 다음 날까지 기다리지 않아도 된다.
+  //
+  // 켜짐 상태는 devMode 모듈(localStorage)에 있다. 예전엔 이 화면의 useState에만 있어서
+  // 탭을 옮기거나 모달을 열면 화면이 언마운트되면서 그대로 꺼졌다.
+  // 두드린 횟수는 이 화면에 머무는 동안만 의미가 있으므로 지역 상태로 남긴다.
   const [versionTaps, setVersionTaps] = useState(0);
-  const devToolsOpen = versionTaps >= 7;
+  const devToolsOpen = useDevMode();
+
+  function tapVersion() {
+    if (devToolsOpen) return;
+    const next = versionTaps + 1;
+    setVersionTaps(next);
+    if (next >= 7) setDevMode(true);
+  }
+
+  function turnOffDevMode() {
+    setDevMode(false);
+    setVersionTaps(0);
+  }
 
   function toggle(id: string) {
     setOpenRow(prev => prev === id ? null : id);
@@ -459,38 +476,56 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
         {devToolsOpen && (
           <>
-            <SectionHeader label="테스트 도구" />
+            <SectionHeader label="관리자 모드" />
             <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 12 }}>
+              <div style={{ minHeight: 50, padding: '10px 16px', borderBottom: '1px solid rgba(26,26,26,0.07)' }}>
+                <div style={{ fontSize: 15 }}>하루 한 편 제한 해제됨</div>
+                <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2, lineHeight: 1.5 }}>
+                  모드가 켜져 있는 동안은 같은 하루로 영상을 몇 번이든 만들 수 있고,
+                  마감한 날에도 계속 기록할 수 있어요
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => {
-                  if (!confirm('오늘의 마감 잠금을 풀까요?\n\n다시 기록하고 영상도 만들 수 있게 됩니다.\n이미 만든 영상과 아카이브 항목은 그대로 남습니다.')) return;
+                  if (!confirm('오늘의 마감 기록 자체를 지울까요?\n\n관리자 모드를 꺼도 오늘 하루가 잠기지 않게 됩니다.\n이미 만든 영상과 아카이브 항목은 그대로 남습니다.')) return;
                   unlockToday();
                 }}
-                disabled={!isWrapped}
                 style={{
-                  width: '100%', minHeight: 50, padding: '0 16px', display: 'flex', alignItems: 'center',
-                  background: 'none', border: 'none', textAlign: 'left', fontFamily: 'Inter, sans-serif',
-                  opacity: isWrapped ? 1 : 0.4, cursor: isWrapped ? 'pointer' : 'default',
+                  width: '100%', minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center',
+                  background: 'none', border: 'none', textAlign: 'left', fontFamily: 'Inter, sans-serif', cursor: 'pointer',
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15 }}>오늘 마감 잠금 풀기</div>
+                  <div style={{ fontSize: 15 }}>오늘 마감 기록 지우기</div>
                   <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>
-                    {isWrapped ? '같은 날 다시 기록·영상 생성을 해볼 수 있어요' : '오늘은 아직 마감하지 않았어요'}
+                    마감 플래그와 오늘 날짜의 영상 이용권을 함께 비워요
                   </div>
                 </div>
               </button>
             </div>
+            <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 12 }}>
+              <button
+                type="button"
+                onClick={turnOffDevMode}
+                style={{
+                  width: '100%', minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center',
+                  background: 'none', border: 'none', textAlign: 'left', fontFamily: 'Inter, sans-serif', cursor: 'pointer',
+                }}
+              >
+                <div style={{ flex: 1, fontSize: 15, color: '#E5533C' }}>관리자 모드 끄기</div>
+              </button>
+            </div>
             <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', padding: '0 16px 12px', lineHeight: 1.5 }}>
               테스트용입니다. 실제 사용에서는 하루에 영상 하나가 정책이에요.
+              이 모드는 앱을 다시 열어도 꺼지지 않으니, 실제로 써볼 때는 꼭 꺼주세요.
             </div>
           </>
         )}
 
         <button
           type="button"
-          onClick={() => setVersionTaps(n => n + 1)}
+          onClick={tapVersion}
           aria-label="빌드 버전"
           style={{ display: 'block', width: '100%', textAlign: 'center', fontSize: 11, color: 'rgba(26,26,26,0.3)', fontFamily: "'JetBrains Mono', monospace", padding: '8px 0', background: 'none', border: 'none' }}
         >

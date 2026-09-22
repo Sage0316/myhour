@@ -15,6 +15,7 @@ import { archiveVideoKey, markArchiveGenerated, saveVideoToIDB } from '../store'
 import type { ArchiveEntry } from '../store';
 import { consumeVideoForDate } from '../videoEntitlement';
 import { wrapUpService } from '../services/wrap-up-service';
+import { useDevMode } from '../devMode';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 
 interface WrapUpScreenProps {
@@ -32,6 +33,7 @@ const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenProps) {
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   const { records: todayRecords, settings } = useApp();
+  const devMode = useDevMode();
   // 아카이브 모드면 그 항목의 기록과 날짜를 쓴다. 아니면 오늘 것.
   const records = entry ? entry.records : todayRecords;
   const sessionDate = entry ? entry.date : getSessionDate(settings.startTime);
@@ -84,7 +86,8 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
   // 오늘 마감할 때는 날짜당 한 번이라는 이용권 규칙을 그대로 쓴다.
   // 아카이브 항목을 열었을 때는 "그 항목에 영상이 있는가"로 본다 — 같은 날짜에 항목이 두 개
   // 남아 있던 사용자는 날짜 기준으로 막으면 두 번째 항목의 영상을 영영 만들 수 없다.
-  const alreadyGenerated = entry ? entry.isWrapped : hasVideoForDate(sessionDate);
+  // 관리자 모드에서는 둘 다 무시한다 — 같은 하루로 몇 번이든 다시 만들어 볼 수 있다.
+  const alreadyGenerated = devMode ? false : entry ? entry.isWrapped : hasVideoForDate(sessionDate);
   // 감정 강도. 안 건드리면 AI가 고른 곡이 그 무드에서 몇 단계인지 되짚어 보여준다.
   const intensity = intensityPick
     ?? (director ? intensityForTrack(selectedMood.mood, director.bgmTrack) : 60);

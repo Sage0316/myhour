@@ -145,3 +145,11 @@ git pull --ff-only"
 **Context**: U1 기록 화면 UX 조정, 저장 구조·데이터 호환성 변경 없음
 
 ---
+
+## 관리자 모드 유지 실패와 영상 하루 한 편 제한 우회
+**Timestamp**: 2026-09-22T00:00:00Z
+**User Input**: "그리고 관리자모드가 안 돼 / 너가 시킨곳 7번 탭하면 관리자 모드가 되긴하는데 바로 풀림 / 영상을 나도 하루에 한 번 밖에 못 만들어 ㅡㅡ;;;"
+**AI Response**: "관리자 모드 상태가 `SettingsScreen`의 `useState`에만 있어서 탭 전환·모달로 화면이 언마운트되면 꺼졌다. `src/devMode.ts`(localStorage `hakku_dev_mode_v1` + `useSyncExternalStore`)로 옮겨 앱을 다시 열어도 유지되게 했고, 끄는 버튼을 추가했다. 켜져 있는 동안은 이용권·마감 잠금 게이트 네 곳(`isDayWrapped`, `wrapUpService.complete`, `WrapUpScreen.alreadyGenerated`, 아카이브 '다시 만들기')을 모두 건너뛰어 같은 하루로 영상을 여러 번 만들 수 있다. `wrapLock.test.ts`에 유지·우회 테스트 4건을 추가하고 `pnpm check` 전체 검증을 통과했다."
+**Context**: U6 테스트 도구 수정, 일반 사용자 정책(하루 한 편)은 그대로이며 관리자 모드에서만 우회
+
+---

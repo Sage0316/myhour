@@ -9,16 +9,21 @@ import { createStableId } from './domain/model';
 import { AppContext, type RecordMedia } from './appContext';
 import { cleanupOrphanMedia } from './media/cleanup';
 import { hasVideoForDate, releaseVideoForDate } from './videoEntitlement';
+import { isDevMode, useDevMode } from './devMode';
 
 // 하루가 마감됐는지는 두 곳에서 온다:
 // ① 이 하루의 isWrapped 플래그, ② 그 날짜로 이미 영상을 만들었다는 이용권 기록.
 // ②가 필요한 이유: 플래그를 false로 되돌리던 예전 버전에서 마감한 하루는 ①이 비어 있다.
 // 이용권은 영상이 실제로 만들어진 사실이라 나중에 지워지지 않는다 — 이쪽이 더 단단한 근거다.
+// 관리자 모드는 둘 다 건너뛴다. 한쪽만 건너뛰면 여전히 잠겨 보인다.
 function isDayWrapped(data: Pick<AppData, 'isWrapped' | 'date'>): boolean {
+  if (isDevMode()) return false;
   return data.isWrapped || hasVideoForDate(data.date);
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  // 관리자 모드가 켜지고 꺼질 때 마감 잠금이 즉시 다시 계산되도록 구독한다.
+  const devMode = useDevMode();
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [appData, setAppData] = useState<AppData>(() => loadAppData(loadSettings().startTime));
 
@@ -146,7 +151,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       records: appData.records,
-      isWrapped: isDayWrapped(appData),
+      // devMode를 여기서 읽어야 모드를 껐다 켤 때 잠금 표시가 즉시 따라온다
+      isWrapped: devMode ? false : isDayWrapped(appData),
       settings,
       slots,
       currentSlot,
