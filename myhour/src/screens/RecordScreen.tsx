@@ -12,7 +12,7 @@ interface RecordScreenProps {
 }
 
 type Mode = '영상' | '사진' | '음성' | '글';
-const MODES: Mode[] = ['영상', '사진', '음성', '글'];
+const MODES: Mode[] = ['사진', '영상', '음성', '글'];
 const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' };
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
@@ -467,8 +467,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   const { currentSlot: slot, settings } = useApp();
   const defaultMode: Mode = settings.captureMode === 'fixed'
-    ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '글')
-    : '글';
+    ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '사진')
+    : '사진';
 
   const [mode, setMode] = useState<Mode>(defaultMode);
   const [loading, setLoading] = useState(false);
