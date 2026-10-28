@@ -17,6 +17,7 @@ on:
         type: choice
         options:
           - ai
+          - media
           - all
 
 permissions:
@@ -64,3 +65,11 @@ jobs:
           else
             pnpm dlx wrangler@4.36.0 deploy
           fi
+      - name: Deploy Media Worker
+        # 배경음악 서버는 운영 환경 하나뿐이다
+        if: (inputs.worker == 'media' || inputs.worker == 'all') && inputs.environment == 'production'
+        working-directory: myhour/media-server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm dlx wrangler@4.36.0 deploy

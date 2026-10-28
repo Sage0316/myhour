@@ -298,3 +298,11 @@ git pull --ff-only"
 **Context**: U11 Code Generation 완료
 
 ---
+
+## U9 서버 허용 주소 — 코드 생성 완료
+**Timestamp**: 2026-10-28T09:12:35Z
+**User Input**: "응 계속 진행해줘"
+**AI Response**: "iOS 앱은 capacitor://localhost 주소에서 열리므로 AI 서버(hakku-ai)와 배경음악 서버(hakku-media)의 ALLOWED_ORIGINS에 추가했다. 푸시 서버는 앱이 폰 예약 알림을 쓰므로 그대로. Deploy Workers 워크플로에 배경음악 서버 배포(media / all, 운영만)를 추가했다. 서버 테스트 통과. 실제 배포는 사용자가 GitHub Actions에서 실행해야 한다(이 세션은 워크플로 실행 권한 없음)."
+**Context**: U9 Code Generation 완료, 배포 대기
+
+---

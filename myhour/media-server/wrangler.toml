@@ -7,4 +7,5 @@ binding = "MEDIA"
 bucket_name = "myhour-media"
 
 [vars]
-ALLOWED_ORIGINS = "https://sage0316.github.io"
+# capacitor://localhost = iOS 앱(Capacitor) 안에서 열린 하꾸
+ALLOWED_ORIGINS = "https://sage0316.github.io,capacitor://localhost"

@@ -41,7 +41,7 @@
 - [x] U8 iOS 앱 틀 — 코드 생성 완료, 클라우드 컴파일 확인 대기 (`construction/plans/u8-ios-app-shell-code-generation-plan.md`)
 - [x] U10 예약 알림 — 기능 설계·코드 생성 완료, 실기기 확인은 TestFlight 이후 (`construction/plans/u10-local-reminders-code-generation-plan.md`)
 - [x] U11 저장·공유 — 코드 생성 완료, 실기기 확인은 TestFlight 이후 (`construction/plans/u11-save-share-code-generation-plan.md`)
-- [ ] U9 서버 허용 주소
+- [x] U9 서버 허용 주소 — AI·배경음악 서버에 `capacitor://localhost` 추가, 배포 워크플로에 media 선택지 추가. 운영 배포는 사용자가 Deploy Workers(production, all) 실행
 - [ ] U14 출시용 정리
 - [ ] U13 결제·페이월
 - [ ] U15 클라우드 빌드
