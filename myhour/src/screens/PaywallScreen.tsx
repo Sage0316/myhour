@@ -106,7 +106,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div className="scroll-column" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <h1 style={{ ...TITLE, whiteSpace: 'pre-line' }}>{usedUp ? '이번 달 영상을\n다 만들었어요' : '오늘 하루를\n영상으로 남겨요'}</h1>
           <p style={{ margin: 0, fontSize: 14, color: COLOR.inkMuted, lineHeight: 1.6, whiteSpace: 'pre-line' }}>

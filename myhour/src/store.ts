@@ -485,6 +485,18 @@ export function addToArchive(entry: ArchiveEntry) {
   saveArchive(entries);
 }
 
+/**
+ * 테스트 도구 '오늘 마감 되돌리기'의 계획: 그 날짜의 가장 최근 아카이브 항목(addToArchive가 앞에 넣는다)의
+ * 기록을 지금 기록과 합친다(같은 id는 한 번만, 시간 순). 항목이 없으면 entry는 null.
+ */
+export function planUndoWrap(archive: ArchiveEntry[], current: MyRecord[], date: string): { entry: ArchiveEntry | null; records: MyRecord[] } {
+  const entry = archive.find(item => item.date === date) ?? null;
+  if (!entry) return { entry: null, records: current };
+  const byId = new Map<string, MyRecord>();
+  for (const record of [...entry.records, ...current]) if (!byId.has(record.id)) byId.set(record.id, record);
+  return { entry, records: [...byId.values()].sort((a, b) => a.createdAt - b.createdAt) };
+}
+
 export function removeFromArchive(entry: ArchiveEntry) {
   const entries = loadArchive().filter(item => item.id !== entry.id);
   saveArchive(entries);

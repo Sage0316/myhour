@@ -3,7 +3,7 @@ import {
   type MyRecord, type RecordType, type AppData, type AppSettings,
   loadAppData, saveAppData, loadSettings, saveSettings,
   getCurrentSlot, generateSlots, getSessionDate, deleteVideoFromIDB,
-  loadArchive,
+  loadArchive, planUndoWrap, removeFromArchive, archiveVideoKey,
 } from './store';
 import { createStableId } from './domain/model';
 import { AppContext, type RecordMedia } from './appContext';
@@ -130,18 +130,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAppData(fresh);
   }, [settings.startTime]);
 
-  // 테스트 도구 전용. 오늘의 마감 잠금을 풀어 같은 날 다시 기록·영상 생성을 해볼 수 있게 한다.
-  // 잠금 근거가 둘(플래그 + 이용권)이라 둘 다 풀어야 실제로 열린다.
-  const unlockToday = useCallback(() => {
+  // 테스트 도구 전용. 오늘 마감을 통째로 되돌린다: 아카이브로 간 오늘 기록을 오늘 화면으로 돌려놓고,
+  // 그 아카이브 항목과 만든 영상을 지우고, 잠금(플래그 + 이용권)을 둘 다 푼다.
+  // 순서가 중요하다 — 기록을 먼저 오늘로 옮긴 뒤 아카이브 항목을 지운다. 반대로 하면 그 사이에
+  // cleanupOrphanMedia가 사진을 참조 없는 파일로 보고 지울 수 있다. 사진 원본(media_*)은 건드리지 않는다.
+  const undoTodayWrap = useCallback(async (): Promise<number> => {
     const date = getSessionDate(settings.startTime);
+    const { entry, records } = planUndoWrap(loadArchive(), appData.date === date ? appData.records : [], date);
+    const next: AppData = { schemaVersion: 2, date, records, isWrapped: false };
+    saveAppData(next);
+    setAppData(next);
     releaseVideoForDate(date);
-    setAppData(prev => {
-      if (prev.date !== date) return prev;
-      const next = { ...prev, isWrapped: false };
-      saveAppData(next);
-      return next;
-    });
-  }, [settings.startTime]);
+    if (entry) {
+      removeFromArchive(entry);
+      await deleteVideoFromIDB(archiveVideoKey(entry)).catch(() => undefined);
+    }
+    return entry ? entry.records.length : 0;
+  }, [settings.startTime, appData]);
 
   return (
     <AppContext.Provider value={{
@@ -154,7 +159,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       deleteRecord,
       updateSettings,
       reset,
-      unlockToday,
+      undoTodayWrap,
     }}>
       {children}
     </AppContext.Provider>

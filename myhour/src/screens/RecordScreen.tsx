@@ -459,7 +459,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
   const isMedia = type === 'photo' || type === 'video' || type === 'meme';
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+    <div className="scroll-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
       {/* 미리보기 */}
       {isMedia && (
         <div style={{ borderRadius: 20, overflow: 'hidden', maxHeight: '42vh', flexShrink: 0, position: 'relative', border: `1.5px solid ${COLOR.ink}`, background: COLOR.beige }}>

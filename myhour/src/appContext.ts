@@ -18,8 +18,8 @@ export interface AppContextValue {
   deleteRecord: (id: string) => void;
   updateSettings: (updates: Partial<AppSettings>) => void;
   reset: () => void;
-  /** 테스트 도구 전용: 오늘의 마감 잠금(플래그 + 영상 이용권)을 푼다 */
-  unlockToday: () => void;
+  /** 테스트 도구 전용: 오늘 마감을 되돌린다 (기록을 오늘로, 아카이브 항목·영상 삭제, 잠금 해제). 되돌린 기록 수 */
+  undoTodayWrap: () => Promise<number>;
 }
 
 export const AppContext = createContext<AppContextValue | null>(null);

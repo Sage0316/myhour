@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   addToArchive, daysUntilTrim, generateClosing, guessMood, loadAppData, loadArchive,
-  needsTrimNotice, sweepArchive, type ArchiveEntry, type MyRecord,
+  needsTrimNotice, planUndoWrap, sweepArchive, type ArchiveEntry, type MyRecord,
 } from './store';
 import { journalRepository } from './repositories/journalRepository';
 
@@ -248,5 +248,26 @@ describe('마감한 하루는 다시 기록할 수 없다', () => {
 
     loadAppData('09:00');
     expect(loadArchive()).toHaveLength(0);
+  });
+});
+
+describe('오늘 마감 되돌리기 계획', () => {
+  const rec = (id: string, createdAt: number) => ({ id, slotTime: '10:00', type: 'text', content: id, createdAt }) as MyRecord;
+  const entry = (id: string, date: string, records: MyRecord[]) => ({ id, date, records, isWrapped: true, trimmed: false });
+
+  it('brings back the newest entry of that date, merged with anything recorded since, in time order', () => {
+    const archive = [
+      entry('new', '2026-10-28', [rec('a', 1), rec('b', 3)]),
+      entry('old', '2026-10-28', [rec('z', 0)]),
+      entry('other', '2026-10-27', [rec('y', 0)]),
+    ];
+    const plan = planUndoWrap(archive, [rec('c', 2), rec('a', 1)], '2026-10-28');
+    expect(plan.entry?.id).toBe('new');
+    expect(plan.records.map(r => r.id)).toEqual(['a', 'c', 'b']);
+  });
+
+  it('changes nothing when that date has no archive entry', () => {
+    const current = [rec('c', 2)];
+    expect(planUndoWrap([entry('other', '2026-10-27', [])], current, '2026-10-28')).toEqual({ entry: null, records: current });
   });
 });

@@ -480,7 +480,7 @@ function writeDevTools(on: boolean): void {
 }
 
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
-  const { settings, updateSettings, isWrapped, unlockToday } = useApp();
+  const { settings, updateSettings, isWrapped, undoTodayWrap } = useApp();
   const [openRow, setOpenRow] = useState<string | null>(null);
   // 웹 버전에서 빌드 버전을 일곱 번 두드리면 테스트 도구가 열린다. 개발자는 하루 마감 잠금 때문에
   // 다음 날까지 기다리지 않아도 된다. 앱스토어 앱(--mode app)에는 숨은 기능을 두지 않는다.
@@ -531,7 +531,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         <h1 style={TITLE}>설정</h1>
       </div>
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 22px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="no-scrollbar scroll-column" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 22px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Schedule */}
         <SettingGroup header="기록 시간">
@@ -635,9 +635,10 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
             <div style={{ ...CARD, overflow: 'hidden', marginBottom: 12 }}>
               <button
                 type="button"
-                onClick={() => {
-                  if (!confirm('오늘의 마감 잠금을 풀까요?\n\n다시 기록하고 영상도 만들 수 있게 됩니다.\n이미 만든 영상과 아카이브 항목은 그대로 남습니다.')) return;
-                  unlockToday();
+                onClick={async () => {
+                  if (!confirm('오늘 마감을 되돌릴까요?\n\n오늘 기록이 홈 화면으로 돌아오고, 오늘 만든 영상과 아카이브 항목은 지워져요.\n사진·글 같은 기록은 그대로 남아요.')) return;
+                  const restored = await undoTodayWrap();
+                  alert(restored > 0 ? `기록 ${restored}개를 오늘로 되돌렸어요. 하루 마감을 다시 할 수 있어요.` : '되돌릴 아카이브 항목이 없어서 잠금만 풀었어요.');
                 }}
                 disabled={!isWrapped}
                 style={{
@@ -647,9 +648,9 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15 }}>오늘 마감 잠금 풀기</div>
+                  <div style={{ fontSize: 15 }}>오늘 마감 되돌리기</div>
                   <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
-                    {isWrapped ? '같은 날 다시 기록·영상 생성을 해볼 수 있어요' : '오늘은 아직 마감하지 않았어요'}
+                    {isWrapped ? '오늘 기록을 되돌리고 영상을 새로 만들 수 있어요' : '오늘은 아직 마감하지 않았어요'}
                   </div>
                 </div>
               </button>

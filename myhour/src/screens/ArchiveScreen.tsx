@@ -266,7 +266,7 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
             </div>
           </div>
         </div>
-        <div style={{ overflowY: 'auto', overflowX: 'hidden', padding: '12px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="scroll-column" style={{ overflowY: 'auto', overflowX: 'hidden', padding: '12px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {sorted.map(r => <DetailRow key={r.id} record={r} />)}
         </div>
       </div>
