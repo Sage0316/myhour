@@ -441,3 +441,11 @@ git pull --ff-only"
 **Context**: 사용자 요청 + 발견한 버그 수정
 
 ---
+
+## 기록 칸 주소 자동완성 재수정
+**Timestamp**: 2026-10-28T14:59:10Z
+**User Input**: (캡션 입력 중 키보드 위에 '집 은평구 서울특별시 …' 주소 추천 스크린샷) "이것봐 아직도 주소로 나와"
+**AI Response**: "사파리는 autoComplete=off를 무시하고 키보드 추천 줄에 연락처 주소를 넣는다. 공용 noAutofill 속성(추천 줄을 끄는 autoCorrect=off, autoCapitalize=off, spellCheck=false, 주소와 무관한 name, 비밀번호 관리 앱 무시 표시)을 글 기록·한 줄 캡션·하루 마감 제목 칸에 적용했다. 폰에서 확인 필요. 키보드 위 '자동 완성 연락처' 버튼 자체는 웹에서 없앨 수 없다."
+**Context**: 사용자 피드백 반영, 폰 확인 대기
+
+---

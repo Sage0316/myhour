@@ -8,6 +8,7 @@ import { useApp, type RecordMedia } from '../appContext';
 import { createStableId } from '../domain/model';
 import { assertCaptureCapacity } from '../media/capabilities';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
+import { noAutofill } from '../noAutofill';
 import { saveCaptureToPhotos } from '../native/saveToPhotos';
 
 interface RecordScreenProps {
@@ -284,7 +285,7 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
       }}>
         <textarea
           // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
-          autoComplete="off"
+          {...noAutofill('text')}
           value={text}
           rows={2}
           maxLength={TEXT_MAX}
@@ -493,7 +494,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
         <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>한 줄 남기기 (선택)</span>
         <textarea
           // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
-          autoComplete="off"
+          {...noAutofill('caption')}
           value={text}
           maxLength={CAPTION_MAX}
           onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}
