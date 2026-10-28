@@ -1,0 +1,3 @@
+minimumReleaseAgeExclude:
+  - '@revenuecat/purchases-capacitor@13.8.0'
+  - '@revenuecat/purchases-typescript-internal-esm@19.17.0'

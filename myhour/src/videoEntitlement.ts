@@ -72,3 +72,8 @@ export function releaseVideoForDate(date: string): boolean {
   }
   return true;
 }
+
+/** 영상을 만든 시각 목록 — Standard 요금제의 결제 기간별 개수를 센다 */
+export function consumedTimes(): string[] {
+  return Object.values(readLedger().consumed);
+}

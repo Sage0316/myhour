@@ -46,6 +46,7 @@ jobs:
           VITE_AI_WORKER_URL: ${{ vars.VITE_AI_WORKER_URL }}
           VITE_PUSH_SERVER_URL: ${{ vars.VITE_PUSH_SERVER_URL }}
           VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+          VITE_REVENUECAT_IOS_KEY: ${{ vars.VITE_REVENUECAT_IOS_KEY }}
       - name: Show Xcode version
         run: xcodebuild -version
       - name: Compile for the iOS simulator without code signing

@@ -339,7 +339,68 @@ async function callProvider(body, env) {
 }
 
 // 코드 → HTTP 상태. 여기 없는 오류만 analysis_unavailable로 떨어진다.
+// ── 구독 확인 (U13) ───────────────────────────────────────────────────────────
+// 앱의 RevenueCat 사용자 ID = 설치 ID. REQUIRE_SUBSCRIPTION이 'true'일 때만 확인한다 —
+// 웹 버전을 닫는 날(U16)까지는 꺼 둔다.
+// Standard: 한 결제 기간에 연출한 날짜 15개까지 / Premium: 날짜 수 제한 없음 (날짜당 횟수 한도는 그대로)
+const STANDARD_DAYS_PER_PERIOD = 15;
+const SUBSCRIPTION_CACHE_SECONDS = 300;
+
+/** RevenueCat /v1/subscribers 응답 → { plan, periodStart } 또는 null. Premium이 우선이다 */
+export function parseSubscriber(body, now = Date.now()) {
+  const entitlements = body?.subscriber?.entitlements ?? {};
+  const subscriptions = body?.subscriber?.subscriptions ?? {};
+  for (const plan of ['premium', 'standard']) {
+    const entitlement = entitlements[plan];
+    if (!entitlement) continue;
+    const expires = entitlement.expires_date ? Date.parse(entitlement.expires_date) : Infinity;
+    if (!(expires > now)) continue;
+    const subscription = subscriptions[entitlement.product_identifier] ?? {};
+    return { plan, periodStart: subscription.purchase_date ?? entitlement.purchase_date ?? 'unknown' };
+  }
+  return null;
+}
+
+async function subscriptionFor(installationId, env) {
+  const cacheKey = `sub:${installationId}`;
+  const cached = await env.AI_STATE.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+  if (!env.REVENUECAT_SECRET_KEY) throw new Error('subscription_check_unavailable');
+  const res = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(installationId)}`, {
+    headers: { Authorization: `Bearer ${env.REVENUECAT_SECRET_KEY}` },
+  });
+  if (!res.ok) throw new Error('subscription_check_unavailable');
+  const subscription = parseSubscriber(await res.json());
+  // 구독 없음은 저장하지 않는다 — 방금 결제한 사람이 5분 동안 막히면 안 된다
+  if (subscription) await env.AI_STATE.put(cacheKey, JSON.stringify(subscription), { expirationTtl: SUBSCRIPTION_CACHE_SECONDS });
+  return subscription;
+}
+
+function standardKey(installationId, subscription) {
+  return `std:${installationId}:${subscription.periodStart}`;
+}
+
+async function standardDates(installationId, subscription, env) {
+  return JSON.parse(await env.AI_STATE.get(standardKey(installationId, subscription)) ?? '[]');
+}
+
+/** 구독 확인. 막아야 하면 오류 코드, 통과면 null */
+async function subscriptionError(installationId, subscription, date, env) {
+  if (!subscription) return 'subscription_required';
+  if (subscription.plan !== 'standard') return null;
+  const dates = await standardDates(installationId, subscription, env);
+  return !dates.includes(date) && dates.length >= STANDARD_DAYS_PER_PERIOD ? 'standard_limit_reached' : null;
+}
+
+async function recordStandardDate(installationId, subscription, date, env) {
+  if (subscription?.plan !== 'standard') return;
+  const dates = await standardDates(installationId, subscription, env);
+  if (dates.includes(date)) return;
+  await env.AI_STATE.put(standardKey(installationId, subscription), JSON.stringify([...dates, date]), { expirationTtl: 40 * 24 * 60 * 60 });
+}
+
 const ERROR_STATUS = {
+  subscription_check_unavailable: 503,
   provider_not_configured: 503,
   provider_auth_failed: 502,
   provider_forbidden: 502,
@@ -387,11 +448,17 @@ export default {
         }
         const body = await readJson(request);
         if (!validRequest(body)) return response(request, env, { error: 'invalid_request' }, 400);
+        const subscription = env.REQUIRE_SUBSCRIPTION === 'true' ? await subscriptionFor(installationId, env) : null;
+        if (env.REQUIRE_SUBSCRIPTION === 'true') {
+          const denied = await subscriptionError(installationId, subscription, body.date, env);
+          if (denied) return response(request, env, { error: denied }, 402);
+        }
         const limited = await quotaError(installationId, body.date, env);
         if (limited) return response(request, env, { error: limited }, 429);
         // 공급자 오류로 실패한 시도는 다시 연출 횟수를 쓰지 않는다
         const result = await callProvider(body, env);
         await consumeQuota(installationId, body.date, env);
+        await recordStandardDate(installationId, subscription, body.date, env);
         return response(request, env, { result });
       }
       return response(request, env, { error: 'not_found' }, 404);

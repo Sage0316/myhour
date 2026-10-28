@@ -330,3 +330,18 @@ git pull --ff-only"
 **Context**: U11 저장·공유 범위 확장, 실기기 확인은 TestFlight 이후
 
 ---
+
+## U13 결제·페이월 — 계획 승인
+**Timestamp**: 2026-10-28T09:42:13Z
+**User Input**: "승인"
+**AI Response**: "U13 코드 생성 계획 승인을 받아 구현을 시작했다."
+**Context**: U13 Code Generation 시작
+
+---
+
+## U13 결제·페이월 — 코드 생성 완료
+**Timestamp**: 2026-10-28T09:42:13Z
+**AI Response**: "이용권 판정, RevenueCat 연결 계층, 결제 화면, 하루 마감·설정 연결, AI 서버 구독 확인(스위치 꺼짐)을 구현했다. 웹과 키 없는 앱은 지금처럼 제한 없이 동작한다. 결제 화면 카드 정렬(선택 시 테두리 두께로 1px 밀림)을 스크린샷으로 확인해 고쳤다. pnpm check(테스트 87개, 서버 테스트 포함)와 e2e 통과."
+**Context**: U13 완료 보고, 결제 연결은 애플 계정·RevenueCat 가입 뒤
+
+---

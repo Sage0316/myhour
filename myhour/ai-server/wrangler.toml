@@ -19,10 +19,13 @@ namespace_id = "1001" # 계정 안에서 고유한 양의 정수로 변경
 ALLOWED_ORIGINS = "https://sage0316.github.io,capacitor://localhost"
 OPENAI_MODEL = "gpt-5.6-sol"
 OPENAI_REASONING_EFFORT = "low"
+# 구독 확인. 웹 버전을 닫는 날(U16)에 "true"로 바꾸고 REVENUECAT_SECRET_KEY를 등록한다
+REQUIRE_SUBSCRIPTION = "false"
 
 # 배포 환경에서만 등록:
 # npx wrangler secret put OPENAI_API_KEY
 # npx wrangler secret put INSTALL_TOKEN_SECRET
+# npx wrangler secret put REVENUECAT_SECRET_KEY (U16, 구독 확인을 켤 때)
 
 [env.preview]
 name = "hakku-ai-preview"

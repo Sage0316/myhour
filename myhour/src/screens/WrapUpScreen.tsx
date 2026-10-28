@@ -16,6 +16,10 @@ import type { ArchiveEntry } from '../store';
 import { consumeVideoForDate } from '../videoEntitlement';
 import { wrapUpService } from '../services/wrap-up-service';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
+import { canMakeVideo, formatMonthDay } from '../billing/access';
+import type { VideoAccess } from '../billing/access';
+import { getVideoAccess } from '../billing/purchases';
+import PaywallScreen from './PaywallScreen';
 import {
   BUTTON_DISABLED, BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, highlight, topPad,
 } from '../design';
@@ -95,6 +99,17 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
   // 아카이브 항목을 열었을 때는 "그 항목에 영상이 있는가"로 본다 — 같은 날짜에 항목이 두 개
   // 남아 있던 사용자는 날짜 기준으로 막으면 두 번째 항목의 영상을 영영 만들 수 없다.
   const alreadyGenerated = entry ? entry.isWrapped : hasVideoForDate(sessionDate);
+  // 구독 확인. 웹·결제 연결 전에는 바로 'unrestricted'가 와서 지금처럼 동작한다.
+  // 확인이 끝나기 전에는 AI를 부르지 않는다 — 구독 없는 사람의 연출에 비용이 나가지 않게.
+  const [access, setAccess] = useState<VideoAccess | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const locked = access !== null && !canMakeVideo(access);
+  useEffect(() => {
+    if (alreadyGenerated) return;
+    let alive = true;
+    getVideoAccess().then(next => { if (alive) setAccess(next); });
+    return () => { alive = false; };
+  }, [alreadyGenerated]);
   // 감정 강도. 안 건드리면 AI가 고른 곡이 그 무드에서 몇 단계인지 되짚어 보여준다.
   const intensity = intensityPick
     ?? (director ? intensityForTrack(selectedMood.mood, director.bgmTrack) : 60);
@@ -126,7 +141,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
 
   // AI는 **사용자가 확정 버튼을 누를 때만** 부른다.
   // 화면을 열었다는 이유로 부르면, "영상 없이 마감"만 눌러도 비용이 나간다.
-  const aiAvailable = hasAIConsent() && isAIConfigured() && records.length > 0 && !alreadyGenerated;
+  const aiAvailable = hasAIConsent() && isAIConfigured() && records.length > 0 && !alreadyGenerated && access !== null && !locked;
   const aiKey = aiAvailable ? directorKeyFor(records, sessionDate, intensityLevel, moodLock) : null;
   // 이 강도의 결과가 이미 화면에 적용돼 있는가
   const directorIsCurrent = aiKey !== null && directorKey === aiKey;
@@ -198,6 +213,11 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
     if (records.length === 0 || generating) return;
     if (alreadyGenerated) {
       setGenError('이 날짜는 이미 영상을 만들었어요. 아카이브에서 확인할 수 있어요.');
+      return;
+    }
+    if (access === null) return;
+    if (locked) {
+      setPaywallOpen(true);
       return;
     }
     setGenerating(true);
@@ -390,6 +410,17 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
             </button>
           )}
 
+          {locked && (
+            <div style={{ border: `1.5px solid ${COLOR.ink}`, borderRadius: 12, background: '#FFFDF6', padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ flex: 1, fontSize: 13, color: COLOR.inkSub, lineHeight: 1.5 }}>
+                {access?.kind === 'standard_used_up'
+                  ? `이번 달 영상 15개를 다 만들었어요.${access.resetsAt ? ` ${formatMonthDay(access.resetsAt)}에 다시 채워져요.` : ''}`
+                  : 'AI 연출과 하루 영상은 구독으로 만들어요. 3일은 무료예요.'}
+              </span>
+              <button type="button" onClick={() => setPaywallOpen(true)} style={{ ...PILL_BUTTON, flexShrink: 0, background: COLOR.yellow }}>요금제 보기</button>
+            </div>
+          )}
+
           {analyzeError && (
             <div style={{ fontSize: 12, color: COLOR.red }}>{analyzeError}</div>
           )}
@@ -485,6 +516,9 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               </div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>{entry ? '탭하면 이 날이 영상이 돼요' : '탭하면 오늘이 영상이 돼요'}</div>
             </button>
+            {access?.kind === 'allowed' && access.remaining !== null && !alreadyGenerated && (
+              <div style={{ fontSize: 12, color: COLOR.inkMuted, textAlign: 'center' }}>이번 달 남은 영상 {access.remaining}개</div>
+            )}
             {genError && (
               <div style={{ fontSize: 13, color: COLOR.red, lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
             )}
@@ -517,6 +551,16 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
           </button>
         )}
       </div>
+      {paywallOpen && (
+        <PaywallScreen
+          onClose={() => setPaywallOpen(false)}
+          standardResetsAt={access?.kind === 'standard_used_up' ? access.resetsAt : undefined}
+          onSubscribed={() => {
+            setPaywallOpen(false);
+            void getVideoAccess().then(setAccess);
+          }}
+        />
+      )}
     </div>
   );
 }

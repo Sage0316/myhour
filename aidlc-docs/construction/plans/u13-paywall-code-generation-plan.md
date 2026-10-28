@@ -1,4 +1,4 @@
-# U13 결제·페이월 — 코드 생성 계획 (승인 대기)
+# U13 결제·페이월 — 코드 생성 계획 (2026-10-28 승인, 코드 생성 완료 · 결제 연결은 계정 생긴 뒤)
 
 ## 사용자가 정한 상품 (2026-10-28 질문 1~6 답변)
 | 항목 | 결정 |
@@ -17,7 +17,7 @@
 - 상품 ID: `com.hakku.app.standard.monthly`, `com.hakku.app.premium.monthly` / RevenueCat 권한(entitlement): `standard`, `premium`
 - 키가 없을 때(지금): 결제 기능은 "준비 중" 상태로 동작하고, 웹 버전은 지금처럼 제한 없이 쓴다.
 
-## 단계
+## 단계 (모두 완료)
 1. **이용권 판정 로직** `src/billing/access.ts` (순수 함수 + 속성 테스트)
    - 입력: 구독 상태(없음/standard/premium, 현재 결제 기간 시작·끝), 이번 기간에 영상 만든 날짜들, 오늘 날짜
    - 출력: 허용 / 결제 필요 / Standard 소진(다음 충전일) / 오늘 이미 만듦
@@ -42,3 +42,14 @@
 - RevenueCat 가입(무료) → 앱 등록 → 키 2개(앱용 공개 키, 서버용 비밀 키) 받기
 - 공개 키는 GitHub 저장소 변수, 비밀 키는 Cloudflare 비밀값으로 넣기 (방법은 그때 안내)
 - 이용약관·개인정보처리방침 페이지는 U16에서 만든다 (지금은 링크 자리만)
+
+## 구현 결과
+- `src/billing/access.ts` + 테스트 6개(속성 테스트 포함): unrestricted / allowed(남은 개수) / subscribe / standard_used_up(충전일)
+- `src/billing/purchases.ts` + 테스트 4개: RevenueCat 연결(`@revenuecat/purchases-capacitor` 13.8.0), 앱 사용자 ID = 설치 ID, 키(`VITE_REVENUECAT_IOS_KEY`)가 없거나 웹이면 결제 꺼짐
+- `src/screens/PaywallScreen.tsx`: 요금제 카드 2개(Premium 추천), 3일 무료 문구(체험 자격 없으면 바로 구독 문구), 자동 갱신·해지 안내, 구매 복원·이용약관(애플 표준 EULA)·개인정보처리방침 링크
+- 하루 마감: 구독 확인이 끝나기 전에는 AI를 부르지 않음, 잠겨 있으면 안내 카드 + 영상 만들기 누르면 결제 화면, Standard 남은 개수 표시
+- 설정 > 구독(결제 켜진 앱에서만): 요금제·체험·남은 개수·다음 결제일, 요금제 보기, 구독 관리·해지, 구매 복원
+- 웹 테스트 도구에 "결제 화면 미리보기"
+- AI 서버: `REQUIRE_SUBSCRIPTION`(지금 "false") 켜지면 RevenueCat으로 구독 확인(있음만 5분 저장), 없으면 402 `subscription_required`, Standard는 결제 기간에 연출한 날짜 15개 넘으면 402 `standard_limit_reached`. 서버 테스트 추가
+- iOS 빌드 워크플로에 `VITE_REVENUECAT_IOS_KEY` 저장소 변수 연결
+- 검증: pnpm check(단위 테스트 87개 + 서버 테스트), e2e 2개 통과, 웹 화면 변화 없음 확인

@@ -8,6 +8,10 @@ import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePu
 import TabBar from '../components/TabBar';
 import { shareFileNative } from '../native/shareFile';
 import { isAutoSaveEnabled, setAutoSaveEnabled } from '../native/saveToPhotos';
+import { getVideoAccess, isBillingActive, MANAGE_SUBSCRIPTIONS_URL, restorePurchases, getSubscription } from '../billing/purchases';
+import { formatMonthDay } from '../billing/access';
+import type { Subscription, VideoAccess } from '../billing/access';
+import PaywallScreen from './PaywallScreen';
 import { exportCompleteBackup, restoreCompleteBackup, type BackupProgress } from '../backup/backupService';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -156,6 +160,7 @@ const SECTION_COLORS: Record<string, string> = {
   '알림': 'rgba(184,214,120,0.75)',
   '데이터': 'rgba(132,190,236,0.6)',
   'AI 촬영감독': 'rgba(255,214,90,0.7)',
+  '구독': 'rgba(240,170,170,0.6)',
 };
 
 function SectionHeader({ label }: { label: string }) {
@@ -273,6 +278,76 @@ function AISection() {
   );
 }
 
+// 구독 — 결제가 연결된 앱에서만 보인다
+function SubscriptionSection() {
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [access, setAccess] = useState<VideoAccess | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function refresh() {
+    const [sub, next] = await Promise.all([getSubscription().catch(() => null), getVideoAccess()]);
+    setSubscription(sub);
+    setAccess(next);
+  }
+
+  useEffect(() => { void refresh(); }, []);
+
+  async function handleRestore() {
+    if (busy) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const restored = await restorePurchases();
+      setMessage(restored ? '구독을 복원했어요.' : '복원할 구독이 없어요.');
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '구매를 복원하지 못했어요.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const planName = subscription ? (subscription.plan === 'premium' ? 'Premium' : 'Standard') : '구독 안 함';
+  const detail = !subscription
+    ? '기록은 무료, 하루 영상은 구독으로 만들어요'
+    : [
+      subscription.isTrial ? '무료 체험 중' : null,
+      access?.kind === 'allowed' && access.remaining !== null ? `남은 영상 ${access.remaining}개` : null,
+      access?.kind === 'standard_used_up' ? '이번 달 영상을 다 썼어요' : null,
+      subscription.periodEnd ? `다음 결제일 ${formatMonthDay(subscription.periodEnd)}` : null,
+    ].filter(Boolean).join(' · ');
+  const rowButton: React.CSSProperties = { display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', background: 'none', border: 'none', borderTop: `1.5px dashed ${COLOR.dash}`, cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, fontSize: 15, textAlign: 'left' };
+
+  return (
+    <div>
+      <SectionHeader label="구독" />
+      <div style={{ ...CARD, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', minHeight: 60 }}>
+          <IconTile bg={COLOR.yellow}><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" /></IconTile>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>{planName}</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>{detail}</div>
+          </div>
+        </div>
+        <button type="button" onClick={() => setPaywallOpen(true)} style={rowButton}>{subscription ? '요금제 보기' : '3일 무료로 시작하기'}</button>
+        {subscription && (
+          <a href={MANAGE_SUBSCRIPTIONS_URL} target="_blank" rel="noreferrer" style={{ ...rowButton, textDecoration: 'none', boxSizing: 'border-box' }}>구독 관리·해지</a>
+        )}
+        <button type="button" onClick={handleRestore} disabled={busy} style={rowButton}>{busy ? '복원 중…' : '구매 복원'}</button>
+      </div>
+      {message && <div role="status" style={{ fontSize: 12, color: COLOR.inkMuted, padding: '8px 4px' }}>{message}</div>}
+      {paywallOpen && (
+        <PaywallScreen
+          onClose={() => setPaywallOpen(false)}
+          onSubscribed={() => { setPaywallOpen(false); void refresh(); }}
+        />
+      )}
+    </div>
+  );
+}
+
 function DataSection() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -386,6 +461,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   // 다음 날까지 기다리지 않아도 된다. 앱스토어 앱(--mode app)에는 숨은 기능을 두지 않는다.
   const [versionTaps, setVersionTaps] = useState(0);
   const devToolsOpen = DEV_TOOLS_AVAILABLE && versionTaps >= 7;
+  const [paywallPreview, setPaywallPreview] = useState(false);
   // 사진첩 자동 저장은 앱에서만 된다 (웹은 사진첩에 직접 쓸 수 없다)
   const native = isNativeApp();
   const [autoSave, setAutoSave] = useState(isAutoSaveEnabled);
@@ -501,6 +577,8 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
           )}
         </SettingGroup>
 
+        {isBillingActive() && <SubscriptionSection />}
+
         <PushSection />
 
         <DataSection />
@@ -532,6 +610,14 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
                 </div>
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => setPaywallPreview(true)}
+              style={{ ...CARD, width: '100%', minHeight: 50, padding: '0 16px', marginBottom: 12, textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink, fontSize: 15, cursor: 'pointer' }}
+            >
+              결제 화면 미리보기
+            </button>
+            {paywallPreview && <PaywallScreen onClose={() => setPaywallPreview(false)} onSubscribed={() => setPaywallPreview(false)} />}
             <div style={{ fontSize: 11, color: COLOR.inkMuted, padding: '0 16px 12px', lineHeight: 1.5 }}>
               테스트용입니다. 실제 사용에서는 하루에 영상 하나가 정책이에요.
             </div>

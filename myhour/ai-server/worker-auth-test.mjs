@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import worker, { normalizeResult } from './worker.js';
+import worker, { normalizeResult, parseSubscriber } from './worker.js';
 
 class MemoryKV {
   values = new Map();
@@ -211,4 +211,82 @@ console.log('✅ AI ERROR CODES OK');
   assert.equal(overDaily.body.error, 'daily_quota_exceeded', '날짜를 바꿔 가며 보내도 하루 전체 상한에 걸린다');
 
   console.log('✅ AI QUOTA OK (날짜당 연출 1번 + 다시 3번)');
+}
+
+// 구독 확인 (U13): REQUIRE_SUBSCRIPTION이 켜졌을 때만. Standard는 결제 기간에 15개 날짜까지.
+{
+  const future = new Date(Date.now() + 10 * 86_400_000).toISOString();
+  const past = new Date(Date.now() - 86_400_000).toISOString();
+  const subscriber = (plan, expires = future, start = '2026-10-28T09:00:00Z') => ({
+    subscriber: {
+      entitlements: { [plan]: { expires_date: expires, product_identifier: `com.hakku.app.${plan}.monthly`, purchase_date: start } },
+      subscriptions: { [`com.hakku.app.${plan}.monthly`]: { purchase_date: start, expires_date: expires } },
+    },
+  });
+
+  assert.deepEqual(parseSubscriber(subscriber('premium')), { plan: 'premium', periodStart: '2026-10-28T09:00:00Z' });
+  assert.equal(parseSubscriber(subscriber('standard', past)), null, '만료된 구독은 없는 것으로 본다');
+  assert.equal(parseSubscriber({ subscriber: { entitlements: {}, subscriptions: {} } }), null);
+  const both = subscriber('standard');
+  Object.assign(both.subscriber.entitlements, subscriber('premium').subscriber.entitlements);
+  Object.assign(both.subscriber.subscriptions, subscriber('premium').subscriber.subscriptions);
+  assert.equal(parseSubscriber(both).plan, 'premium', 'Premium이 Standard보다 우선');
+
+  const okProvider = new Response(JSON.stringify({
+    output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ ...directorBase, closing: '라면 국물을 다 마시고 불을 껐다.' }) }] }],
+  }), { status: 200 });
+
+  async function directAs(plan, dates, extraEnv = {}, usedStandardDates = []) {
+    const subEnv = { ...env, AI_STATE: new MemoryKV(), OPENAI_API_KEY: 'test-key', REVENUECAT_SECRET_KEY: 'rc-secret', REQUIRE_SUBSCRIPTION: 'true', ...extraEnv };
+    const installationId = crypto.randomUUID();
+    // 하루 전체 상한(8번) 때문에 15일치를 한 번에 부를 수 없어서, 지난 날짜들은 미리 채워 둔다
+    if (usedStandardDates.length) await subEnv.AI_STATE.put(`std:${installationId}:2026-10-28T09:00:00Z`, JSON.stringify(usedStandardDates));
+    const fresh = await worker.fetch(request('/v1/install', { installationId }), subEnv);
+    const { token: subToken } = await fresh.json();
+    const realFetch = globalThis.fetch;
+    let revenueCatCalls = 0;
+    globalThis.fetch = async url => {
+      if (String(url).startsWith('https://api.revenuecat.com/')) {
+        revenueCatCalls++;
+        return new Response(JSON.stringify(plan ? subscriber(plan) : { subscriber: { entitlements: {}, subscriptions: {} } }), { status: 200 });
+      }
+      return okProvider.clone();
+    };
+    try {
+      const statuses = [];
+      for (const date of dates) {
+        const res = await worker.fetch(request('/v1/direct', { ...directBody, date }, subToken), subEnv);
+        statuses.push({ status: res.status, error: (await res.json()).error });
+      }
+      return { statuses, revenueCatCalls };
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  }
+
+  const none = await directAs(null, ['10월 28일 수요일', '10월 28일 수요일']);
+  assert.deepEqual(none.statuses.map(s => s.error), ['subscription_required', 'subscription_required']);
+  assert.equal(none.revenueCatCalls, 2, '구독 없음은 저장하지 않고 매번 다시 확인한다 (방금 결제한 사람이 막히지 않게)');
+
+  const days = Array.from({ length: 16 }, (_, i) => `11월 ${i + 1}일`);
+  const standard = await directAs('standard', [days[14], days[0], days[15]], {}, days.slice(0, 14));
+  assert.equal(standard.statuses[0].status, 200, 'Standard는 15번째 날짜까지 연출');
+  assert.equal(standard.statuses[1].status, 200, '이미 쓴 날짜를 다시 연출하는 건 새 날짜가 아니다');
+  assert.deepEqual(standard.statuses[2], { status: 402, error: 'standard_limit_reached' });
+  assert.equal(standard.revenueCatCalls, 1, '구독 있음은 5분 동안 저장해 매번 묻지 않는다');
+
+  const fresh = await directAs('standard', days.slice(0, 2));
+  assert.ok(fresh.statuses.every(s => s.status === 200), '새 Standard 구독은 바로 연출');
+
+  const premium = await directAs('premium', days.slice(0, 2), {}, days.slice(0, 14));
+  assert.ok(premium.statuses.every(s => s.status === 200), 'Premium은 날짜 수 제한 없음');
+
+  const off = await directAs(null, ['10월 28일 수요일'], { REQUIRE_SUBSCRIPTION: 'false' });
+  assert.equal(off.statuses[0].status, 200, '스위치가 꺼져 있으면 지금처럼 동작');
+  assert.equal(off.revenueCatCalls, 0);
+
+  const noKey = await directAs('premium', ['10월 28일 수요일'], { REVENUECAT_SECRET_KEY: '' });
+  assert.deepEqual(noKey.statuses[0], { status: 503, error: 'subscription_check_unavailable' });
+
+  console.log('✅ AI SUBSCRIPTION OK (구독 없음 차단 · Standard 15일 · Premium · 스위치)');
 }
