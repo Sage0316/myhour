@@ -30,7 +30,7 @@
 ### 🔵 INCEPTION PHASE
 - [x] Workspace Detection — brownfield, 기존 맥락 문서 사용
 - [-] Reverse Engineering — 생략 (`PROJECT_CONTEXT.md`, `IMPLEMENTATION_SUMMARY.md`로 대체)
-- [ ] Requirements Analysis — 질문 파일 작성, 사용자 답변 대기 (`inception/requirements/requirement-verification-questions.md`)
+- [ ] Requirements Analysis — 답변 반영, `inception/requirements/requirements.md` 작성, 사용자 승인 대기
 - [ ] User Stories
 - [ ] Workflow Planning
 - [ ] Application Design

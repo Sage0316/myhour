@@ -1,7 +1,7 @@
 # iOS 앱스토어 출시 — 요구사항 확인 질문
 
 하꾸를 iOS 앱으로 앱스토어에 유료 출시하기 위한 질문이에요.
-각 질문의 `[Answer]:` 뒤에 알파벳을 적어 주세요. 대화에서 이미 정한 건 `[Answer]:`에 미리 채워 두었어요. 맞으면 그대로 두고, 다르면 고쳐 주세요.
+사용자가 md 파일을 열 수 없어 2026-10-28 대화의 선택형 질문으로 하나씩 답했고, 그 답을 아래 `[Answer]:`에 옮겨 적었다.
 
 ---
 
@@ -16,7 +16,7 @@ B) 법인을 세운 뒤 조직 계정으로 시작 (회사 이름 노출, D-U-N-
 
 C) 개인 계정으로 먼저 출시하고, 나중에 법인으로 앱 이전
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -29,7 +29,7 @@ B) EU를 뺀 전 세계
 
 C) EU 포함 전 세계 (판매자 연락처 공개 감수)
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: B
 
 [Answer]: 
 
@@ -40,7 +40,7 @@ A) 아이폰 전용
 
 B) 아이폰 + 아이패드
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -55,7 +55,7 @@ A) 3일 무료 체험(한달권 구독에 붙임) + 한달권 5,500원 자동 �
 
 B) 3일 무료(결제 수단 등록 없이 앱에서 바로 열어 줌) + 한달권 5,500원 + 15일권 3,300원 — 단, 재설치하면 다시 무료가 되는 구멍이 생겨요
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: A (대화에서 3일 무료 + 15일권 3,300원 + 한달권 5,500원으로 정함 — 체험 방식만 확인)
 
@@ -68,7 +68,7 @@ B) 기록하기와 영상 만들기(기본 연출)는 무료, **AI 연출**만 �
 
 C) 앱 전체가 유료 (체험이 끝나면 기록하기도 막힘)
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -79,7 +79,7 @@ A) 계속 보고 저장(다운로드)할 수 있고, 새로 만드는 것만 막
 
 B) 보기는 되지만 저장(다운로드)은 막는다
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -96,7 +96,7 @@ B) 웹 버전은 남기되 AI 연출은 끔 (AI 서버가 앱 요청만 받음)
 
 C) 웹 버전도 그대로 유지 (무료로 열어 둠)
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -107,7 +107,7 @@ A) 있다 — 웹에서 백업 내보내기 → 앱에서 가져오기로 옮길
 
 B) 없다 — 출시 전이라 옮길 데이터가 없다
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: B
 
 [Answer]: 
 
@@ -122,7 +122,7 @@ A) 폰 자체 예약 알림으로 바꾼다 (알림 서버가 필요 없고, 기
 
 B) 애플 푸시 서버(APNs)를 붙여 지금처럼 서버에서 보낸다
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -133,7 +133,7 @@ A) 출시 전에 넣는다 (추천)
 
 B) 지금 디자인으로 먼저 출시하고 업데이트로 넣는다
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -144,7 +144,7 @@ A) RevenueCat 같은 결제 관리 서비스를 쓴다 (빠르고 검증된 방�
 
 B) 애플 StoreKit 2를 직접 쓰고, 지금 AI 서버(Cloudflare)에서 영수증을 검증한다 (외부 서비스 없음, 직접 만들 게 많음)
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -159,7 +159,7 @@ A) 하꾸
 
 B) 하꾸 - 하루 꾸미기
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: B
 
 [Answer]: 
 
@@ -170,7 +170,7 @@ A) `com.hakku.app` 같은 새 이름 (도메인이 없어도 됨, 다른 앱이 
 
 B) 갖고 있는 도메인 기반 (Other에 도메인 적어 주세요)
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: 
 
@@ -181,6 +181,6 @@ A) GitHub Actions의 Mac 서버로 클라우드 빌드 → TestFlight로 펌킨 
 
 B) 새 Mac(또는 빌려 쓸 Mac)을 쓴다
 
-X) Other (please describe after [Answer]: tag below)
+X) Other (please describe after [Answer]: A
 
 [Answer]: A (대화에서 Windows + 2013년형 Mac만 있다고 확인)

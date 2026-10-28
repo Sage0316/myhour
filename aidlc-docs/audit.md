@@ -161,3 +161,11 @@ git pull --ff-only"
 **Context**: Workspace Detection 완료, 대화에서 이미 나온 결정(개인 계정 고민, 유료 출시, 3일 무료+15일권 3,300원+한달권 5,500원, Windows·2013년형 Mac만 보유, Apple Developer 미가입)을 요구사항 질문 파일에 반영
 
 ---
+
+## Requirements Analysis — 질문 답변
+**Timestamp**: 2026-10-28T07:55:25Z
+**User Input**: "나한테 하나씩 물어봐줘 엠디파일 안 열려" → 선택형 질문 답변: 계정 "개인으로 시작 (추천)", 출시 국가 "EU 빼고 전 세계 (추천)", 지원 기기 "아이폰 전용 (추천)", 무료 체험 "애플 구독 체험 (추천)", 유료 범위 "영상 + AI 연출만 유료", 만료 후 "보기·저장 계속 가능 (추천)", 웹 버전 "웹 버전 종료 (추천)", 데이터 이전 "없어, 새로 시작", 알림 "폰 예약 알림 (추천)", 디자인 "출시 전에 넣기 (추천)", 결제 확인 "RevenueCat 사용 (추천)", 앱 이름 "하꾸 - 하루 꾸미기", 번들 ID "com.hakku.app (추천)", 빌드 환경 "클라우드 빌드 (추천)"
+**AI Response**: "사용자가 md 파일을 열 수 없어 질문 14개를 대화의 선택형 질문으로 나눠 받았고, 답을 requirement-verification-questions.md에 옮겨 적었다. 추가 모호점이 없어 requirements.md를 작성했다. User Stories는 사용자 유형이 하나라 생략을 제안한다."
+**Context**: Requirements Analysis 답변 수집 및 요구사항 문서 작성, 승인 요청
+
+---
