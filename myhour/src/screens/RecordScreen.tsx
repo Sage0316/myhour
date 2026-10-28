@@ -282,6 +282,8 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
         ...CARD, borderRadius: 18, padding: '14px 18px 10px',
       }}>
         <textarea
+          // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
+          autoComplete="off"
           value={text}
           rows={2}
           maxLength={TEXT_MAX}
@@ -489,6 +491,8 @@ function CaptionStep({ content, type, onSave, onRetake }: {
       <div style={{ flex: 1, ...CARD, padding: '14px 16px', minHeight: 100, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>한 줄 남기기 (선택)</span>
         <textarea
+          // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
+          autoComplete="off"
           value={text}
           maxLength={CAPTION_MAX}
           onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}

@@ -324,6 +324,8 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                 {editingTitle ? (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <input
+                      // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
+                      autoComplete="off"
                       value={titleDraft}
                       onChange={e => setTitleDraft(e.target.value.slice(0, TITLE_MAX))}
                       onKeyDown={e => { if (e.key === 'Enter') commitTitle(); }}
