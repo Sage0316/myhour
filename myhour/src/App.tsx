@@ -117,7 +117,8 @@ function AppContent() {
       // 폰에서는 실제 상태 표시줄 높이만큼만 위를 비운다 (데스크톱 미리보기 틀은 가짜 상태 표시줄 높이).
       <div style={{
         position: 'fixed', inset: 0, overflow: 'hidden', background: '#FBF7EC',
-        '--top-inset': 'env(safe-area-inset-top, 0px)',
+        // 상태 표시줄 밑 흐림 효과에 위 글씨가 덮이지 않게 28px 더 내린다
+        '--top-inset': 'calc(env(safe-area-inset-top, 0px) + 28px)',
       } as React.CSSProperties}>
         {activeScreen}
       </div>

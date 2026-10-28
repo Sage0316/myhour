@@ -251,3 +251,11 @@ git pull --ff-only"
 **Context**: U12 실제 기기 피드백 반영
 
 ---
+
+## U12 디자인 — 위 여백 추가
+**Timestamp**: 2026-10-28T08:48:09Z
+**User Input**: "아니 이 앱 사이즈 그대로 밑으로 조금만 더 내려줘"
+**AI Response**: "요소 크기는 그대로 두고 폰 화면의 위 여백만 28px 늘렸다(--top-inset = safe-area-inset-top + 28px). 6개 화면 모두 적용, 데스크톱 미리보기 틀은 그대로."
+**Context**: U12 실제 기기 피드백 반영
+
+---
