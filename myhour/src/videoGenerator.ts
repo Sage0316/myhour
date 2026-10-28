@@ -4,8 +4,9 @@ import {
   W, H, PAPER,
   drawCover, drawVideoCover,
   fallbackEmojisFor, splitEmojis, ensureDiaryFont,
-  drawTitleScene, drawPhotoScene, drawAudioScene, drawVideoOverlay,
+  drawPhotoScene, drawAudioScene, drawVideoOverlay,
 } from './scenes';
+import { drawTitleScene } from './scenesCover';
 import { drawClosingScene } from './scenesClosing';
 import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 import { loadMediaBlob } from './persistence/mediaRepository';
@@ -390,7 +391,7 @@ export async function generateVideo(
   const tick = () => { framesDone++; onProgress?.(Math.min(framesDone / totalFrames, 0.99)); };
 
   await renderSegment(TITLE_DUR, (t) => {
-    drawTitleScene(ctx, { title, dateStr, count: records.length, types: records.map(r => r.type) }, t);
+    drawTitleScene(ctx, { title, dateStr, count: records.length, date: overrides?.date }, t);
   }, tick, signal);
 
   // Each record — AI 자막은 사용자가 캡션을 직접 쓰지 않은 기록에만 들어가고,

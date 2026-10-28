@@ -2,8 +2,9 @@
 import type { MyRecord } from './store';
 import {
   W, H, ensureDiaryFont,
-  drawTitleScene, drawPhotoScene, drawAudioScene,
+  drawPhotoScene, drawAudioScene,
 } from './scenes';
+import { drawTitleScene } from './scenesCover';
 import { drawClosingScene } from './scenesClosing';
 import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 
@@ -68,7 +69,7 @@ async function main() {
   await ensureDiaryFont();
   const t = 0.6; // 애니메이션이 끝난 시점
 
-  drawTitleScene(cell('title'), { title: '커피 두 잔의 날', dateStr: '7.18 금요일', count: 5, types: ['text', 'photo', 'video', 'text', 'audio'] }, t);
+  drawTitleScene(cell('title'), { title: '커피 두 잔의 날', dateStr: '7월 18일 금요일', count: 5, date: '2026-07-18' }, t);
 
   // 키워드 사전 매칭 (AI 없이) — 내용을 그리는 이모지가 자동으로 붙는다
   drawDiaryScene(cell('그림일기 · 떡볶이'), rec('z9', 'text', '퇴근하고 떡볶이 먹음'), MOOD_EMOJI, t);

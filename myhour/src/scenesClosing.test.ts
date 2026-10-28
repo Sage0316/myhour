@@ -19,3 +19,12 @@ describe('마지막 장면 고르기', () => {
     }));
   });
 });
+
+describe('첫 장면(공책 표지) 고르기', () => {
+  it('alternates covers day by day', async () => {
+    const { COVER_VARIANTS, coverVariantIndex } = await import('./scenesCover');
+    expect(COVER_VARIANTS.length).toBe(2);
+    expect(coverVariantIndex('2026-10-28', '')).not.toBe(coverVariantIndex('2026-10-29', ''));
+    expect(coverVariantIndex('2026-10-28', 'x')).toBe(coverVariantIndex('2026-10-28', 'y'));
+  });
+});

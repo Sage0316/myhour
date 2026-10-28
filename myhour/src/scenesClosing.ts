@@ -1,8 +1,10 @@
 // 마지막 장면(마무리 문장) — 다꾸 스타일 여러 장. 날짜마다 돌아가며 써서 연속 이틀 같은 장면이 나오지 않는다.
-// 2026-10-28 펌킨이 핀터레스트에서 고른 분위기(깅엄·손그림 별·데님 레이스·집게 메모지·하트 체크 — 소용돌이 별밤은 시안에서 뺐다)를
+// 2026-10-28 펌킨이 핀터레스트에서 고른 분위기(깅엄·손그림 별·데님 레이스·집게 메모지·하트 체크·패치워크 — 소용돌이 별밤은 시안에서 뺐고,
+// 패치워크는 첫 장면 시안에서 옮겨 왔다)를
 // 사진을 쓰지 않고 캔버스로 직접 그렸다. 모든 좌표는 540×960 논리 좌표계.
 import { W, H, HAND, roundRectPath, seededRnd } from './scenes';
 import { C, fitHand, heart, noShadow, rotateAround, softShadow, star, washi, wrapWords } from './scenesDakku';
+import { goldStar, heartPath, starPath, weave as weaveRect } from './scenesCover';
 
 export interface ClosingOpts {
   closing: string;
@@ -302,6 +304,88 @@ function closingHeartPlaid(ctx: CanvasRenderingContext2D, o: ClosingOpts, t: num
   ctx.globalAlpha = 1;
 }
 
+// ─── 6. 패치워크 천 + 크라프트 종이 (첫 장면 시안 2번을 사용자 요청으로 옮김) ─────────────────────────────────────────
+
+function closingPatchwork(ctx: CanvasRenderingContext2D, o: ClosingOpts, t: number) {
+  const block = (x: number, y: number, w: number, h: number, draw: () => void) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); draw(); weaveRect(ctx, x, y, w, h, 0.07); ctx.restore();
+  };
+  // 왼쪽 위: 하트 체크
+  block(0, 0, 330, 360, () => {
+    ctx.fillStyle = '#F2EBCF'; ctx.fillRect(0, 0, 330, 360);
+    ctx.fillStyle = 'rgba(31,40,70,0.55)';
+    for (let x = 0; x < 330; x += 40) { ctx.fillRect(x, 0, 3, 360); ctx.fillRect(x + 7, 0, 2, 360); }
+    for (let y = 0; y < 360; y += 40) { ctx.fillRect(0, y, 330, 3); ctx.fillRect(0, y + 7, 330, 2); }
+    ctx.fillStyle = '#C62828';
+    for (let y = 24, r = 0; y < 360; y += 40, r++) for (let x = r % 2 ? 44 : 24; x < 330; x += 40) { heartPath(ctx, x, y, 14); ctx.fill(); }
+  });
+  // 오른쪽 위: 네이비 줄무늬
+  block(330, 0, W - 330, 520, () => {
+    ctx.fillStyle = '#E9E0C8'; ctx.fillRect(330, 0, W - 330, 520);
+    ctx.fillStyle = '#1F4A6E';
+    for (let x = 330; x < W; x += 16) ctx.fillRect(x, 0, 9, 520);
+  });
+  // 왼쪽 아래: 흑백 다이아몬드
+  block(0, 360, 110, 460, () => {
+    ctx.fillStyle = '#F2EBDA'; ctx.fillRect(0, 360, 110, 460);
+    ctx.fillStyle = '#1A1A1A';
+    for (let y = 360, r = 0; y < 820; y += 22, r++) for (let x = r % 2 ? 11 : 0; x < 110; x += 22) {
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 11, y + 11); ctx.lineTo(x, y + 22); ctx.lineTo(x - 11, y + 11); ctx.closePath(); ctx.fill();
+    }
+  });
+  // 오른쪽 가운데: 네이비 체크 + 빨간 별
+  block(W - 110, 520, 110, 220, () => {
+    ctx.fillStyle = '#E8E2D6'; ctx.fillRect(W - 110, 520, 110, 220);
+    ctx.fillStyle = 'rgba(40,50,110,0.6)';
+    ctx.fillRect(W - 110, 520, 40, 220); ctx.fillRect(W - 110, 600, 110, 40);
+    ctx.fillStyle = '#B0284A';
+    for (const y of [560, 650, 720]) { starPath(ctx, W - 40, y, 16); ctx.fill(); }
+  });
+  // 아래: 버건디 별 무늬 / 작은 깅엄 / 데님 점
+  block(0, 820, 260, H - 820, () => {
+    ctx.fillStyle = '#7A1622'; ctx.fillRect(0, 820, 260, H - 820);
+    ctx.fillStyle = '#D9B44A';
+    for (let y = 840, r = 0; y < H; y += 40, r++) for (let x = r % 2 ? 40 : 18; x < 260; x += 46) { starPath(ctx, x, y, 9); ctx.fill(); }
+  });
+  block(260, 740, W - 260, 120, () => {
+    ctx.fillStyle = '#EFE6D6'; ctx.fillRect(260, 740, W - 260, 120);
+    ctx.fillStyle = 'rgba(200,40,40,0.55)'; for (let x = 260; x < W; x += 14) ctx.fillRect(x, 740, 6, 120);
+    ctx.fillStyle = 'rgba(40,50,110,0.45)'; for (let y = 740; y < 860; y += 14) ctx.fillRect(260, y, W - 260, 6);
+  });
+  block(260, 860, W - 260, H - 860, () => {
+    ctx.fillStyle = '#34496A'; ctx.fillRect(260, 860, W - 260, H - 860);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let y = 870; y < H; y += 12) for (let x = 266; x < W; x += 12) ctx.fillRect(x, y, 1.5, 1.5);
+  });
+  // 가운데 크라프트 종이
+  const e = ease(t);
+  ctx.globalAlpha = e;
+  const px = 90, py = 230 + (1 - e) * 12, pw = 370, ph = 560;
+  ctx.save();
+  rotateAround(ctx, px + pw / 2, py + ph / 2, -1);
+  softShadow(ctx);
+  ctx.fillStyle = '#E6E0D4'; ctx.fillRect(px, py, pw, ph);
+  noShadow(ctx);
+  const rnd = seededRnd('kraft');
+  ctx.fillStyle = 'rgba(120,100,80,0.12)';
+  for (let i = 0; i < 300; i++) ctx.fillRect(px + rnd() * pw, py + rnd() * ph, 1.5, 1.5);
+  // 클립
+  ctx.strokeStyle = '#4A4A4A'; ctx.lineWidth = 3;
+  roundRectPath(ctx, px + pw - 70, py - 20, 22, 110, 11); ctx.stroke();
+  roundRectPath(ctx, px + pw - 64, py - 8, 12, 80, 6); ctx.stroke();
+  // 글: 마무리 문장 + 빨간 밑줄 + 날짜
+  closingText(ctx, o.closing, px + pw / 2, py + ph * 0.42, pw - 80, C.ink, 40);
+  ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  const uy = py + ph * 0.56;
+  ctx.beginPath(); ctx.moveTo(px + 90, uy); ctx.quadraticCurveTo(px + pw / 2, uy + 8, px + pw - 90, uy - 2); ctx.stroke();
+  footer(ctx, o.dateStr, px + pw / 2, uy + 56, 'rgba(43,38,34,0.6)');
+  ctx.textAlign = 'left';
+  ctx.restore();
+  goldStar(ctx, 110, 250, 70, -12);
+  goldStar(ctx, W - 120, 760, 64, 18);
+  ctx.globalAlpha = 1;
+}
+
 // ─── 고르기 ─────────────────────────────────────────────────────────────────
 
 export const CLOSING_VARIANTS = [
@@ -310,6 +394,7 @@ export const CLOSING_VARIANTS = [
   { name: '데님 + 레이스 + 도트', draw: closingDenimLace },
   { name: '하늘 체크 + 집게 메모지', draw: closingClipNote },
   { name: '네이비 체크 + 하트', draw: closingHeartPlaid },
+  { name: '패치워크 천 + 종이', draw: closingPatchwork },
 ] as const;
 
 /** 날짜를 일 단위 번호로 바꿔 차례로 고른다 — 연속 이틀은 같은 장면이 나오지 않는다 */

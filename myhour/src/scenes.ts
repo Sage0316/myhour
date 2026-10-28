@@ -226,50 +226,7 @@ export function drawEmojis(ctx: CanvasRenderingContext2D, placements: EmojiPlace
 
 // ─── 장면들 ─────────────────────────────────────────────────────────────────
 
-export function drawTitleScene(
-  ctx: CanvasRenderingContext2D,
-  opts: { title: string; dateStr: string; count: number; types?: MyRecord['type'][]; emojiSet?: string[] },
-  t: number,
-) {
-  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H);
-
-  // 상단 구석 은은한 워시
-  const wash = ctx.createRadialGradient(W * 0.85, H * 0.12, 0, W * 0.85, H * 0.12, 460);
-  wash.addColorStop(0, hexAlpha(TYPE_COLORS['photo'], 0.5));
-  wash.addColorStop(1, hexAlpha(TYPE_COLORS['photo'], 0));
-  ctx.fillStyle = wash; ctx.fillRect(0, 0, W, H);
-
-  const ease = Math.min(1, t / 0.3);
-  const rise = (1 - ease) * 16;
-
-  ctx.globalAlpha = ease;
-  ctx.font = `bold 14px "Courier New", monospace`;
-  ctx.fillStyle = 'rgba(26,26,26,0.35)';
-  ctx.fillText('하 꾸', 44, 104);
-  ctx.font = `13px "Courier New", monospace`;
-  ctx.fillStyle = 'rgba(26,26,26,0.45)';
-  ctx.fillText(opts.dateStr, 44, 132);
-
-  // 제목 — 짧으면 크게
-  const size = opts.title.length <= 10 ? 54 : opts.title.length <= 18 ? 46 : 40;
-  ctx.font = `700 ${size}px system-ui, sans-serif`;
-  ctx.fillStyle = INK;
-  const endY = wrapText(ctx, opts.title, 44, H * 0.52 + rise, W - 88, size * 1.35);
-
-  // 기록 타입 색 점들 — 오늘 하루의 구성
-  if (opts.types && opts.types.length > 0) {
-    let dx = 44;
-    for (const ty of opts.types.slice(0, 10)) {
-      ctx.fillStyle = TYPE_COLORS[ty];
-      ctx.beginPath(); ctx.arc(dx + 6, endY + 22 + rise, 6, 0, Math.PI * 2); ctx.fill();
-      dx += 20;
-    }
-  }
-  ctx.font = `12px "Courier New", monospace`;
-  ctx.fillStyle = 'rgba(26,26,26,0.4)';
-  ctx.fillText(`${opts.count} MOMENTS`, 44, endY + 58 + rise);
-  ctx.globalAlpha = 1;
-}
+// 첫 장면(공책 표지)은 scenesCover.ts에 있다 (2026-10-28 다꾸 스타일 2종으로 교체).
 
 // 글 장면 — 길이에 따라 글자 크기가 변하고, 내용 이모지가 있으면 문장 끝에 붙는다
 export function drawTextScene(
