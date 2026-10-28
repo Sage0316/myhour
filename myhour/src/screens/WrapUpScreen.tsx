@@ -235,7 +235,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
       const bgmUrl = bgmAssetUrl(bgmFile);
       const warnings: string[] = [];
       const blob = await videoGenerationService.generate(records, `${dateDay} ${dateWeekday}`, p => setProgress(p), {
-        title, closing, bgmUrl,
+        date: sessionDate, title, closing, bgmUrl,
         emojis: emojiPick ?? director?.emojis ?? emojiChoices.join(''),
         mood: selectedMood.mood,
         captions: director?.captions,

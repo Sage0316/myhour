@@ -2,8 +2,9 @@
 import type { MyRecord } from './store';
 import {
   W, H, ensureDiaryFont,
-  drawTitleScene, drawPhotoScene, drawAudioScene, drawClosingScene,
+  drawTitleScene, drawPhotoScene, drawAudioScene,
 } from './scenes';
+import { drawClosingScene } from './scenesClosing';
 import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 
 const MOOD_EMOJI = '🌙'; // 그날의 무드 이모지 하나 (그림일기 '오늘' 칸용)

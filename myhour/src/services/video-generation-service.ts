@@ -2,6 +2,8 @@ import type { MyRecord } from '../store';
 import { generateVideo } from '../videoGenerator';
 
 export interface VideoGenerationOptions {
+  /** 하루 날짜 (YYYY-MM-DD) — 마지막 장면을 날짜마다 돌아가며 고른다 */
+  date?: string;
   title?: string;
   closing?: string;
   bgmUrl?: string;

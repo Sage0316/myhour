@@ -479,19 +479,4 @@ export function drawVideoOverlay(ctx: CanvasRenderingContext2D, record: MyRecord
   }
 }
 
-export function drawClosingScene(
-  ctx: CanvasRenderingContext2D,
-  opts: { closing: string; dateStr: string },
-  t: number,
-) {
-  ctx.fillStyle = '#161616'; ctx.fillRect(0, 0, W, H);
-  const ease = Math.min(1, t / 0.35);
-  ctx.globalAlpha = ease;
-  ctx.font = `300 30px Georgia, serif`;
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  wrapText(ctx, opts.closing, 44, H * 0.45, W - 88, 48);
-  ctx.font = `bold 12px "Courier New", monospace`;
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.fillText(`하꾸 · ${opts.dateStr}`, 44, H - 56);
-  ctx.globalAlpha = 1;
-}
+// 마지막 장면은 scenesClosing.ts에 있다 (2026-10-28 다꾸 스타일 5종으로 교체).

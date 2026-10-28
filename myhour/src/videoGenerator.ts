@@ -4,8 +4,9 @@ import {
   W, H, PAPER,
   drawCover, drawVideoCover,
   fallbackEmojisFor, splitEmojis, ensureDiaryFont,
-  drawTitleScene, drawPhotoScene, drawAudioScene, drawVideoOverlay, drawClosingScene,
+  drawTitleScene, drawPhotoScene, drawAudioScene, drawVideoOverlay,
 } from './scenes';
+import { drawClosingScene } from './scenesClosing';
 import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 import { loadMediaBlob } from './persistence/mediaRepository';
 
@@ -188,7 +189,7 @@ export async function generateVideo(
   records: MyRecord[],
   dateStr: string,
   onProgress?: (pct: number) => void,
-  overrides?: { title?: string; closing?: string; bgmUrl?: string; emojis?: string; mood?: string; captions?: string[]; recordEmojis?: string[] },
+  overrides?: { date?: string; title?: string; closing?: string; bgmUrl?: string; emojis?: string; mood?: string; captions?: string[]; recordEmojis?: string[] },
   onWarn?: (msg: string) => void,
   signal?: AbortSignal,
 ): Promise<Blob> {
@@ -526,7 +527,7 @@ export async function generateVideo(
   }
 
   await renderSegment(CLOSE_DUR, (t) => {
-    drawClosingScene(ctx, { closing, dateStr }, t);
+    drawClosingScene(ctx, { closing, dateStr, date: overrides?.date }, t);
   }, tick, signal);
 
   // Fade the BGM out over the last moments, then stop recording

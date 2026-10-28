@@ -3,7 +3,7 @@
 // 색은 앱 화면(design.ts)과 같은 팔레트를 쓴다. 모든 좌표는 540×960 논리 좌표계.
 import type { MyRecord } from './store';
 import { W, H, HAND, pickContentEmoji, roundRectPath, seededRnd, wrapLines } from './scenes';
-const C = {
+export const C = {
   ink: '#2B2622', paper: '#FBF7EC', red: '#C9381F', sky: '#96C7EC', skyInk: '#173055',
   green: '#C9DE95', yellow: '#FFE27A', pink: '#F2B6B4', kraft: '#D8BF98', white: '#FFFFFF',
 };
@@ -55,7 +55,7 @@ function paper(ctx: CanvasRenderingContext2D, kind: 'grid' | 'dot') {
 type Pattern = 'plain' | 'stripe' | 'dot' | 'check';
 
 /** 마스킹 테이프 — 양 끝이 톱니처럼 찢긴 반투명 띠 + 무늬 */
-function washi(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number, rot: number, base: string, pattern: Pattern = 'plain', patternColor = 'rgba(255,255,255,0.7)') {
+export function washi(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number, rot: number, base: string, pattern: Pattern = 'plain', patternColor = 'rgba(255,255,255,0.7)') {
   ctx.save();
   ctx.translate(cx, cy); ctx.rotate(rot * Math.PI / 180);
   const teeth = 6, tw = 5;
@@ -84,7 +84,7 @@ function washi(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number,
   ctx.restore();
 }
 
-function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string | null, rot = 0) {
+export function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string | null, rot = 0) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot * Math.PI / 180);
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
@@ -98,7 +98,7 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fi
   ctx.restore();
 }
 
-function heart(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, fill: string | null, rot = 0) {
+export function heart(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, fill: string | null, rot = 0) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot * Math.PI / 180); ctx.scale(s / 20, s / 20);
   ctx.beginPath();
   ctx.moveTo(0, 6);
@@ -109,7 +109,7 @@ function heart(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, f
   ctx.restore();
 }
 
-function sparkle(ctx: CanvasRenderingContext2D, x: number, y: number, r = 12) {
+export function sparkle(ctx: CanvasRenderingContext2D, x: number, y: number, r = 12) {
   ctx.save(); ctx.translate(x, y);
   ctx.strokeStyle = C.ink; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
   for (const [a, k] of [[0, 1], [Math.PI / 2, 1], [Math.PI / 4, 0.5], [-Math.PI / 4, 0.5]]) {
@@ -119,7 +119,7 @@ function sparkle(ctx: CanvasRenderingContext2D, x: number, y: number, r = 12) {
 }
 
 /** 글자가 maxW 안에 들어올 때까지 줄인 손글씨 폰트 크기 */
-function fitHand(ctx: CanvasRenderingContext2D, text: string, size: number, maxW: number, min = 20): number {
+export function fitHand(ctx: CanvasRenderingContext2D, text: string, size: number, maxW: number, min = 20): number {
   ctx.font = `${size}px ${HAND}`;
   while (size > min && ctx.measureText(text).width > maxW) { size -= 2; ctx.font = `${size}px ${HAND}`; }
   return size;
@@ -137,19 +137,19 @@ function labelTape(ctx: CanvasRenderingContext2D, text: string, x: number, y: nu
   ctx.restore();
 }
 
-function softShadow(ctx: CanvasRenderingContext2D) {
+export function softShadow(ctx: CanvasRenderingContext2D) {
   ctx.shadowColor = 'rgba(43,38,34,0.16)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6;
 }
-function noShadow(ctx: CanvasRenderingContext2D) {
+export function noShadow(ctx: CanvasRenderingContext2D) {
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 }
 
-function rotateAround(ctx: CanvasRenderingContext2D, cx: number, cy: number, deg: number) {
+export function rotateAround(ctx: CanvasRenderingContext2D, cx: number, cy: number, deg: number) {
   ctx.translate(cx, cy); ctx.rotate(deg * Math.PI / 180); ctx.translate(-cx, -cy);
 }
 
 // ☕✈️ 같은 모노톤 글리프는 fillStyle로 칠해진다 — 잉크색을 깔아 두지 않으면 배경에 묻힌다
-function drawEmoji(ctx: CanvasRenderingContext2D, emoji: string, x: number, y: number, size: number) {
+export function drawEmoji(ctx: CanvasRenderingContext2D, emoji: string, x: number, y: number, size: number) {
   ctx.save();
   ctx.font = `${size}px system-ui, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -173,7 +173,7 @@ function photoRect(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null, 
 }
 
 /** 찢은 종이 모양 경로 (seed가 같으면 프레임마다 같은 모양) */
-function tornRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, seed: string) {
+export function tornRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, seed: string) {
   const rnd = seededRnd(seed); rnd(); rnd();
   const j = () => (rnd() - 0.5) * 7;
   ctx.beginPath();
@@ -197,7 +197,7 @@ function textMetrics(len: number): [number, number, number] {
 }
 
 /** 띄어쓰기 단위로 줄바꿈 (한 단어가 한 줄보다 길 때만 글자 단위로 자른다). 넘치면 마지막 줄 끝에 … */
-function wrapWords(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
+export function wrapWords(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   const lines: string[] = [];
   let line = '';
   for (const word of text.split(/\s+/).filter(Boolean)) {
