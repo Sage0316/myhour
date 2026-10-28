@@ -8,7 +8,7 @@ import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePu
 import TabBar from '../components/TabBar';
 import { shareFileNative } from '../native/shareFile';
 import { isAutoSaveEnabled, setAutoSaveEnabled } from '../native/saveToPhotos';
-import { getVideoAccess, isBillingActive, MANAGE_SUBSCRIPTIONS_URL, restorePurchases, getSubscription } from '../billing/purchases';
+import { getVideoAccess, isBillingActive, MANAGE_SUBSCRIPTIONS_URL, redeemOfferCode, restorePurchases, getSubscription, watchSubscription } from '../billing/purchases';
 import { formatMonthDay } from '../billing/access';
 import type { Subscription, VideoAccess } from '../billing/access';
 import PaywallScreen from './PaywallScreen';
@@ -293,6 +293,17 @@ function SubscriptionSection() {
   }
 
   useEffect(() => { void refresh(); }, []);
+  // 쿠폰·결제·갱신으로 구독이 바뀌면 다시 읽는다
+  useEffect(() => watchSubscription(() => { void refresh(); }), []);
+
+  async function handleRedeem() {
+    setMessage(null);
+    try {
+      await redeemOfferCode();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '쿠폰 입력 창을 열지 못했어요.');
+    }
+  }
 
   async function handleRestore() {
     if (busy) return;
@@ -335,6 +346,7 @@ function SubscriptionSection() {
         {subscription && (
           <a href={MANAGE_SUBSCRIPTIONS_URL} target="_blank" rel="noreferrer" style={{ ...rowButton, textDecoration: 'none', boxSizing: 'border-box' }}>구독 관리·해지</a>
         )}
+        <button type="button" onClick={handleRedeem} style={rowButton}>쿠폰 코드 입력</button>
         <button type="button" onClick={handleRestore} disabled={busy} style={rowButton}>{busy ? '복원 중…' : '구매 복원'}</button>
       </div>
       {message && <div role="status" style={{ fontSize: 12, color: COLOR.inkMuted, padding: '8px 4px' }}>{message}</div>}

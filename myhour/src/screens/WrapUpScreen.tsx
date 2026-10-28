@@ -526,7 +526,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
         )}
       </div>
 
-      <div style={{ padding: '12px 22px 30px', display: 'flex', gap: 10 }}>
+      <div style={{ padding: '12px 22px calc(var(--bottom-inset, 14px) + 8px)', display: 'flex', gap: 10 }}>
         <button
           onClick={handleGenerate}
           disabled={generating || records.length === 0 || alreadyGenerated}

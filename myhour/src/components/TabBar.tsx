@@ -24,7 +24,7 @@ const tabs: { id: Tab; label: string }[] = [
 export default function TabBar({ active, onTabChange }: TabBarProps) {
   return (
     <nav aria-label="주요 메뉴" style={{
-      margin: '0 14px max(14px, env(safe-area-inset-bottom))',
+      margin: '0 14px var(--bottom-inset, 14px)',
       display: 'grid',
       gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
       padding: '6px 4px',

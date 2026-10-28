@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 import {
   BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, SCREEN, TAPE_GREEN, TITLE, tape, topPad,
@@ -6,7 +6,7 @@ import {
 import { STANDARD_VIDEOS_PER_PERIOD, formatMonthDay } from '../billing/access';
 import type { Plan, Subscription } from '../billing/access';
 import {
-  PRIVACY_URL, TERMS_URL, getPlanOffers, isBillingActive, purchase, restorePurchases,
+  PRIVACY_URL, TERMS_URL, getPlanOffers, isBillingActive, purchase, redeemOfferCode, restorePurchases, watchSubscription,
 } from '../billing/purchases';
 import type { PlanOffer } from '../billing/purchases';
 
@@ -36,6 +36,11 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
   const [selected, setSelected] = useState<Plan>('premium');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  // 쿠폰 입력은 애플 창에서 끝나고 결과가 나중에 온다 — 구독이 생기면 바로 닫는다
+  const onSubscribedRef = useRef(onSubscribed);
+  useEffect(() => { onSubscribedRef.current = onSubscribed; }, [onSubscribed]);
+  useEffect(() => watchSubscription(subscription => { if (subscription) onSubscribedRef.current(subscription); }), []);
 
   useEffect(() => {
     getPlanOffers().then(setOffers).catch(() => setMessage('요금제를 불러오지 못했어요. 잠시 후 다시 열어 주세요.'));
@@ -71,6 +76,15 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
       setMessage(error instanceof Error ? error.message : '구매를 복원하지 못했어요.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleRedeem() {
+    setMessage(null);
+    try {
+      await redeemOfferCode();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '쿠폰 입력 창을 열지 못했어요.');
     }
   }
 
@@ -157,7 +171,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
         {message && <div role="alert" style={{ fontSize: 13, color: COLOR.red, lineHeight: 1.5 }}>{message}</div>}
       </div>
 
-      <div style={{ padding: '12px 22px max(18px, env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10, borderTop: `1.5px dashed ${COLOR.dash}`, background: COLOR.paper }}>
+      <div style={{ padding: '12px 22px calc(var(--bottom-inset, 14px) + 4px)', display: 'flex', flexDirection: 'column', gap: 10, borderTop: `1.5px dashed ${COLOR.dash}`, background: COLOR.paper }}>
         <button type="button" onClick={handlePurchase} disabled={!canBuy} style={canBuy ? BUTTON_PRIMARY : { ...BUTTON_PRIMARY, ...BUTTON_DISABLED }}>
           {billing ? ctaLabel : '앱에서 구독할 수 있어요'}
         </button>
@@ -169,6 +183,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 12 }}>
           <button type="button" onClick={handleRestore} disabled={!billing || busy} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.inkSub, fontSize: 12, minHeight: 32 }}>구매 복원</button>
+          <button type="button" onClick={handleRedeem} disabled={!billing} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.inkSub, fontSize: 12, minHeight: 32 }}>쿠폰 입력</button>
           <a href={TERMS_URL} target="_blank" rel="noreferrer" style={{ color: COLOR.inkSub, minHeight: 32, display: 'flex', alignItems: 'center' }}>이용약관</a>
           <a href={PRIVACY_URL} target="_blank" rel="noreferrer" style={{ color: COLOR.inkSub, minHeight: 32, display: 'flex', alignItems: 'center' }}>개인정보처리방침</a>
         </div>

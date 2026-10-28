@@ -118,6 +118,35 @@ export async function restorePurchases(): Promise<Subscription | null> {
   return subscriptionFrom(customerInfo);
 }
 
+/**
+ * 쿠폰(애플 오퍼 코드) 입력 창을 띄운다. 애플은 앱 자체 쿠폰으로 유료 기능을 여는 걸 허용하지 않아서,
+ * App Store Connect에서 만든 오퍼 코드(예: Standard 1달 무료)를 애플 화면에서 입력받는다.
+ * 결과는 바로 오지 않고, 적용되면 watchSubscription으로 알려 준다.
+ */
+export async function redeemOfferCode(): Promise<void> {
+  if (!isBillingActive()) throw new Error('쿠폰은 앱에서 입력할 수 있어요.');
+  await ensureConfigured();
+  await Purchases.presentCodeRedemptionSheet();
+}
+
+/** 구독 상태가 바뀌면(구매·쿠폰·갱신·만료) 알려 준다. 돌려주는 함수로 그만 듣는다 */
+export function watchSubscription(onChange: (subscription: Subscription | null) => void): () => void {
+  if (!isBillingActive()) return () => {};
+  let callbackId: string | null = null;
+  let stopped = false;
+  void ensureConfigured()
+    .then(() => Purchases.addCustomerInfoUpdateListener(info => onChange(subscriptionFrom(info))))
+    .then(id => {
+      if (stopped) void Purchases.removeCustomerInfoUpdateListener({ listenerToRemove: id });
+      else callbackId = id;
+    })
+    .catch(() => {});
+  return () => {
+    stopped = true;
+    if (callbackId) void Purchases.removeCustomerInfoUpdateListener({ listenerToRemove: callbackId });
+  };
+}
+
 /** 애플 구독 관리 화면 (해지·요금제 변경) */
 export const MANAGE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 /** 애플 표준 이용약관 (EULA) */

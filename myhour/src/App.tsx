@@ -135,6 +135,8 @@ function AppContent() {
         position: 'fixed', inset: 0, overflow: 'hidden', background: '#FBF7EC',
         // 상태 표시줄 밑 흐림 효과에 위 글씨가 덮이지 않게 28px 더 내린다
         '--top-inset': 'calc(env(safe-area-inset-top, 0px) + 28px)',
+        // 아래쪽은 홈 인디케이터 여백을 30px 덜 써서 화면을 아래로 더 넓게 쓴다 (위는 그대로)
+        '--bottom-inset': 'max(8px, calc(env(safe-area-inset-bottom, 0px) - 30px))',
       } as React.CSSProperties}>
         {activeScreen}
       </div>
