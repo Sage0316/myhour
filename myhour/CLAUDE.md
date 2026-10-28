@@ -93,6 +93,7 @@ pnpm test:e2e
 - `src/videoGenerator.ts`: 1080×1920 렌더링. **mimeType 우선순위는 mp4를 webm보다 먼저** (2026-07-22 변경) — iOS Safari가 MediaRecorder로 webm '녹화' 자체는 지원해도 사진 앱이 webm을 영상으로 인식 못 해서, 에어드랍/공유해도 파일 앱에만 들어가고 사진 앱엔 저장 안 되는 문제가 있었음. mp4(h264)는 어디서든 정상 저장됨. **절대 webm을 다시 앞으로 올리지 말 것** — 2026-07-25 병합에서 한 번 되돌아갔다. 우선순위는 `videoGenerator.ts`와 `services/video-generation-service.ts`(capabilities) **두 곳**에 있어서 같이 봐야 한다. BGM 무드 7종×3곡(public/bgm, 전곡 CC0, 랜덤 선곡 + `pickAudibleOffset`로 소리 나는 지점에서 시작) + 음성/클립 소리 믹싱(BGM 더킹, 컷 페이드아웃). 영상·음성 장면은 3~5초(MEDIA_MAX)
 - BGM 파일명은 `llmDirector.BGM_FILES`와 public/bgm이 정확히 일치해야 한다 — 어긋나면 fetch가 404 나고 영상에 음악만 조용히 빠진다. llmDirector.test.ts가 카탈로그 21곡의 실제 파일 존재를 검사한다
 - 음성 녹음은 16kHz WAV 직접 인코딩 (iOS mp4는 decodeAudioData 실패하는 버그 회피)
+- **영상 생성 중 앱을 나가면 멈춘다 (2026-10-28)**: 캔버스 녹화는 앱을 내리거나 화면이 잠기면 iOS가 멈추는데 그리기는 계속 돌아, 예전엔 나간 시점까지만 담긴 잘린 영상이 100%로 완성됐다. `generateVideo`가 visibilitychange(hidden)에서 생성을 멈추고 `INTERRUPTED_MESSAGE`를 띄우며, 만드는 동안 Wake Lock으로 화면 자동 꺼짐을 막는다. 실제 그리기는 `renderVideo`
 - AudioContext는 탭 제스처 직후 생성 필수 (iOS suspended 버그), 폰트/디코딩엔 타임아웃, 생성 실패 시 onWarn으로 폰에 에러 표시
 - **iOS 화면 확대 방지 (2026-08-04)**: ① 입력창 글자가 16px 미만이면 포커스 시 Safari가 화면을 자동 확대한다 —
   끌 수 없어서 `index.css`가 `input, textarea, select { font-size: max(16px, 1em) }`로 바닥을 깐다.

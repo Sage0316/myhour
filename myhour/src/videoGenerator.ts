@@ -94,8 +94,49 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
 
 type DrawFn = (t: number, frame: number) => void;
 
+// 영상은 화면 안에서 실시간 녹화하듯 만든다. 앱을 내리거나 화면이 잠기면 iOS가 녹화를 멈추는데
+// 그리기는 계속 돌아서, 나간 시점까지만 담긴 잘린 영상이 100%로 '완성'됐다 (2026-10-28 펌킨 발견).
+// 그래서 화면이 가려지는 순간 생성을 멈추고 다시 만들어 달라고 알린다.
+const INTERRUPTED = 'app-hidden';
+export const INTERRUPTED_MESSAGE = '앱을 나가서 영상 만들기가 멈췄어요. 다 만들 때까지 하꾸를 켜 둔 채로 다시 만들어 주세요.';
+
 function throwIfAborted(signal?: AbortSignal): void {
-  if (signal?.aborted) throw new DOMException('영상 생성을 취소했어요.', 'AbortError');
+  if (!signal?.aborted) return;
+  if (signal.reason === INTERRUPTED) throw new Error(INTERRUPTED_MESSAGE);
+  throw new DOMException('영상 생성을 취소했어요.', 'AbortError');
+}
+
+/** 만드는 동안 화면이 자동으로 꺼지지 않게 한다 (지원하지 않으면 그냥 넘어간다) */
+async function keepScreenOn(): Promise<WakeLockSentinel | null> {
+  try {
+    return await navigator.wakeLock?.request('screen') ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function generateVideo(
+  records: MyRecord[],
+  dateStr: string,
+  onProgress?: (pct: number) => void,
+  overrides?: Parameters<typeof renderVideo>[3],
+  onWarn?: (msg: string) => void,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const run = new AbortController();
+  const forward = () => run.abort(signal?.reason);
+  if (signal?.aborted) forward();
+  signal?.addEventListener('abort', forward, { once: true });
+  const onVisibility = () => { if (document.hidden) run.abort(INTERRUPTED); };
+  document.addEventListener('visibilitychange', onVisibility);
+  const wakeLock = await keepScreenOn();
+  try {
+    return await renderVideo(records, dateStr, onProgress, overrides, onWarn, run.signal);
+  } finally {
+    document.removeEventListener('visibilitychange', onVisibility);
+    signal?.removeEventListener('abort', forward);
+    wakeLock?.release().catch(() => {});
+  }
 }
 
 async function yieldToBrowser(signal?: AbortSignal): Promise<void> {
@@ -186,7 +227,7 @@ async function renderVideoClip(
   vid.pause();
 }
 
-export async function generateVideo(
+async function renderVideo(
   records: MyRecord[],
   dateStr: string,
   onProgress?: (pct: number) => void,
