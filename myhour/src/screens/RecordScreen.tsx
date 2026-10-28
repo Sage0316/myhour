@@ -463,8 +463,10 @@ function CaptionStep({ content, type, onSave, onRetake }: {
     <div className="scroll-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
       {/* 미리보기 */}
       {isMedia && (
-        <div style={{ borderRadius: 20, overflow: 'hidden', maxHeight: '42vh', flexShrink: 0, position: 'relative', border: `1.5px solid ${COLOR.ink}`, background: COLOR.beige }}>
-          <img src={content} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: '42vh', display: 'block' }} />
+        // 미리보기는 남는 공간만 쓴다. 예전엔 최대 42vh까지 커져서, 세로로 긴 영상 썸네일이면
+        // 아래 저장 버튼이 밀려 스크롤이 생겼다(정사각형에 가까운 사진은 괜찮아서 영상만 그랬다)
+        <div style={{ borderRadius: 20, overflow: 'hidden', flex: '1 1 0', minHeight: 140, position: 'relative', border: `1.5px solid ${COLOR.ink}`, background: COLOR.beige }}>
+          <img src={content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           {type === 'video' && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: 44, height: 44, borderRadius: 22, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -490,7 +492,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
       )}
 
       {/* 문구 입력 */}
-      <div style={{ flex: 1, ...CARD, padding: '14px 16px', minHeight: 100, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ ...(isMedia ? { height: 120 } : { flex: 1, minHeight: 100 }), ...CARD, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>한 줄 남기기 (선택)</span>
         <textarea
           // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
