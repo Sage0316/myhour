@@ -4,8 +4,9 @@ import {
   W, H, PAPER,
   drawCover, drawVideoCover,
   fallbackEmojisFor, splitEmojis, ensureDiaryFont,
-  drawTitleScene, drawDiaryScene, drawPhotoScene, drawMemeScene, drawAudioScene, drawVideoOverlay, drawClosingScene,
+  drawTitleScene, drawPhotoScene, drawAudioScene, drawVideoOverlay, drawClosingScene,
 } from './scenes';
+import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 import { loadMediaBlob } from './persistence/mediaRepository';
 
 const FPS = 24;
@@ -476,7 +477,7 @@ export async function generateVideo(
     } else if (record.type === 'meme') {
       const img = imgMap.get(record.id) ?? null;
       await renderSegment(RECORD_DUR, (t) => {
-        drawMemeScene(ctx, record, img, t, moodColor);
+        drawMemeScene(ctx, record, img, t);
       }, tick, signal);
 
     } else if (record.type === 'text') {

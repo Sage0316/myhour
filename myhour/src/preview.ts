@@ -2,8 +2,9 @@
 import type { MyRecord } from './store';
 import {
   W, H, ensureDiaryFont,
-  drawTitleScene, drawDiaryScene, drawPhotoScene, drawMemeScene, drawAudioScene, drawClosingScene,
+  drawTitleScene, drawPhotoScene, drawAudioScene, drawClosingScene,
 } from './scenes';
+import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 
 const MOOD_EMOJI = '🌙'; // 그날의 무드 이모지 하나 (그림일기 '오늘' 칸용)
 
@@ -85,18 +86,18 @@ async function main() {
 
   drawAudioScene(cell('audio'), rec('f6', 'audio', '', '오늘의 목소리 메모'), t);
 
-  // 짤 — id로 폴라로이드/스크랩북이 갈린다 (여러 id를 시도해 두 스타일 다 확인)
+  // 짤 — id로 폴라로이드/스크랩 노트가 갈린다 (여러 id를 시도해 두 스타일 다 확인)
   const meme = await fakeMeme();
-  drawMemeScene(cell('meme · 1'), rec('m1', 'meme', 'data:', '딱 이 기분이었음 ㅋㅋ'), meme, t, '#D9743F');
-  drawMemeScene(cell('meme · 2'), rec('m2', 'meme', 'data:', '오늘의 나 요약'), meme, t, '#3FA37B');
-  drawMemeScene(cell('meme · 3'), rec('m3', 'meme', 'data:', '회의 세 개 연속으로 하고 나온 직후의 나의 표정이 딱 이랬다'), meme, t, '#7C5CC4');
-  drawMemeScene(cell('meme · 캡션 없음'), rec('m4', 'meme', 'data:'), meme, t, '#C4567A');
-  drawMemeScene(cell('meme · 원본 정리됨'), rec('m5', 'meme', ''), null, t, '#D9743F');
+  drawMemeScene(cell('meme · 1'), rec('m1', 'meme', 'data:', '딱 이 기분이었음 ㅋㅋ'), meme, t);
+  drawMemeScene(cell('meme · 2'), rec('m2', 'meme', 'data:', '오늘의 나 요약'), meme, t);
+  drawMemeScene(cell('meme · 3'), rec('m3', 'meme', 'data:', '회의 세 개 연속으로 하고 나온 직후의 나의 표정이 딱 이랬다'), meme, t);
+  drawMemeScene(cell('meme · 캡션 없음'), rec('m4', 'meme', 'data:'), meme, t);
+  drawMemeScene(cell('meme · 원본 정리됨'), rec('m5', 'meme', ''), null, t);
   // 실제 버그 리포트 재현: 20자 제한 안인데도 이전엔 말줄임으로 잘리던 캡션
-  drawMemeScene(cell('meme · 6 (버그 재현, 폴라로이드)'), rec('m6', 'meme', 'data:', '금반지 찾으러 가는 길 출근'), meme, t, '#D9743F');
-  drawMemeScene(cell('meme · 7 (20자 경계, 폴라로이드)'), rec('m7', 'meme', 'data:', '오늘도 무사히 하루를 마감했다'), meme, t, '#7C5CC4');
-  drawMemeScene(cell('meme · 8 (버그 재현, 스크랩북)'), rec('m8', 'meme', 'data:', '금반지 찾으러 가는 길 출근'), meme, t, '#3FA37B');
-  drawMemeScene(cell('meme · 9 (20자 경계, 스크랩북)'), rec('m9', 'meme', 'data:', '오늘도 무사히 하루를 마감했다'), meme, t, '#C4567A');
+  drawMemeScene(cell('meme · 6 (버그 재현, 폴라로이드)'), rec('m6', 'meme', 'data:', '금반지 찾으러 가는 길 출근'), meme, t);
+  drawMemeScene(cell('meme · 7 (20자 경계, 폴라로이드)'), rec('m7', 'meme', 'data:', '오늘도 무사히 하루를 마감했다'), meme, t);
+  drawMemeScene(cell('meme · 8 (버그 재현, 스크랩북)'), rec('m8', 'meme', 'data:', '금반지 찾으러 가는 길 출근'), meme, t);
+  drawMemeScene(cell('meme · 9 (20자 경계, 스크랩북)'), rec('m9', 'meme', 'data:', '오늘도 무사히 하루를 마감했다'), meme, t);
 
   drawClosingScene(cell('closing'), { closing: '결국 다 먹었다. 그걸로 됐다.', dateStr: '7.18 금요일' }, t);
 }
