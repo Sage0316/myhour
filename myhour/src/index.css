@@ -1,11 +1,11 @@
-/* 손글씨: 온글잎 윤탱체 (© VoyagerX, inc. & Yunseon Kim — 파일은 수정하지 않고 그대로 쓴다, THIRD_PARTY_NOTICES.md) */
+/* 손글씨: 그리운 코코초이툰 (© TypeE. Corp. & ChoiYoungJoo — 파일은 수정하지 않고 그대로 쓴다, THIRD_PARTY_NOTICES.md) */
 @font-face {
-  font-family: 'OwnglyphYuntaeng';
-  src: url('./assets/fonts/OwnglyphYuntaeng.woff2') format('woff2');
+  font-family: 'GriunCocochoitoon';
+  src: url('./assets/fonts/GriunCocochoitoon.woff2') format('woff2');
   font-weight: 400;
   font-display: swap;
-  /* 윤탱체는 같은 크기에서 글자가 개구보다 작게 보여서 15% 키운다 (영상 쪽 scenes.ts와 같은 값) */
-  size-adjust: 115%;
+  /* 같은 크기에서 글자가 윤탱체보다 약 25% 커서, 윤탱체 기본 크기로 보이게 80%로 줄인다 (펌킨 요청, scenes.ts와 같은 값) */
+  size-adjust: 80%;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
