@@ -25,6 +25,9 @@ import {
   BUTTON_DISABLED, BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, highlight, topPad,
 } from '../design';
 
+// 영상 생성 버튼과 '만드는 중' 상자는 같은 높이 — 누르는 순간 화면이 출렁이지 않게
+const NIGHT_BOX_HEIGHT = 128;
+
 /** 별이 박힌 밤하늘 — 영상 생성 버튼 배경 */
 const NIGHT: React.CSSProperties = {
   backgroundColor: COLOR.navy,
@@ -487,7 +490,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
         </div>
 
         {generating ? (
-          <div style={{ ...NIGHT, minHeight: 110, borderRadius: 20, border: `1.5px solid ${COLOR.ink}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '24px 28px' }}>
+          <div style={{ ...NIGHT, height: NIGHT_BOX_HEIGHT, boxSizing: 'border-box', borderRadius: 20, border: `1.5px solid ${COLOR.ink}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 28px' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>
               영상 만드는 중 · {Math.round(progress * 100)}%
             </div>
@@ -509,7 +512,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               onClick={handleGenerate}
               disabled={records.length === 0 || alreadyGenerated}
               aria-label="오늘 기록으로 영상 생성하기"
-              style={{ ...NIGHT, width: '100%', minHeight: 110, position: 'relative', borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: records.length === 0 || alreadyGenerated ? 'default' : 'pointer', opacity: records.length === 0 || alreadyGenerated ? 0.5 : 1, border: `1.5px solid ${COLOR.ink}`, fontFamily: FONT_BODY }}
+              style={{ ...NIGHT, width: '100%', height: NIGHT_BOX_HEIGHT, boxSizing: 'border-box', position: 'relative', borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: records.length === 0 || alreadyGenerated ? 'default' : 'pointer', opacity: records.length === 0 || alreadyGenerated ? 0.5 : 1, border: `1.5px solid ${COLOR.ink}`, fontFamily: FONT_BODY }}
             >
               <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" style={{ position: 'absolute', left: 18, top: 14, transform: 'rotate(-12deg)' }}><path d="M12 2.5l2.6 6 6.4.6-4.9 4.2 1.5 6.3L12 16.3 6.4 19.6l1.5-6.3L3 9.1l6.4-.6z" fill="#FFD25A" stroke={COLOR.ink} strokeWidth="1.4" strokeLinejoin="round" /></svg>
               <div style={{ width: 52, height: 52, borderRadius: 26, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
