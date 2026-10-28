@@ -9,6 +9,8 @@ import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
 import { AppProvider } from './context';
 import { useApp } from './appContext';
+import { getSessionDate } from './store';
+import { isNativeApp, syncReminders } from './notifications/localReminders';
 import './App.css';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -39,7 +41,21 @@ function AppContent() {
     const match = window.location.hash.match(/^#archive=(.+)$/);
     return match ? decodeURIComponent(match[1]) : null;
   });
-  const { addRecord, reset } = useApp();
+  const { addRecord, reset, settings, isWrapped } = useApp();
+
+  // iOS 앱: 예약 알림은 며칠분만 걸려 있으므로 설정이 바뀌거나, 하루를 마감하거나,
+  // 앱이 다시 앞으로 나올 때마다 다시 채운다. 알림을 켜지 않았으면 syncReminders가 아무것도 하지 않는다.
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const sync = () => {
+      const sessionDate = getSessionDate(settings.startTime);
+      syncReminders(settings, sessionDate, isWrapped ? sessionDate : null).catch(() => undefined);
+    };
+    sync();
+    const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [settings, isWrapped]);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
 
   useEffect(() => {

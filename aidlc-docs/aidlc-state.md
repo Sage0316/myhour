@@ -39,7 +39,7 @@
 ### 🟢 CONSTRUCTION PHASE
 - [x] U12 디자인 리뉴얼 — 코드 생성 완료, 실제 기기 피드백 반영 (`construction/plans/u12-design-renewal-code-generation-plan.md`)
 - [x] U8 iOS 앱 틀 — 코드 생성 완료, 클라우드 컴파일 확인 대기 (`construction/plans/u8-ios-app-shell-code-generation-plan.md`)
-- [ ] U10 예약 알림
+- [x] U10 예약 알림 — 기능 설계·코드 생성 완료, 실기기 확인은 TestFlight 이후 (`construction/plans/u10-local-reminders-code-generation-plan.md`)
 - [ ] U11 저장·공유
 - [ ] U9 서버 허용 주소
 - [ ] U14 출시용 정리

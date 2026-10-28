@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { disableReminders, enableReminders, getRemindersEnabled, isNativeApp } from '../notifications/localReminders';
 import { topPad, CARD, COLOR, FONT_BODY, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
 import { useApp } from '../appContext';
-import { type AppSettings, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel } from '../store';
+import { type AppSettings, TYPE_LABELS, getSessionDate, intervalLabel, notifyLabel, captureModeLabel } from '../store';
 import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
 import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush, syncPushSchedule } from '../push';
 import TabBar from '../components/TabBar';
@@ -66,17 +67,24 @@ function ToggleSwitch({ checked, onChange, disabled, label }: {
 
 // 기록 시간 푸시 알림 — 서버(push-server/) 배포 전에는 준비 중 상태로 표시
 function PushSection() {
-  const { settings } = useApp();
+  const { settings, isWrapped } = useApp();
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { getPushEnabled().then(setEnabled); }, []);
-  useEffect(() => {
-    if (enabled) syncPushSchedule(settings).catch(() => undefined);
-  }, [enabled, settings]);
+  // iOS 앱은 폰 자체 예약 알림, 웹은 기존 웹 푸시를 쓴다
+  const native = isNativeApp();
+  const sessionDate = getSessionDate(settings.startTime);
+  const wrappedDate = isWrapped ? sessionDate : null;
 
-  const ready = PUSH_SERVER_URL !== '' && isPushSupported();
+  useEffect(() => {
+    (native ? getRemindersEnabled() : getPushEnabled()).then(setEnabled);
+  }, [native]);
+  useEffect(() => {
+    if (enabled && !native) syncPushSchedule(settings).catch(() => undefined);
+  }, [enabled, native, settings]);
+
+  const ready = native || (PUSH_SERVER_URL !== '' && isPushSupported());
 
   async function toggle() {
     if (busy) return;
@@ -84,10 +92,10 @@ function PushSection() {
     setError(null);
     try {
       if (enabled) {
-        await disablePush();
+        await (native ? disableReminders() : disablePush());
         setEnabled(false);
       } else {
-        await enablePush(settings);
+        await (native ? enableReminders(settings, sessionDate, wrappedDate) : enablePush(settings));
         setEnabled(true);
       }
     } catch (e) {

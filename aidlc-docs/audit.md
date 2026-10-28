@@ -282,3 +282,11 @@ git pull --ff-only"
 **Context**: U8 Code Generation 완료, 클라우드 컴파일 결과 확인 예정
 
 ---
+
+## U10 예약 알림 — 기능 설계·코드 생성 완료
+**Timestamp**: 2026-10-28T09:08:19Z
+**User Input**: "응 계속 진행해줘"
+**AI Response**: "사용자의 진행 지시에 따라 기능 설계를 문서로 남기고 바로 구현했다. 폰 예약 알림(3일분·최대 60개·1분 전/정각/둘 다·마감한 날 제외), 설정 스위치 분기(앱=예약 알림, 웹=웹 푸시), 앱 복귀·설정·마감 시 다시 걸기. 테스트 77개 통과."
+**Context**: U10 Functional Design + Code Generation 완료
+
+---

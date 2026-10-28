@@ -21,6 +21,7 @@
   "dependencies": {
     "@capacitor/core": "8.5.3",
     "@capacitor/ios": "8.5.3",
+    "@capacitor/local-notifications": "8.3.1",
     "@fontsource/gaegu": "^5.3.0",
     "jszip": "^3.10.1",
     "react": "^19.2.7",
