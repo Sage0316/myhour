@@ -43,7 +43,7 @@ function makeWavDataUrl(seconds = 1.5, freq = 440): string {
 const records: MyRecord[] = [
   { id: 'r1', slotTime: '09:10', type: 'text', content: '아침에 커피 두 잔 마셨다', createdAt: 1 } as MyRecord,
   { id: 'r2', slotTime: '13:40', type: 'audio', content: makeWavDataUrl(4.2), caption: '목소리 메모', createdAt: 2 } as MyRecord,
-  { id: 'r3', slotTime: '19:22', type: 'text', content: '퇴근하고 떡볶이 먹음', createdAt: 3 } as MyRecord,
+  { id: 'r3', slotTime: '19:22', type: 'text', content: '퇴근하고 떡볶이 먹었는데 너무 매워서 우유를 두 팩이나 마셨다 그래도 맛있었음', createdAt: 3 } as MyRecord,
   { id: 'r4', slotTime: '17:55', type: 'meme', content: makeMemeDataUrl(), caption: '딱 이 기분이었음 ㅋㅋ', createdAt: 4 } as MyRecord,
 ];
 

@@ -416,6 +416,8 @@ async function renderVideo(
   const RECORD_DUR = 3;
   const CLOSE_DUR = 2;
   const MEDIA_MAX = 5; // 영상·음성 장면 상한 — 몽타주 리듬 유지
+  // 사진은 짧게 두고, 25자를 넘는 글만 두 배로 보여줘서 끝까지 읽히게 한다 (펌킨 요청)
+  const LONG_TEXT = 25;
   const segDurations = records.map(r => {
     if (r.type === 'audio') {
       const buf = voiceBufMap.get(r.id);
@@ -425,6 +427,7 @@ async function renderVideo(
       const d = clipDurMap.get(r.id);
       return d ? Math.min(Math.max(d, RECORD_DUR), MEDIA_MAX) : RECORD_DUR;
     }
+    if (r.type === 'text' && r.content.length > LONG_TEXT) return RECORD_DUR * 2;
     return RECORD_DUR;
   });
   const totalFrames = Math.round((TITLE_DUR + segDurations.reduce((a, b) => a + b, 0) + CLOSE_DUR) * FPS);
@@ -524,8 +527,10 @@ async function renderVideo(
       }, tick, signal);
 
     } else if (record.type === 'text') {
-      await renderSegment(RECORD_DUR, (t) => {
-        drawDiaryScene(ctx, record, moodEmoji, t, recordEmoji);
+      // 길어진 장면에서도 등장 속도는 3초 장면과 같게 — t를 3초 기준으로 늘려 넘긴다 (1을 넘으면 등장은 끝난 상태로 유지)
+      const stretch = segDurations[ri] / RECORD_DUR;
+      await renderSegment(segDurations[ri], (t) => {
+        drawDiaryScene(ctx, record, moodEmoji, t * stretch, recordEmoji);
       }, tick, signal);
 
     } else if (record.type === 'audio') {
