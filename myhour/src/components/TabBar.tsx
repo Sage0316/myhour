@@ -24,10 +24,11 @@ const tabs: { id: Tab; label: string }[] = [
 export default function TabBar({ active, onTabChange }: TabBarProps) {
   return (
     <nav aria-label="주요 메뉴" style={{
-      margin: '0 14px var(--bottom-inset, 14px)',
+      // 좌우 여백은 화면 내용(버튼·카드)과 같은 22px — 메뉴만 더 넓으면 삐져나와 보인다
+      margin: '0 22px var(--bottom-inset, 14px)',
       display: 'grid',
       gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-      padding: '6px 4px',
+      padding: '4px',
       background: COLOR.white,
       border: `1.5px solid ${COLOR.ink}`,
       borderRadius: 22,
@@ -42,7 +43,7 @@ export default function TabBar({ active, onTabChange }: TabBarProps) {
             onClick={() => onTabChange(tab.id)}
             aria-current={on ? 'page' : undefined}
             style={{
-              minHeight: 54,
+              minHeight: 50,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -53,19 +54,19 @@ export default function TabBar({ active, onTabChange }: TabBarProps) {
               cursor: 'pointer',
               padding: 0,
               fontFamily: FONT_BODY,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: on ? 700 : 400,
               color: on ? COLOR.ink : COLOR.inkSub,
             }}
           >
             <span style={{
-              width: 40, height: 30, borderRadius: 15,
+              width: 38, height: 26, borderRadius: 13,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxSizing: 'border-box',
               background: on ? COLOR.yellow : 'transparent',
               border: on ? `1.5px solid ${COLOR.ink}` : '1.5px solid transparent',
             }}>
-              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={on ? 2.2 : 2} strokeLinecap="round" strokeLinejoin="round">
+              <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={on ? 2.2 : 2} strokeLinecap="round" strokeLinejoin="round">
                 {ICON_PATHS[tab.id]}
               </svg>
             </span>

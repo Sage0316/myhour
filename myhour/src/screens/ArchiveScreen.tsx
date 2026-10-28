@@ -501,7 +501,7 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
         )}
       </div>
 
-      <div style={{
+      <div className="no-scrollbar" style={{
         flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '18px 22px 24px',
         display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
         columnGap: 14, rowGap: 28, alignContent: 'start',

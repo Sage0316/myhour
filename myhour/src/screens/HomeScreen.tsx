@@ -193,7 +193,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
       {isEmpty ? (
         <EmptyState onRecord={onRecord} nextSlot={nextSlot} />
       ) : (
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, position: 'relative' }}>
+        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, position: 'relative' }}>
           {/* 세로로만 스크롤 — overflowY만 주면 가로도 auto가 돼서, 화면 끝에 걸친 스티커 때문에 좌우로 흔들렸다 */}
           <div style={{ position: 'relative', padding: '16px 40px 8px 0', display: 'flex', flexDirection: 'column', gap: 22 }}>
             {sorted.length > 0 && <div aria-hidden="true" style={STAR_TAPE} />}

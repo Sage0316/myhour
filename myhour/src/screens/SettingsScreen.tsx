@@ -502,7 +502,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         <h1 style={TITLE}>설정</h1>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 22px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 22px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Schedule */}
         <SettingGroup header="기록 시간">

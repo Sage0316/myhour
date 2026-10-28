@@ -63,3 +63,7 @@ button {
   html, body { background: #FBF7EC; overflow: hidden; height: 100dvh; }
   #root { padding: 0; min-height: 100dvh; width: 100%; overflow: hidden; }
 }
+
+/* 스크롤은 되지만 스크롤 막대는 보이지 않게 (홈·오늘·아카이브·설정 목록) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
