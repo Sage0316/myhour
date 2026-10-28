@@ -237,8 +237,8 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
   );
 }
 
-// 그림일기 줄노트에 들어가는 최대치 (7줄 × ~13자) — 넘으면 영상에서 잘린다
-const TEXT_MAX = 90;
+// 영상에서 기록 하나는 1~2초만 보인다 — 한 줄 13자 안팎으로 두 줄이면 그 안에 읽힌다
+const TEXT_MAX = 25;
 
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
@@ -467,8 +467,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   const { currentSlot: slot, settings } = useApp();
   const defaultMode: Mode = settings.captureMode === 'fixed'
-    ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '글')
-    : '글';
+    ? (Object.entries({ 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' } as Record<Mode, RecordType>).find(([, v]) => v === settings.defaultType)?.[0] as Mode ?? '사진')
+    : '사진';
 
   const [mode, setMode] = useState<Mode>(defaultMode);
   const [loading, setLoading] = useState(false);
