@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CARD, COLOR, FONT_BODY, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
 import { useApp } from '../appContext';
 import { type AppSettings, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel } from '../store';
 import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
@@ -12,10 +13,6 @@ interface SettingsScreenProps {
   onTabChange: (tab: Tab) => void;
 }
 
-const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
-
-// 하꾸 브랜드 하늘색 — 아이콘 마크의 포인트 컬러와 같은 값 ("하꾸=하늘")
-const BRAND_BLUE = '#3FA0E0';
 
 const START_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00'];
 const END_TIMES   = ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
@@ -41,8 +38,8 @@ function ToggleSwitch({ checked, onChange, disabled, label }: {
       disabled={disabled}
       style={{
         width: W, height: H, flexShrink: 0, padding: 0,
-        borderRadius: H / 2, border: 'none',
-        background: checked ? BRAND_BLUE : 'rgba(26,26,26,0.18)',
+        borderRadius: H / 2, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box',
+        background: checked ? COLOR.red : '#EFEAE0',
         transition: 'background 0.2s ease',
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.4 : 1,
@@ -56,10 +53,9 @@ function ToggleSwitch({ checked, onChange, disabled, label }: {
     >
       <span
         style={{
-          position: 'absolute', top: PAD, left: PAD,
-          width: knob, height: knob, borderRadius: '50%',
-          background: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.28)',
+          position: 'absolute', top: PAD - 1.5, left: PAD - 1.5,
+          width: knob, height: knob, borderRadius: '50%', boxSizing: 'border-box',
+          background: COLOR.white, border: `1.5px solid ${COLOR.ink}`,
           transform: checked ? `translateX(${W - knob - PAD * 2}px)` : 'translateX(0)',
           transition: 'transform 0.2s ease',
         }}
@@ -103,11 +99,11 @@ function PushSection() {
   return (
     <div>
       <SectionHeader label="알림" />
-      <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ ...CARD, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 15 }}>기록 시간 알림</div>
-            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
               {ready
                 ? `${settings.startTime}부터 ${intervalLabel(settings.interval)} 간격으로 알려드려요`
                 : PUSH_SERVER_URL === ''
@@ -122,9 +118,9 @@ function PushSection() {
             disabled={!ready || busy}
           />
         </div>
-        {error && <div style={{ fontSize: 11, color: '#E5533C', whiteSpace: 'pre-line' }}>{error}</div>}
+        {error && <div style={{ fontSize: 11, color: COLOR.red, whiteSpace: 'pre-line' }}>{error}</div>}
         {enabled && (
-          <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>
+          <div style={{ fontSize: 11, color: COLOR.inkMuted }}>
             시간과 간격을 바꾸면 알림 일정도 자동으로 갱신돼요
           </div>
         )}
@@ -133,10 +129,19 @@ function PushSection() {
   );
 }
 
+const SECTION_COLORS: Record<string, string> = {
+  '기록 시간': 'rgba(132,190,236,0.6)',
+  '알림 · 기록 방식': 'rgba(255,214,90,0.7)',
+  '결과물': 'rgba(240,170,170,0.6)',
+  '알림': 'rgba(184,214,120,0.75)',
+  '데이터': 'rgba(132,190,236,0.6)',
+  'AI 촬영감독': 'rgba(255,214,90,0.7)',
+};
+
 function SectionHeader({ label }: { label: string }) {
   return (
-    <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.45)', padding: '0 4px 8px' }}>
-      {label}
+    <div style={{ padding: '0 2px 8px', display: 'flex' }}>
+      <h2 style={{ margin: 0, ...highlight(SECTION_COLORS[label] ?? 'rgba(132,190,236,0.6)'), color: COLOR.ink }}>{label}</h2>
     </div>
   );
 }
@@ -145,8 +150,8 @@ function Chevron({ open }: { open: boolean }) {
   return (
     <div style={{
       width: 7, height: 7,
-      borderRight: '1.5px solid rgba(26,26,26,0.35)',
-      borderBottom: '1.5px solid rgba(26,26,26,0.35)',
+      borderRight: `2px solid ${COLOR.inkSub}`,
+      borderBottom: `2px solid ${COLOR.inkSub}`,
       transform: open ? 'rotate(-135deg)' : 'rotate(45deg)',
       transition: 'transform 0.18s',
       marginTop: open ? 3 : 0,
@@ -171,14 +176,14 @@ function SettingRow({ label, value, last, open, onToggle, children }: RowProps) 
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', cursor: 'pointer', background: 'none', border: 'none', borderBottom: last && !open ? 'none' : '1px solid rgba(26,26,26,0.07)', fontFamily: 'Inter, sans-serif' }}
+        style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', cursor: 'pointer', background: 'none', border: 'none', borderBottom: last && !open ? 'none' : `1.5px dashed ${COLOR.dash}`, fontFamily: FONT_BODY, color: COLOR.ink }}
       >
         <div style={{ flex: 1, fontSize: 15, textAlign: 'left' }}>{label}</div>
-        <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.5)', marginRight: 10 }}>{value}</div>
+        <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 10 }}>{value}</div>
         <Chevron open={open} />
       </button>
       {open && (
-        <div style={{ padding: '6px 16px 14px', borderBottom: last ? 'none' : '1px solid rgba(26,26,26,0.07)', background: 'rgba(26,26,26,0.02)' }}>
+        <div style={{ padding: '6px 16px 14px', borderBottom: last ? 'none' : `1.5px dashed ${COLOR.dash}`, background: 'rgba(43,38,34,0.03)' }}>
           {children}
         </div>
       )}
@@ -190,11 +195,11 @@ function Option({ label, selected, onSelect }: { label: string; selected: boolea
   return (
     <button
       onClick={onSelect}
-      style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', borderBottom: '1px solid rgba(26,26,26,0.05)' }}
+      style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, borderBottom: `1px dashed ${COLOR.dash}` }}
     >
-      <div style={{ flex: 1, fontSize: 15, textAlign: 'left', color: selected ? '#1A1A1A' : 'rgba(26,26,26,0.6)', fontWeight: selected ? 500 : 400 }}>{label}</div>
-      <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selected ? '#1A1A1A' : 'rgba(26,26,26,0.2)'}`, background: selected ? '#1A1A1A' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {selected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+      <div style={{ flex: 1, fontSize: 15, textAlign: 'left', color: selected ? COLOR.ink : COLOR.inkSub, fontWeight: selected ? 500 : 400 }}>{label}</div>
+      <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selected ? COLOR.ink : COLOR.dash}`, background: selected ? COLOR.ink : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {selected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: COLOR.white }} />}
       </div>
     </button>
   );
@@ -204,7 +209,7 @@ function SettingGroup({ header, children }: { header: string; children: React.Re
   return (
     <div>
       <SectionHeader label={header} />
-      <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden' }}>
+      <div style={{ ...CARD, overflow: 'hidden' }}>
         {children}
       </div>
     </div>
@@ -223,12 +228,12 @@ function AISection() {
 
   return (
     <div>
-      <SectionHeader label="AI · 촬영감독" />
-      <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <SectionHeader label="AI 촬영감독" />
+      <div style={{ ...CARD, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ fontSize: 15 }}>AI 분석 사용</div>
-            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
               {configured ? (consented ? '제목·무드·BGM을 AI가 추천해요' : '켜면 하루 마감에서 AI가 연출해요') : '서버 연결 전이에요'}
             </div>
           </div>
@@ -239,7 +244,7 @@ function AISection() {
             disabled={!configured}
           />
         </div>
-        <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.5)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 12, color: COLOR.inkMuted, lineHeight: 1.6 }}>
           켜면 텍스트 기록과 캡션만 하꾸 AI 서버로 보내 제목·무드·BGM을 추천해요. 사진·영상·음성 원본은 전송하지 않아요.
         </div>
       </div>
@@ -312,32 +317,32 @@ function DataSection() {
 
   return (
     <div>
-      <SectionHeader label="Data · 데이터" />
-      <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, overflow: 'hidden' }}>
+      <SectionHeader label="데이터" />
+      <div style={{ ...CARD, overflow: 'hidden' }}>
         <button
           onClick={handleExport}
           disabled={busy}
-          style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', background: 'none', border: 'none', borderBottom: '1px solid rgba(26,26,26,0.07)', cursor: 'pointer', fontFamily: 'Inter, sans-serif', textAlign: 'left' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 60, padding: '12px 16px', background: 'none', border: 'none', borderBottom: `1.5px dashed ${COLOR.dash}`, cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, textAlign: 'left' }}
         >
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 내보내기</div>
-            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>설정·기록·아카이브·모든 미디어를 해시와 함께 저장</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>설정·기록·아카이브·모든 미디어를 해시와 함께 저장</div>
           </div>
-          <div style={{ fontSize: 18, color: 'rgba(26,26,26,0.35)' }}>↑</div>
+          <div style={{ fontSize: 18, color: COLOR.inkMuted }}>↑</div>
         </button>
 
-        <label style={{ display: 'flex', alignItems: 'center', minHeight: 50, padding: '0 16px', cursor: 'pointer', borderBottom: 'none' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 60, padding: '12px 16px', cursor: 'pointer', borderBottom: 'none' }}>
           <input type="file" accept=".zip,.hakku.zip,application/zip" onChange={handleImport} disabled={busy} style={{ display: 'none' }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 가져오기</div>
-            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>경로·크기·해시 검증 후 원자적으로 복원</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>경로·크기·해시 검증 후 원자적으로 복원</div>
           </div>
-          <div style={{ fontSize: 18, color: 'rgba(26,26,26,0.35)' }}>↓</div>
+          <div style={{ fontSize: 18, color: COLOR.inkMuted }}>↓</div>
         </label>
       </div>
 
       {error && (
-        <div role="alert" style={{ fontSize: 12, color: '#E5533C', padding: '8px 4px', lineHeight: 1.5 }}>{error}</div>
+        <div role="alert" style={{ fontSize: 12, color: COLOR.red, padding: '8px 4px', lineHeight: 1.5 }}>{error}</div>
       )}
       {status && (
         <div role="status" aria-live="polite" style={{ fontSize: 12, color: '#3FA37B', padding: '8px 4px' }}>{status}</div>
@@ -367,16 +372,16 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   const defaultTypeLabel = TYPE_LABELS[settings.defaultType];
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#F7F7F5' }}>
-      <div style={{ padding: '60px 22px 8px', background: '#F7F7F5' }}>
-        <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>Settings</div>
-        <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.7px', marginTop: 7 }}>설정</div>
+    <div style={SCREEN}>
+      <div style={{ padding: '58px 22px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={TAPE_GREEN()}>나의 하꾸</span>
+        <h1 style={TITLE}>설정</h1>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '12px 22px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Schedule */}
-        <SettingGroup header="Schedule · 기록 시간">
+        <SettingGroup header="기록 시간">
           <SettingRow label="시작 시간" value={settings.startTime} open={openRow === 'startTime'} onToggle={() => toggle('startTime')}>
             {START_TIMES.map(t => (
               <Option key={t} label={t} selected={settings.startTime === t} onSelect={() => set('startTime', t)} />
@@ -388,15 +393,15 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
             <Option label="종료 시간 지정" selected={settings.endMode === 'fixed'} onSelect={() => updateSettings({ endMode: 'fixed' })} />
             {settings.endMode === 'fixed' && (
               <div style={{ paddingTop: 8 }}>
-                <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.5)', marginBottom: 6 }}>종료 시간 선택</div>
+                <div style={{ fontSize: 12, color: COLOR.inkMuted, marginBottom: 6 }}>종료 시간 선택</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {END_TIMES.map(t => (
                     <button key={t} onClick={() => set('endTime', t)} style={{
-                      padding: '7px 14px', borderRadius: 50, fontSize: 13,
-                      background: settings.endTime === t ? '#1A1A1A' : '#fff',
-                      color: settings.endTime === t ? '#fff' : '#1A1A1A',
-                      border: settings.endTime === t ? 'none' : '1px solid rgba(26,26,26,0.15)',
-                      cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                      minHeight: 36, padding: '0 14px', borderRadius: 18, fontSize: 13,
+                      background: settings.endTime === t ? COLOR.ink : COLOR.white,
+                      color: settings.endTime === t ? COLOR.white : COLOR.ink,
+                      border: `1.5px solid ${COLOR.ink}`,
+                      cursor: 'pointer', fontFamily: FONT_BODY,
                     }}>{t}</button>
                   ))}
                 </div>
@@ -412,7 +417,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         </SettingGroup>
 
         {/* Capture */}
-        <SettingGroup header="Capture · 알림 · 기록 방식">
+        <SettingGroup header="알림 · 기록 방식">
           <SettingRow label="알림 시점" value={notifyLabel(settings.notifyTiming)} open={openRow === 'notify'} onToggle={() => toggle('notify')}>
             <Option label="1분 전" selected={settings.notifyTiming === 'before'} onSelect={() => set('notifyTiming', 'before')} />
             <Option label="기록 시각" selected={settings.notifyTiming === 'exact'} onSelect={() => set('notifyTiming', 'exact')} />
@@ -440,14 +445,14 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         </SettingGroup>
 
         {/* Output */}
-        <SettingGroup header="Output · 결과물">
-          <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(26,26,26,0.07)' }}>
+        <SettingGroup header="결과물">
+          <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center', borderBottom: `1.5px dashed ${COLOR.dash}` }}>
             <div style={{ flex: 1, fontSize: 15 }}>영상 크기</div>
-            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.5)' }}>720×1280 · 9:16</div>
+            <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 17 }}>720×1280 · 9:16</div>
           </div>
           <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
             <div style={{ flex: 1, fontSize: 15 }}>저장 방식</div>
-            <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.5)' }}>아카이브 저장 후 열기</div>
+            <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 17 }}>아카이브 저장 후 열기</div>
           </div>
         </SettingGroup>
 
@@ -460,7 +465,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         {devToolsOpen && (
           <>
             <SectionHeader label="테스트 도구" />
-            <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 12 }}>
+            <div style={{ ...CARD, overflow: 'hidden', marginBottom: 12 }}>
               <button
                 type="button"
                 onClick={() => {
@@ -470,19 +475,19 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
                 disabled={!isWrapped}
                 style={{
                   width: '100%', minHeight: 50, padding: '0 16px', display: 'flex', alignItems: 'center',
-                  background: 'none', border: 'none', textAlign: 'left', fontFamily: 'Inter, sans-serif',
+                  background: 'none', border: 'none', textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink,
                   opacity: isWrapped ? 1 : 0.4, cursor: isWrapped ? 'pointer' : 'default',
                 }}
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15 }}>오늘 마감 잠금 풀기</div>
-                  <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
                     {isWrapped ? '같은 날 다시 기록·영상 생성을 해볼 수 있어요' : '오늘은 아직 마감하지 않았어요'}
                   </div>
                 </div>
               </button>
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', padding: '0 16px 12px', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: COLOR.inkMuted, padding: '0 16px 12px', lineHeight: 1.5 }}>
               테스트용입니다. 실제 사용에서는 하루에 영상 하나가 정책이에요.
             </div>
           </>
@@ -492,7 +497,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
           type="button"
           onClick={() => setVersionTaps(n => n + 1)}
           aria-label="빌드 버전"
-          style={{ display: 'block', width: '100%', textAlign: 'center', fontSize: 11, color: 'rgba(26,26,26,0.3)', fontFamily: "'JetBrains Mono', monospace", padding: '8px 0', background: 'none', border: 'none' }}
+          style={{ display: 'block', width: '100%', textAlign: 'center', fontSize: 11, color: COLOR.inkMuted, fontFamily: "'JetBrains Mono', monospace", padding: '8px 0', background: 'none', border: 'none' }}
         >
           하꾸 · HAKKU {__BUILD_VERSION__}{devToolsOpen ? ' · DEV' : ''}
         </button>

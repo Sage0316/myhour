@@ -110,7 +110,7 @@ function AppContent() {
 
   if (isMobile) {
     return (
-      <div style={{ height: '100dvh', width: '100%', overflow: 'hidden', background: '#fff' }}>
+      <div style={{ height: '100dvh', width: '100%', overflow: 'hidden', background: '#FBF7EC' }}>
         {activeScreen}
       </div>
     );

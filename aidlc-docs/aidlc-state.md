@@ -32,9 +32,20 @@
 - [-] Reverse Engineering — 생략 (`PROJECT_CONTEXT.md`, `IMPLEMENTATION_SUMMARY.md`로 대체)
 - [x] Requirements Analysis — `inception/requirements/requirements.md` 사용자 승인
 - [-] User Stories — 생략 (사용자 유형 하나)
-- [ ] Workflow Planning — `inception/plans/execution-plan.md` 작성, 승인 대기
+- [x] Workflow Planning — `inception/plans/execution-plan.md` 사용자 승인
 - [-] Application Design — 생략 (기존 경계 안의 통합)
-- [ ] Units Generation — 실행 계획의 작업 단위 목록(U8–U16)으로 확정 예정
+- [x] Units Generation — 실행 계획의 작업 단위 목록(U8–U16)으로 확정
+
+### 🟢 CONSTRUCTION PHASE
+- [x] U12 디자인 리뉴얼 — 코드 생성 완료, 사용자 확인 대기 (`construction/plans/u12-design-renewal-code-generation-plan.md`)
+- [ ] U8 iOS 앱 틀
+- [ ] U10 예약 알림
+- [ ] U11 저장·공유
+- [ ] U9 서버 허용 주소
+- [ ] U14 출시용 정리
+- [ ] U13 결제·페이월
+- [ ] U15 클라우드 빌드
+- [ ] U16 앱스토어 제출
 
 ## 적용된 확장
 

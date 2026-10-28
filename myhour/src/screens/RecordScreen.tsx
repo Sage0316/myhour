@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import {
+  BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_SKY,
+} from '../design';
 import type { RecordType } from '../store';
 import { deleteVideoFromIDB, saveVideoToIDB } from '../store';
 import { useApp, type RecordMedia } from '../appContext';
@@ -15,6 +18,38 @@ type Mode = '영상' | '사진' | '음성' | '글';
 const MODES: Mode[] = ['영상', '사진', '음성', '글'];
 const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' };
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
+
+/** 뷰파인더 네 모서리 표시 */
+function ViewfinderCorners({ color, bottom = 18 }: { color: string; bottom?: number }) {
+  const corner = (d: string, pos: React.CSSProperties) => (
+    <svg aria-hidden="true" width="26" height="26" viewBox="0 0 26 26" style={{ position: 'absolute', ...pos }}>
+      <path d={d} fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+  return (
+    <>
+      {corner('M2 12V2h10', { top: 18, left: 18 })}
+      {corner('M14 2h10v10', { top: 18, right: 18 })}
+      {corner('M2 14v10h10', { bottom, left: 18 })}
+      {corner('M24 14v10H14', { bottom, right: 18 })}
+    </>
+  );
+}
+
+/** 빨간 녹화·촬영 버튼. 녹화 중이면 네모(정지)로 바뀐다 */
+function RecordButton({ onClick, label, recording, light }: { onClick: () => void; label: string; recording: boolean; light?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      style={{ width: 74, height: 74, borderRadius: 37, boxSizing: 'border-box', border: `3px solid ${light ? COLOR.white : COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: light ? 'rgba(0,0,0,0.25)' : COLOR.white, cursor: 'pointer', padding: 0 }}
+    >
+      <span style={recording
+        ? { width: 26, height: 26, borderRadius: 5, background: COLOR.red }
+        : { width: 54, height: 54, borderRadius: 27, background: COLOR.red }} />
+    </button>
+  );
+}
 
 interface PreparedImage {
   preview: string;
@@ -166,21 +201,21 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
 
   if (phase === 'error') return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 22 }}>
-      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 1.7 }}>
+      <div style={{ ...CARD, padding: '20px 22px', fontSize: 15, fontWeight: 700, textAlign: 'center', lineHeight: 1.6 }}>
         카메라 접근 권한이 필요해요<br />
-        <span style={{ fontSize: 12 }}>브라우저 설정에서 허용해주세요</span>
+        <span style={{ fontSize: 13, fontWeight: 400, color: COLOR.inkMuted }}>설정에서 카메라를 허용해 주세요</span>
       </div>
     </div>
   );
 
   if (phase === 'processing') return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>처리 중…</div>
+      <div style={{ fontSize: 14, color: COLOR.inkMuted }}>처리 중…</div>
     </div>
   );
 
   return (
-    <div style={{ flex: 1, position: 'relative', margin: '16px 22px 30px', borderRadius: 24, overflow: 'hidden', background: '#23232B' }}>
+    <div style={{ flex: 1, position: 'relative', margin: '20px 22px 34px', borderRadius: 22, overflow: 'hidden', background: '#2F2B33', border: `1.5px solid ${COLOR.ink}` }}>
       <video
         ref={videoRef}
         muted
@@ -194,6 +229,7 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
           transition: 'filter 0.6s ease',
         }}
       />
+      {phase === 'preview' && <ViewfinderCorners color={COLOR.white} bottom={138} />}
       {phase === 'starting' && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>카메라 준비 중…</div>
@@ -202,7 +238,7 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
       {phase === 'recording' && (
         <div style={{ position: 'absolute', top: 16, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(0,0,0,0.5)', borderRadius: 50, padding: '6px 14px' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#E5533C' }} />
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR.red }} />
             <span style={{ ...MONO, fontSize: 13, color: seconds >= 5 ? 'rgba(255,255,255,0.45)' : '#fff' }}>{mm}:{ss}</span>
           </div>
           {seconds >= 5 && (
@@ -214,23 +250,19 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
       )}
       {phase === 'preview' && (
         <div style={{ position: 'absolute', bottom: 112, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: 'rgba(0,0,0,0.45)', borderRadius: 50, padding: '5px 13px', fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+          <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: 14, padding: '4px 12px', fontSize: 12, fontWeight: 500, color: COLOR.ink }}>
             하루 요약 영상에는 앞 5초만 담겨요
           </div>
         </div>
       )}
       {(phase === 'preview' || phase === 'recording') && (
         <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-          <button
+          <RecordButton
             onClick={phase === 'preview' ? startRecording : stopRecording}
-            aria-label={phase === 'preview' ? '영상 녹화 시작' : '영상 녹화 중지'}
-            style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }}
-          >
-            {phase === 'preview'
-              ? <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E5533C' }} />
-              : <div style={{ width: 24, height: 24, borderRadius: 4, background: '#E5533C' }} />
-            }
-          </button>
+            label={phase === 'preview' ? '영상 녹화 시작' : '영상 녹화 중지'}
+            recording={phase === 'recording'}
+            light
+          />
         </div>
       )}
     </div>
@@ -242,28 +274,46 @@ const TEXT_MAX = 25;
 
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
+  const ready = text.trim().length > 0;
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 16 }}>
-      <div style={{ flex: 1, borderRadius: 20, background: 'rgba(255,255,255,0.06)', padding: 18 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0 }}>
+      <label style={{
+        flexShrink: 0, height: 112, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
+        ...CARD, borderRadius: 18, padding: '14px 18px 10px',
+      }}>
         <textarea
           value={text}
+          rows={2}
           maxLength={TEXT_MAX}
           onChange={e => setText(e.target.value.slice(0, TEXT_MAX))}
-          placeholder="지금 이 순간을 짧게 남겨보세요"
+          placeholder="지금 이 순간을 한 줄로"
+          aria-label="글 기록"
           autoFocus
-          style={{ width: '100%', height: '100%', background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 16, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
+          style={{
+            flex: 1, width: '100%', border: 'none', outline: 'none', color: COLOR.ink, fontSize: 18, fontWeight: 500, lineHeight: '32px', fontFamily: FONT_BODY, resize: 'none', padding: 0,
+            // 줄노트: 글줄마다 바로 아래에 연한 줄을 긋는다
+            background: 'linear-gradient(transparent 31px, rgba(142,167,201,0.45) 31px, rgba(142,167,201,0.45) 32px) 0 0 / 100% 32px local',
+          }}
         />
+        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: text.length >= TEXT_MAX ? COLOR.red : COLOR.inkMuted }}>{text.length}/{TEXT_MAX}자</span>
+      </label>
+
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>영상에서는 1~2초 동안 이렇게 보여요</span>
+        <div aria-hidden="true" style={{ position: 'relative', height: '100%', maxHeight: 300, aspectRatio: '9 / 16', border: `1.5px solid ${COLOR.ink}`, borderRadius: 14, background: COLOR.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', boxSizing: 'border-box' }}>
+          <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.45, color: ready ? COLOR.white : 'rgba(255,255,255,0.45)', textAlign: 'center', wordBreak: 'keep-all' }}>
+            {ready ? text : '여기 쓴 한 줄'}
+          </span>
+        </div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ ...MONO, fontSize: 11, color: text.length >= TEXT_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{TEXT_MAX}자</div>
-        <button
-          onClick={() => text.trim() && onSave(text.trim())}
-          disabled={!text.trim()}
-          style={{ height: 46, padding: '0 28px', borderRadius: 50, background: text.trim() ? '#fff' : 'rgba(255,255,255,0.2)', color: text.trim() ? '#16161A' : 'rgba(255,255,255,0.4)', fontSize: 15, fontWeight: 600, border: 'none', cursor: text.trim() ? 'pointer' : 'default', fontFamily: 'Inter, sans-serif' }}
-        >
-          저장하기
-        </button>
-      </div>
+
+      <button
+        onClick={() => ready && onSave(text.trim())}
+        disabled={!ready}
+        style={{ ...BUTTON_PRIMARY, width: '100%', flexShrink: 0, ...(ready ? {} : BUTTON_DISABLED) }}
+      >
+        저장하기
+      </button>
     </div>
   );
 }
@@ -357,35 +407,38 @@ function AudioRecordMode({ onCapture }: { onCapture: (blob: Blob) => void }) {
   const ss = String(seconds % 60).padStart(2, '0');
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28, padding: '0 22px 30px' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', minHeight: 0 }}>
+    <div style={{ flex: 1, ...CARD, borderRadius: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
       {phase === 'recording' ? (
         <>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 60 }}>
             {[12, 28, 18, 40, 22, 35, 16, 44, 20, 30, 14, 38].map((h, i) => (
-              <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: 'rgba(255,255,255,0.65)' }} />
+              <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: COLOR.ink }} />
             ))}
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ ...MONO, fontSize: 32, color: seconds >= 5 ? 'rgba(255,255,255,0.45)' : '#fff', letterSpacing: 3 }}>{mm}:{ss}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>
+            <div style={{ ...MONO, fontSize: 32, color: seconds >= 5 ? COLOR.inkMuted : COLOR.ink, letterSpacing: 3 }}>{mm}:{ss}</div>
+            <div style={{ fontSize: 13, color: COLOR.inkMuted, marginTop: 8 }}>
               {seconds >= 5 ? '영상에는 앞 5초만 담겨요' : '녹음 중'}
             </div>
           </div>
-          <button onClick={stop} aria-label="음성 녹음 중지" style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
-            <div style={{ width: 22, height: 22, borderRadius: 4, background: '#E5533C' }} />
-          </button>
+          <RecordButton onClick={stop} label="음성 녹음 중지" recording />
         </>
       ) : (
         <>
-          <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7 }}>
-            마이크로 이 순간을<br />짧게 남겨보세요
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>하루 요약 영상에는 앞 5초만 담겨요</div>
+          <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: 5, height: 60 }}>
+            {[12, 28, 18, 40, 22, 34, 16, 44, 20, 30, 14, 38].map((h, i) => (
+              <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: '#D6CFC3' }} />
+            ))}
           </div>
-          <button onClick={start} aria-label="음성 녹음 시작" style={{ width: 74, height: 74, borderRadius: '50%', border: '3px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', cursor: 'pointer' }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E5533C' }} />
-          </button>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.5 }}>마이크로 이 순간을<br />짧게 남겨보세요</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 8 }}>하루 요약 영상에는 앞 5초만 담겨요</div>
+          </div>
+          <RecordButton onClick={start} label="음성 녹음 시작" recording={false} />
         </>
       )}
+    </div>
     </div>
   );
 }
@@ -403,58 +456,61 @@ function CaptionStep({ content, type, onSave, onRetake }: {
   const isMedia = type === 'photo' || type === 'video' || type === 'meme';
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 22px 30px', gap: 14, minHeight: 0, overflowY: 'auto' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0, overflowY: 'auto' }}>
       {/* 미리보기 */}
       {isMedia && (
-        <div style={{ borderRadius: 20, overflow: 'hidden', maxHeight: '42vh', flexShrink: 0, position: 'relative' }}>
+        <div style={{ borderRadius: 20, overflow: 'hidden', maxHeight: '42vh', flexShrink: 0, position: 'relative', border: `1.5px solid ${COLOR.ink}`, background: COLOR.beige }}>
           <img src={content} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: '42vh', display: 'block' }} />
           {type === 'video' && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 0, height: 0, borderLeft: '12px solid #fff', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+              <div style={{ width: 44, height: 44, borderRadius: 22, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill={COLOR.navy}><path d="M7 4.5v15l12.5-7.5z" /></svg>
               </div>
             </div>
           )}
           {onRetake && (
             <button
               onClick={onRetake}
-              style={{ position: 'absolute', top: 10, right: 10, padding: '5px 12px', borderRadius: 50, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+              style={{ ...PILL_BUTTON, position: 'absolute', top: 10, right: 10, minHeight: 36 }}
             >
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
               {type === 'meme' ? '다시 고르기' : '다시 찍기'}
             </button>
           )}
         </div>
       )}
       {type === 'audio' && (
-        <div style={{ borderRadius: 16, background: 'rgba(255,255,255,0.06)', padding: '14px 16px', flexShrink: 0 }}>
+        <div style={{ ...CARD, padding: '14px 16px', flexShrink: 0 }}>
           <audio src={content} controls style={{ width: '100%', height: 36 }} />
         </div>
       )}
 
       {/* 문구 입력 */}
-      <div style={{ flex: 1, borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 16, minHeight: 100 }}>
+      <div style={{ flex: 1, ...CARD, padding: '14px 16px', minHeight: 100, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>한 줄 남기기 (선택)</span>
         <textarea
           value={text}
           maxLength={CAPTION_MAX}
           onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}
           placeholder={type === 'meme' ? '딱 이 기분이었음 ㅋㅋ' : '점심 도시락, 오후 산책...'}
           autoFocus
-          style={{ width: '100%', height: '100%', minHeight: 80, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 16, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', resize: 'none' }}
+          aria-label="한 줄 남기기"
+          style={{ flex: 1, width: '100%', minHeight: 60, background: 'none', border: 'none', outline: 'none', color: COLOR.ink, fontSize: 16, lineHeight: 1.6, fontFamily: FONT_BODY, resize: 'none', padding: 0 }}
         />
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, paddingLeft: 4 }}>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+        <div style={{ fontSize: 12, color: COLOR.inkMuted }}>
           {type === 'meme' ? '이 문구가 하루 요약 영상에 손글씨로 들어가요' : ''}
         </div>
-        <div style={{ ...MONO, fontSize: 11, color: text.length >= CAPTION_MAX ? '#E5533C' : 'rgba(255,255,255,0.45)' }}>{text.length}/{CAPTION_MAX}자</div>
+        <div style={{ fontSize: 12, color: text.length >= CAPTION_MAX ? COLOR.red : COLOR.inkMuted }}>{text.length}/{CAPTION_MAX}자</div>
       </div>
 
       {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
       <div style={{ flexShrink: 0 }}>
         <button
           onClick={() => onSave(text.trim())}
-          style={{ width: '100%', height: 50, borderRadius: 50, background: '#fff', color: '#16161A', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+          style={{ ...BUTTON_PRIMARY, width: '100%' }}
         >
           저장하기
         </button>
@@ -571,7 +627,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     if (loading) {
       return (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>처리 중…</div>
+          <div style={{ fontSize: 14, color: COLOR.inkMuted }}>처리 중…</div>
         </div>
       );
     }
@@ -592,61 +648,72 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
 
     // 사진 — 촬영/앨범 두 갈래 선택 (앨범에서 고른 건 meme 장면으로 들어간다)
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 22px 30px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: '22px 22px 34px', minHeight: 0 }}>
         <button
           type="button"
           onClick={() => { photoSourceRef.current = 'camera'; photoInputRef.current?.click(); }}
           aria-label="지금 촬영하기"
-          style={{ flex: 1, border: 'none', borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, cursor: 'pointer' }}
+          style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, borderRadius: 6, padding: '12px 12px 0', cursor: 'pointer', boxSizing: 'border-box', fontFamily: FONT_BODY }}
         >
-          <div style={{ width: 62, height: 62, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 16, height: 16, border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: '50%' }} />
-          </div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>지금 촬영</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>카메라로 이 순간을 담아요</div>
+          <span aria-hidden="true" style={{ position: 'absolute', top: -10, left: '50%', width: 76, height: 20, marginLeft: -38, background: COLOR.green, transform: 'rotate(-3deg)' }} />
+          <span style={{ position: 'relative', flex: 1, width: '100%', background: '#EFE9DC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ViewfinderCorners color={COLOR.ink} bottom={18} />
+            <span style={{ fontSize: 13, color: COLOR.inkMuted }}>카메라로 이 순간을 담아요</span>
+          </span>
+          <span style={{ height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+            <span style={{ width: 58, height: 58, borderRadius: 29, border: `2px solid ${COLOR.ink}`, background: COLOR.white, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
+              <span style={{ width: 44, height: 44, borderRadius: 22, background: COLOR.red }} />
+            </span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: COLOR.ink }}>지금 촬영</span>
+          </span>
         </button>
         <button
           type="button"
           onClick={() => { photoSourceRef.current = 'album'; albumInputRef.current?.click(); }}
           aria-label="앨범에서 선택하기"
-          style={{ flex: 1, border: 'none', borderRadius: 24, background: '#23232B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, cursor: 'pointer' }}
+          style={{ flexShrink: 0, minHeight: 72, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', ...CARD, textAlign: 'left', cursor: 'pointer', fontFamily: FONT_BODY }}
         >
-          <div style={{ width: 62, height: 62, borderRadius: 16, border: '2.5px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', padding: 6, gap: 4 }}>
-            <div style={{ width: 12, height: 20, background: 'rgba(255,255,255,0.35)', borderRadius: 3 }} />
-            <div style={{ width: 12, height: 32, background: 'rgba(255,255,255,0.7)', borderRadius: 3 }} />
-            <div style={{ width: 12, height: 14, background: 'rgba(255,255,255,0.35)', borderRadius: 3 }} />
-          </div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>앨범에서 선택</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>기분에 맞는 짤·사진도 좋아요</div>
+          <span style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 12, background: '#EFE9DC', border: `1.5px solid ${COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="15" height="14" rx="2" /><path d="M7 2h12a2 2 0 0 1 2 2v12" /><circle cx="8" cy="10" r="1.5" /><path d="M18 16l-4-4-8 7" /></svg>
+          </span>
+          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: COLOR.ink }}>앨범에서 선택</span>
+            <span style={{ fontSize: 12, color: COLOR.inkMuted }}>기분에 맞는 짤·사진도 좋아요</span>
+          </span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={COLOR.inkSub} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
         </button>
       </div>
     );
   }
 
   return (
-    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="새 기록" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#16161A', color: '#fff' }}>
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="새 기록" style={SCREEN}>
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
       {/* 앨범 선택은 capture 속성 없이 — iOS에서 사진 보관함이 열린다 */}
       <input ref={albumInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
 
-      <div style={{ padding: '58px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={onClose} aria-label="기록 화면 닫기" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>
-        <div style={{ ...MONO, fontSize: 11, letterSpacing: '1px', color: 'rgba(255,255,255,0.6)' }}>SLOT {slot}</div>
-        <div style={{ width: 34 }} />
+      <div style={{ padding: '52px 18px 0', display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) 44px', alignItems: 'center' }}>
+        <button onClick={onClose} aria-label="기록 화면 닫기" style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <span style={{ ...TAPE_SKY(-2, 21), justifySelf: 'center', alignSelf: 'center', padding: '2px 14px' }}>{slot} 기록</span>
+        <span />
       </div>
 
-      <div style={{ padding: '16px 22px 0', display: 'flex', justifyContent: 'center' }}>
-        <div style={{ display: 'inline-flex', gap: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 50, padding: 4 }}>
+      <div style={{ padding: '14px 22px 0' }}>
+        <div role="group" aria-label="기록 방식" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 4, background: COLOR.wash, borderRadius: 14, padding: 4 }}>
           {MODES.map(m => (
             <button
               key={m}
               onClick={() => switchMode(m)}
+              aria-pressed={mode === m}
               style={{
-                padding: '8px 16px', borderRadius: 50,
-                background: mode === m ? '#fff' : 'none',
-                color: mode === m ? '#16161A' : 'rgba(255,255,255,0.55)',
-                fontSize: 13, fontWeight: mode === m ? 600 : 400,
-                border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                minHeight: 40, borderRadius: 10, boxSizing: 'border-box',
+                background: mode === m ? COLOR.white : 'none',
+                color: mode === m ? COLOR.ink : COLOR.inkSub,
+                fontSize: 14, fontWeight: mode === m ? 700 : 400,
+                border: mode === m ? `1.5px solid ${COLOR.ink}` : '1.5px solid transparent',
+                cursor: 'pointer', fontFamily: FONT_BODY,
               }}
             >{m}</button>
           ))}

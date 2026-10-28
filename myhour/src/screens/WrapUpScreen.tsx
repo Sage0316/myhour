@@ -16,6 +16,16 @@ import type { ArchiveEntry } from '../store';
 import { consumeVideoForDate } from '../videoEntitlement';
 import { wrapUpService } from '../services/wrap-up-service';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
+import {
+  BUTTON_DISABLED, BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, highlight,
+} from '../design';
+
+/** 별이 박힌 밤하늘 — 영상 생성 버튼 배경 */
+const NIGHT: React.CSSProperties = {
+  backgroundColor: COLOR.navy,
+  backgroundImage: 'radial-gradient(circle at 20% 30%, #FFF6C9 1.4px, transparent 1.8px), radial-gradient(circle at 75% 70%, #FFFFFF 1px, transparent 1.4px), radial-gradient(circle at 50% 50%, #FFE27A 1.6px, transparent 2px)',
+  backgroundSize: '40px 40px',
+};
 
 interface WrapUpScreenProps {
   onClose: () => void;
@@ -243,43 +253,43 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
   }
 
   return (
-    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={entry ? '지난 날짜 영상 만들기' : '하루 마감'} style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
-      <div style={{ flex: 1, padding: '58px 22px 0', display: 'flex', flexDirection: 'column', gap: 13, overflow: 'auto' }}>
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={entry ? '지난 날짜 영상 만들기' : '하루 마감'} style={SCREEN}>
+      <div style={{ flex: 1, padding: '52px 22px 0', display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>
-            Wrap up · {dateShort}
-          </div>
-          <button onClick={onClose} aria-label={entry ? '영상 만들기 닫기' : '하루 마감 닫기'} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: 'none', cursor: 'pointer' }}>✕</button>
+          <span style={{ ...TAPE_GREEN(), alignSelf: 'center' }}>{entry ? '영상 만들기' : '하루 마감'} · {dateShort}</span>
+          <button onClick={onClose} aria-label={entry ? '영상 만들기 닫기' : '하루 마감 닫기'} style={{ width: 44, height: 44, marginRight: -10, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
         </div>
 
-        <div style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.5px', lineHeight: 1.25 }}>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.6px', lineHeight: 1.25 }}>
           {entry ? '이 날을 영상으로 만들어요' : '오늘을 영상으로 마무리해요'}
-        </div>
+        </h1>
 
         <div>
-          <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.45)', marginBottom: 9 }}>
-            Today's clips · {records.length || 5}
+          <div style={{ fontSize: 13, fontWeight: 700, color: COLOR.inkSub, marginBottom: 9 }}>
+            {entry ? '이 날 남긴 기록' : '오늘 남긴 기록'} · {records.length}
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {clipColors.map((bg, i) => (
-              <div key={i} style={{ width: 34, height: 46, borderRadius: 7, background: `repeating-linear-gradient(135deg, rgba(26,26,26,0.06) 0 5px, rgba(26,26,26,0) 5px 10px), ${bg}` }} />
+              <div key={i} style={{ width: 34, height: 46, borderRadius: 7, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', background: bg }} />
             ))}
-            <div style={{ color: 'rgba(26,26,26,0.35)', fontSize: 18, margin: '0 2px' }}>→</div>
-            <div style={{ width: 34, height: 46, borderRadius: 7, background: '#1A1A1A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 0, height: 0, borderLeft: '8px solid #fff', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', marginLeft: 2 }} />
+            <svg aria-hidden="true" width="22" height="16" viewBox="0 0 26 16" style={{ margin: '0 2px' }}><path d="M2 8h20M15 2l7 6-7 6" fill="none" stroke={COLOR.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <div style={{ ...NIGHT, width: 34, height: 46, borderRadius: 7, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M7 4.5v15l12.5-7.5z" /></svg>
             </div>
           </div>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 18, padding: 15, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ ...CARD, borderRadius: 18, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.45)' }}>오늘의 기록</div>
+            <div style={highlight('rgba(255,214,90,0.85)')}>{entry ? '이 날의 기록' : '오늘의 기록'}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 50, background: selectedMood.color, fontSize: 12, fontWeight: 500 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 50, border: `1px solid ${COLOR.ink}`, background: selectedMood.color, fontSize: 12, fontWeight: 600 }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: selectedMood.dot, display: 'inline-block' }} />
                 {selectedMood.mood}
               </span>
-              <button type="button" onClick={() => setShowMoodPicker(v => !v)} aria-expanded={showMoodPicker} style={{ fontSize: 12, color: '#7C5CC4', textDecoration: 'underline', cursor: 'pointer', border: 0, background: 'transparent' }}>바꾸기</button>
+              <button type="button" onClick={() => setShowMoodPicker(v => !v)} aria-expanded={showMoodPicker} style={PILL_BUTTON}>바꾸기</button>
             </div>
           </div>
 
@@ -290,8 +300,8 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px', borderRadius: 50, background: m.color,
                   fontSize: 12, fontWeight: selectedMood.mood === m.mood ? 600 : 400,
-                  border: selectedMood.mood === m.mood ? `2px solid ${m.dot}` : '2px solid transparent',
-                  cursor: 'pointer',
+                  border: selectedMood.mood === m.mood ? `2px solid ${COLOR.ink}` : '2px solid transparent',
+                  cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, minHeight: 36,
                 }}>
                   <span style={{ width: 5, height: 5, borderRadius: '50%', background: m.dot, display: 'inline-block' }} />
                   {m.mood}
@@ -303,7 +313,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
           <div>
             {analyzing ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.5 }}>
-                <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.6)' }}>AI 분석 중...</div>
+                <div style={{ fontSize: 13, color: COLOR.inkSub }}>AI가 연출 중이에요…</div>
               </div>
             ) : (
               <>
@@ -316,33 +326,38 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                       autoFocus
                       maxLength={TITLE_MAX}
                       aria-label="영상 제목"
-                      style={{ flex: 1, minWidth: 0, height: 36, borderRadius: 10, border: '1px solid rgba(26,26,26,0.18)', padding: '0 10px', fontSize: 16, fontWeight: 600, fontFamily: 'Inter, sans-serif', color: '#1A1A1A' }}
+                      style={{ flex: 1, minWidth: 0, height: 40, borderRadius: 10, border: `1.5px solid ${COLOR.ink}`, padding: '0 10px', fontSize: 16, fontWeight: 600, fontFamily: FONT_BODY, color: COLOR.ink, background: COLOR.white }}
                     />
-                    <button type="button" onClick={commitTitle} style={{ height: 36, padding: '0 12px', borderRadius: 10, border: 'none', background: '#1A1A1A', color: '#fff', fontSize: 13, cursor: 'pointer' }}>확인</button>
+                    <button type="button" onClick={commitTitle} style={{ ...PILL_BUTTON, minHeight: 40, background: COLOR.ink, color: COLOR.white }}>확인</button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-                    <div style={{ flex: 1, fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
-                    <button type="button" onClick={startEditingTitle} style={{ flexShrink: 0, fontSize: 12, color: '#7C5CC4', textDecoration: 'underline', cursor: 'pointer', border: 0, background: 'transparent' }}>제목 수정</button>
+                    <div style={{ flex: 1, fontSize: 19, fontWeight: 700, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
+                    <button type="button" onClick={startEditingTitle} style={{ ...PILL_BUTTON, flexShrink: 0, background: '#FFF6C9' }}>제목 수정</button>
                   </div>
                 )}
-                <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.6)', marginTop: 7, lineHeight: 1.5 }}>"{closing}"</div>
+                <div style={{ fontSize: 14, color: COLOR.inkSub, marginTop: 7, lineHeight: 1.5 }}>“{closing}”</div>
               </>
             )}
           </div>
 
           {director && (
             <>
-              <div style={{ height: 1, background: 'rgba(26,26,26,0.08)' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ ...MONO, fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>AI 촬영감독 · 분석</div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 22 }}>{director.emojis}</span>
-                  <span style={{ fontSize: 13, color: 'rgba(26,26,26,0.7)', lineHeight: 1.4 }}>{director.mood}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <div style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.4)', whiteSpace: 'nowrap' }}>BGM</div>
-                  <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.6)', background: 'rgba(26,26,26,0.05)', borderRadius: 8, padding: '4px 10px' }}>{BGM_TRACKS[director.bgmTrack]} · {director.bgMusic}</div>
+              <div style={{ border: `1.5px solid ${COLOR.ink}`, borderRadius: 12, overflow: 'hidden', background: '#FFFDF6' }}>
+                <div aria-hidden="true" style={{ height: 12, borderBottom: `1.5px solid ${COLOR.ink}`, backgroundImage: `repeating-linear-gradient(135deg, ${COLOR.ink} 0 10px, #FFFFFF 10px 20px)` }} />
+                <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8z" /><path d="M4 11 3.2 7.6a1 1 0 0 1 .7-1.2L17 3l.9 3.4z" /><path d="M8 5.6l2.4 3.3M12.5 4.4l2.4 3.3" /></svg>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>AI 촬영감독의 연출 노트</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ fontSize: 22, flexShrink: 0 }}>{director.emojis}</span>
+                    <span style={{ fontSize: 14, color: COLOR.inkSub, lineHeight: 1.45 }}>{director.mood}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(132,190,236,0.28)', borderRadius: 10, padding: '8px 10px' }}>
+                    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={COLOR.navy} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                    <span style={{ fontSize: 13, color: COLOR.skyInk, lineHeight: 1.4 }}><b>BGM</b> {BGM_TRACKS[director.bgmTrack]} · {director.bgMusic}</span>
+                  </div>
                 </div>
               </div>
             </>
@@ -354,12 +369,9 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               onClick={confirmDirector}
               disabled={analyzing || directorIsCurrent}
               style={{
-                width: '100%', height: 40, borderRadius: 12,
-                border: directorIsCurrent ? '1px solid rgba(26,26,26,0.12)' : '1.5px solid #1A1A1A',
-                background: directorIsCurrent ? 'rgba(26,26,26,0.04)' : '#FFFFFF',
-                color: directorIsCurrent ? 'rgba(26,26,26,0.45)' : '#1A1A1A',
-                fontSize: 13, fontWeight: 600,
-                cursor: analyzing || directorIsCurrent ? 'default' : 'pointer',
+                ...BUTTON_SECONDARY, width: '100%', minHeight: 46, borderRadius: 12, fontSize: 15,
+                background: COLOR.yellow,
+                ...(analyzing || directorIsCurrent ? BUTTON_DISABLED : {}),
               }}
             >
               {analyzing
@@ -373,10 +385,10 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
           )}
 
           {analyzeError && (
-            <div style={{ fontSize: 11, color: '#E5533C', opacity: 0.8 }}>{analyzeError}</div>
+            <div style={{ fontSize: 12, color: COLOR.red }}>{analyzeError}</div>
           )}
 
-          <div style={{ height: 1, background: 'rgba(26,26,26,0.08)' }} />
+          <div style={{ height: 0, borderTop: `1.5px dashed ${COLOR.dash}` }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             <button
@@ -385,17 +397,17 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               aria-expanded={tuningOpen}
               aria-controls="wrapup-tuning"
               style={{
-                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                background: 'transparent', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left',
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%', minHeight: 40,
+                background: 'transparent', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink,
               }}
             >
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>AI가 정한 거 바꾸기</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>AI가 정한 거 바꾸기</span>
               {/* 접힌 채로도 지금 값이 보이게 — 펼쳐야만 알 수 있으면 접은 의미가 없다 */}
-              <span style={{ fontSize: 12, color: 'rgba(26,26,26,0.45)', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 12, color: COLOR.inkMuted, whiteSpace: 'nowrap' }}>
                 {activeEmoji} · {selectedMood.mood} {intensity}
               </span>
               <span aria-hidden="true" style={{
-                fontSize: 11, color: 'rgba(26,26,26,0.4)',
+                fontSize: 11, color: COLOR.inkSub,
                 transform: tuningOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s',
               }}>▾</span>
             </button>
@@ -405,7 +417,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               hidden={!tuningOpen}
               style={{ display: tuningOpen ? 'flex' : 'none', flexDirection: 'column', gap: 9 }}
             >
-            <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.5)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, lineHeight: 1.5 }}>
               그냥 두면 AI가 정한 대로 만들어져요. 바꾸고 싶을 때만 고르세요.
             </div>
             <div style={{ display: 'flex', gap: 7 }}>
@@ -417,8 +429,8 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                   aria-label={`무드 이모지 ${emoji}`}
                   style={{
                     flex: 1, height: 38, borderRadius: 11,
-                    background: emoji === activeEmoji ? '#F0F0EE' : '#FFFFFF',
-                    border: emoji === activeEmoji ? '1.5px solid #1A1A1A' : '1px solid rgba(26,26,26,0.1)',
+                    background: emoji === activeEmoji ? COLOR.yellow : COLOR.white,
+                    border: emoji === activeEmoji ? `1.5px solid ${COLOR.ink}` : `1.5px solid ${COLOR.dash}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 18, cursor: 'pointer',
                     opacity: emoji === activeEmoji ? 1 : 0.45,
@@ -427,27 +439,27 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               ))}
             </div>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: COLOR.inkSub }}>
                 <span>{selectedMood.mood}</span><span style={MONO}>{intensity}</span>
               </div>
-              <input type="range" min={0} max={100} value={intensity} onChange={e => setIntensityPick(Number(e.target.value))} aria-label={`${selectedMood.mood} 정도`} style={{ width: '100%', marginTop: 8, accentColor: '#1A1A1A' }} />
+              <input type="range" min={0} max={100} value={intensity} onChange={e => setIntensityPick(Number(e.target.value))} aria-label={`${selectedMood.mood} 정도`} style={{ width: '100%', marginTop: 8, accentColor: COLOR.red }} />
             </div>
             </div>
           </div>
         </div>
 
         {generating ? (
-          <div style={{ minHeight: 100, borderRadius: 20, background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '24px 28px' }}>
-            <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>
-              영상 생성 중 · {Math.round(progress * 100)}%
+          <div style={{ ...NIGHT, minHeight: 110, borderRadius: 20, border: `1.5px solid ${COLOR.ink}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '24px 28px' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>
+              영상 만드는 중 · {Math.round(progress * 100)}%
             </div>
-            <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 2, background: '#7C5CC4', width: `${progress * 100}%`, transition: 'width 0.3s ease' }} />
+            <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 3, background: COLOR.yellow, width: `${progress * 100}%`, transition: 'width 0.3s ease' }} />
             </div>
             <button
               type="button"
               onClick={() => generationAbortRef.current?.abort()}
-              style={{ border: '1px solid rgba(255,255,255,0.45)', borderRadius: 50, background: 'transparent', color: '#fff', padding: '7px 16px', cursor: 'pointer' }}
+              style={{ ...PILL_BUTTON, minHeight: 40 }}
             >
               생성 취소
             </button>
@@ -459,30 +471,27 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               onClick={handleGenerate}
               disabled={records.length === 0 || alreadyGenerated}
               aria-label="오늘 기록으로 영상 생성하기"
-              style={{ width: '100%', minHeight: 100, position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#1E2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: records.length === 0 ? 'default' : 'pointer', opacity: records.length === 0 ? 0.5 : 1, border: 0 }}
+              style={{ ...NIGHT, width: '100%', minHeight: 110, position: 'relative', borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: records.length === 0 || alreadyGenerated ? 'default' : 'pointer', opacity: records.length === 0 || alreadyGenerated ? 0.5 : 1, border: `1.5px solid ${COLOR.ink}`, fontFamily: FONT_BODY }}
             >
-              <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 0, height: 0, borderLeft: '13px solid #1E2240', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+              <div style={{ width: 52, height: 52, borderRadius: 26, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill={COLOR.navy}><path d="M7 4.5v15l12.5-7.5z" /></svg>
               </div>
-              <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.6)' }}>탭하여 영상 생성</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>{entry ? '탭하면 이 날이 영상이 돼요' : '탭하면 오늘이 영상이 돼요'}</div>
             </button>
             {genError && (
-              <div style={{ fontSize: 12, color: '#E5533C', lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
+              <div style={{ fontSize: 13, color: COLOR.red, lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
             )}
           </div>
         )}
       </div>
 
-      <div style={{ padding: '12px 22px 30px', display: 'flex', gap: 9 }}>
+      <div style={{ padding: '12px 22px 30px', display: 'flex', gap: 10 }}>
         <button
           onClick={handleGenerate}
           disabled={generating || records.length === 0 || alreadyGenerated}
           style={{
-            flex: 1.5, height: 52, borderRadius: 50,
-            background: generating ? 'rgba(26,26,26,0.3)' : '#1A1A1A',
-            color: '#FFFFFF', fontSize: 16, fontWeight: 500, border: 'none',
-            cursor: generating || records.length === 0 ? 'default' : 'pointer',
-            fontFamily: 'Inter, sans-serif',
+            ...BUTTON_PRIMARY, flex: 1.5,
+            ...(generating || records.length === 0 || alreadyGenerated ? BUTTON_DISABLED : {}),
           }}
         >
           {generating ? '생성 중...' : alreadyGenerated ? '이미 만든 하루' : '영상 만들기'}
@@ -493,12 +502,8 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
             onClick={handleSkipVideo}
             disabled={generating}
             style={{
-              flex: 1, height: 52, borderRadius: 50,
-              background: '#FFFFFF', border: '1px solid rgba(26,26,26,0.18)',
-              fontSize: 14, fontWeight: 500,
-              cursor: generating ? 'default' : 'pointer',
-              color: 'rgba(26,26,26,0.5)',
-              fontFamily: 'Inter, sans-serif',
+              ...BUTTON_SECONDARY, flex: 1, fontSize: 15, fontWeight: 500,
+              ...(generating ? BUTTON_DISABLED : {}),
             }}
           >
             영상 없이 마감

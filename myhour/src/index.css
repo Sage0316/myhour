@@ -5,11 +5,15 @@ html, body {
   padding: 0;
   height: 100%;
   background: #EAEAE7;
-  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  color: #2B2622;
   -webkit-font-smoothing: antialiased;
   /* 가로 회전이나 입력 포커스 뒤 iOS가 글자를 임의로 키우지 않게 한다 */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* 한국어 단어가 "충분하/다"처럼 중간에서 끊기지 않게 단어 단위로 줄바꿈 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* iOS의 더블탭 확대를 끈다. 버튼을 빠르게 두 번 누르면 화면이 확대된 채로 남는데,
@@ -42,7 +46,7 @@ button {
 }
 
 :focus-visible {
-  outline: 3px solid #5268e3;
+  outline: 3px solid #1F3A6B;
   outline-offset: 3px;
 }
 
@@ -56,6 +60,6 @@ button {
 }
 
 @media (max-width: 599px) {
-  html, body { background: #fff; overflow: hidden; height: 100dvh; }
+  html, body { background: #FBF7EC; overflow: hidden; height: 100dvh; }
   #root { padding: 0; min-height: 100dvh; width: 100%; overflow: hidden; }
 }

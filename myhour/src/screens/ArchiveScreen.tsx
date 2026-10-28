@@ -4,6 +4,17 @@ import type { MyRecord, ArchiveEntry } from '../store';
 import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
+import {
+  BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, tape,
+} from '../design';
+
+// 화면용 바탕색. TYPE_COLORS는 영상 렌더링에도 쓰이므로 여기서만 종이 톤으로 바꾼다.
+const THUMB_BG: Record<MyRecord['type'], string> = {
+  photo: COLOR.beige, meme: COLOR.beige, video: COLOR.beige, text: COLOR.white, audio: COLOR.white,
+};
+const TAPE_COLORS: [string, string][] = [
+  [COLOR.sky, COLOR.skyInk], ['rgba(240,170,170,0.85)', '#6A1F1F'], [COLOR.green, COLOR.greenInk],
+];
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
@@ -14,7 +25,6 @@ interface ArchiveScreenProps {
   initialArchiveId?: string | null;
 }
 
-const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
 function dateLabel(iso: string) {
   const [, m, d] = iso.split('-');
@@ -27,7 +37,7 @@ function monthLabel(iso: string) {
 }
 
 function RecordThumb({ record }: { record: MyRecord }) {
-  const bg = TYPE_COLORS[record.type];
+  const bg = THUMB_BG[record.type];
   // 원본은 IDB(mediaId)이거나 구버전 기록의 content data URL이다 — 두 경로 다 훅이 처리한다
   const mediaSrc = useMediaSrc(record);
 
@@ -45,8 +55,8 @@ function RecordThumb({ record }: { record: MyRecord }) {
       <>
         <img src={record.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: 'blur(1px)' }} />
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)' }}>
-          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 0, height: 0, borderLeft: '8px solid #1A1A1A', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', marginLeft: 2 }} />
+          <div style={{ width: 32, height: 32, borderRadius: 16, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill={COLOR.navy}><path d="M7 4.5v15l12.5-7.5z" /></svg>
           </div>
         </div>
       </>
@@ -54,8 +64,8 @@ function RecordThumb({ record }: { record: MyRecord }) {
   }
   if (record.type === 'text') {
     return (
-      <div style={{ width: '100%', height: '100%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10 }}>
-        <div style={{ fontSize: 11, lineHeight: 1.5, color: 'rgba(26,26,26,0.75)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' }}>
+      <div style={{ width: '100%', height: '100%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14, boxSizing: 'border-box' }}>
+        <div style={{ fontSize: 13, lineHeight: 1.55, color: COLOR.ink, textAlign: 'center', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' }}>
           {record.content}
         </div>
       </div>
@@ -64,7 +74,7 @@ function RecordThumb({ record }: { record: MyRecord }) {
   return (
     <div style={{ width: '100%', height: '100%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
       {[10, 22, 14, 30, 18, 26, 12, 28, 16, 20].map((h, i) => (
-        <div key={i} style={{ width: 3, height: h, borderRadius: 2, background: 'rgba(124,92,196,0.5)' }} />
+        <div key={i} style={{ width: 3, height: h, borderRadius: 2, background: COLOR.ink }} />
       ))}
     </div>
   );
@@ -118,20 +128,18 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
           disabled={!blob}
           aria-label="영상 다운로드"
           style={{
-            height: 40, padding: '0 16px', borderRadius: 50,
-            background: 'rgba(255,255,255,0.9)', border: 'none',
-            color: '#1A1A1A', fontSize: 14, fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            ...PILL_BUTTON, minHeight: 44, padding: '0 18px', fontSize: 14,
             cursor: blob ? 'pointer' : 'default', opacity: blob ? 1 : 0.5,
-            fontFamily: 'Inter, sans-serif', ...noCallout,
+            ...noCallout,
           }}
         >다운로드</button>
       </div>
       <button
         onClick={onClose}
+        aria-label="영상 닫기"
         style={{
           position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 20,
-          width: 40, height: 40, borderRadius: '50%',
+          width: 44, height: 44, borderRadius: '50%',
           background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)',
           border: '1px solid rgba(255,255,255,0.3)',
           color: '#fff', fontSize: 16, fontWeight: 500,
@@ -170,10 +178,10 @@ function DetailRow({ record }: { record: MyRecord }) {
   }, [record]);
 
   return (
-    <div style={{ background: '#fff', border: '1px solid rgba(26,26,26,0.07)', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ ...CARD, borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.45)' }}>{record.slotTime}</span>
-        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 50, background: TYPE_COLORS[record.type], color: 'rgba(26,26,26,0.65)' }}>{TYPE_LABELS[record.type]}</span>
+        <span style={{ ...tape(COLOR.sky, COLOR.skyInk, 0, 15), padding: '0 7px' }}>{record.slotTime}</span>
+        <span style={{ fontSize: 12, color: COLOR.inkMuted }}>{TYPE_LABELS[record.type]}</span>
       </div>
       {record.type === 'text' && (
         <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{record.content}</div>
@@ -181,22 +189,22 @@ function DetailRow({ record }: { record: MyRecord }) {
       {(record.type === 'photo' || record.type === 'meme') && (
         mediaSrc
           ? <img src={mediaSrc} alt={record.caption ?? `${record.slotTime} 사진 기록`} style={{ width: '100%', borderRadius: 10, display: 'block' }} />
-          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
+          : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>미디어를 불러오지 못했어요</div>
       )}
       {record.type === 'audio' && (
         mediaSrc
           ? <audio src={mediaSrc} controls style={{ width: '100%', height: 36 }} />
-          : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
+          : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>미디어를 불러오지 못했어요</div>
       )}
       {record.type === 'video' && (
         clipUrl
           ? <video src={clipUrl} controls playsInline style={{ width: '100%', borderRadius: 10, display: 'block' }} />
           : record.content.startsWith('data:')
             ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
-            : <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.4)' }}>미디어를 불러오지 못했어요</div>
+            : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>미디어를 불러오지 못했어요</div>
       )}
       {record.caption && (
-        <div style={{ fontSize: 12, color: 'rgba(26,26,26,0.55)' }}>{record.caption}</div>
+        <div style={{ fontSize: 13, color: COLOR.inkSub }}>{record.caption}</div>
       )}
     </div>
   );
@@ -212,20 +220,22 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
       aria-modal="true"
       aria-label={`${dateLabel(entry.date)}의 기록`}
       tabIndex={-1}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(43,38,34,0.38)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
       onClick={onClose}
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', background: '#F7F7F5', borderRadius: '24px 24px 0 0', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}
+        style={{ width: '100%', background: COLOR.paper, borderTop: `1.5px solid ${COLOR.ink}`, borderRadius: '24px 24px 0 0', maxHeight: '82vh', display: 'flex', flexDirection: 'column', fontFamily: FONT_BODY, color: COLOR.ink }}
       >
-        <div style={{ padding: '14px 20px 12px', borderBottom: '1px solid rgba(26,26,26,0.07)', flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(26,26,26,0.15)', margin: '0 auto 14px' }} />
+        <div style={{ padding: '14px 20px 12px', borderBottom: `1.5px dashed ${COLOR.dash}`, flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: COLOR.dash, margin: '0 auto 14px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{dateLabel(entry.date)}의 기록</div>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>{dateLabel(entry.date)}의 기록</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ ...MONO, fontSize: 11, color: 'rgba(26,26,26,0.4)' }}>{entry.records.length}개</div>
-              <button type="button" onClick={onClose} aria-label="기록 상세 닫기" style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(26,26,26,0.06)' }}>✕</button>
+              <div style={{ fontSize: 13, color: COLOR.inkMuted }}>{entry.records.length}개</div>
+              <button type="button" onClick={onClose} aria-label="기록 상세 닫기" style={{ width: 44, height: 44, marginRight: -10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -278,7 +288,8 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
     ?? entry.records.find(r => r.type === 'text')
     ?? entry.records[0];
 
-  const fallbackBg = lead ? TYPE_COLORS[lead.type] : '#E2DBF0';
+  const fallbackBg = lead ? THUMB_BG[lead.type] : COLOR.beige;
+  const [tapeBg, tapeInk] = TAPE_COLORS[Number(entry.date.slice(-2)) % TAPE_COLORS.length];
 
   return (
     <>
@@ -288,10 +299,12 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
       {showDetail && (
         <DayDetailSheet entry={entry} onClose={() => setShowDetail(false)} />
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+        <div style={{ position: 'relative', background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, borderRadius: 6, padding: '6px 6px 8px' }}>
+        <span style={{ ...tape(tapeBg, tapeInk, -3, 16), position: 'absolute', top: -12, left: 12, zIndex: 2, padding: '0 9px' }}>{entry.date.slice(5).replace('-', '.')}</span>
         <div style={{
           position: 'relative', width: '100%', aspectRatio: '3/4',
-          borderRadius: 16, overflow: 'hidden',
+          overflow: 'hidden',
           background: fallbackBg,
         }}>
           {lead ? <RecordThumb record={lead} /> : (
@@ -299,28 +312,31 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
           )}
 
           <div style={{
-            position: 'absolute', bottom: 8, right: 8,
-            background: 'rgba(0,0,0,0.45)', borderRadius: 8,
-            padding: '2px 7px', ...MONO as React.CSSProperties,
-            fontSize: 10, color: '#fff',
+            position: 'absolute', bottom: 6, right: 6,
+            background: COLOR.ink, borderRadius: 8,
+            padding: '1px 7px', fontSize: 11, fontWeight: 700, color: COLOR.white,
           }}>
             {entry.records.length}
           </div>
 
           <button
             onClick={e => { e.stopPropagation(); onDelete(); }}
+            aria-label={`${dateLabel(entry.date)} 기록 삭제`}
             style={{
-              position: 'absolute', top: 8, right: 8, width: 24, height: 24,
-              borderRadius: '50%', background: 'rgba(0,0,0,0.4)', color: 'rgba(255,255,255,0.9)',
-              fontSize: 11, border: 'none', cursor: 'pointer', display: 'flex',
+              position: 'absolute', top: 0, right: 0, width: 44, height: 44,
+              background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0,
               alignItems: 'center', justifyContent: 'center', zIndex: 1,
             }}
-          >✕</button>
+          >
+            <span style={{ width: 24, height: 24, borderRadius: 12, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="3.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </span>
+          </button>
 
           {entry.records.length > 1 && (
-            <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 3 }}>
+            <div style={{ position: 'absolute', bottom: 6, left: 6, display: 'flex', gap: 3 }}>
               {[...new Set(entry.records.map(r => r.type))].map(t => (
-                <div key={t} style={{ width: 6, height: 6, borderRadius: '50%', background: TYPE_COLORS[t], border: '1px solid rgba(255,255,255,0.6)' }} />
+                <div key={t} style={{ width: 8, height: 8, borderRadius: 4, background: TYPE_COLORS[t], border: `1px solid ${COLOR.ink}` }} />
               ))}
             </div>
           )}
@@ -330,14 +346,15 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
               type="button"
               aria-label="생성된 영상 전체 화면으로 보기"
               onClick={() => setFullscreen(true)}
-              style={{ position: 'absolute', inset: 0, width: '100%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.22)', cursor: 'pointer' }}
+              style={{ position: 'absolute', inset: 0, width: '100%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(31,58,107,0.22)', cursor: 'pointer' }}
             >
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 0, height: 0, borderLeft: '13px solid #1A1A1A', borderTop: '8px solid transparent', borderBottom: '8px solid transparent', marginLeft: 3 }} />
+              <div style={{ width: 44, height: 44, borderRadius: 22, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill={COLOR.navy}><path d="M7 4.5v15l12.5-7.5z" /></svg>
               </div>
             </button>
           )}
 
+        </div>
         </div>
 
         <div>
@@ -345,35 +362,34 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
             type="button"
             onClick={() => setShowDetail(true)}
             aria-label={`${dateLabel(entry.date)} 기록 보기`}
-            style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter, sans-serif' }}
+            style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink }}
           >
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ ...MONO, fontSize: 10, color: 'rgba(26,26,26,0.5)' }}>{dateLabel(entry.date)}</span>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '2px 8px', borderRadius: 50,
-              background: mood.color, fontSize: 10, fontWeight: 500,
+              padding: '1px 8px', borderRadius: 50, border: `1px solid ${COLOR.ink}`,
+              background: mood.color, fontSize: 11, fontWeight: 600,
             }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: mood.dot, display: 'inline-block' }} />
               {mood.mood}
             </span>
           </div>
-          <div style={{ fontSize: 13, fontWeight: 500, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-          <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.4)', marginTop: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+          <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 1 }}>
             {[...new Set(entry.records.map(r => TYPE_LABELS[r.type]))].join(' · ')}
           </div>
 
-          <div style={{ fontSize: 10, color: 'rgba(26,26,26,0.35)', marginTop: 3 }}>기록 보기 ›</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#3B557A', marginTop: 3 }}>기록 보기 ›</div>
           </button>
 
           {/* 정리 예고. 푸시는 쓰지 않으므로 이 배지가 유일한 알림 수단이다 —
               앱을 열면 반드시 보이도록 버튼 바로 위에 둔다. */}
           {genState === 'idle' && trimNotice && (
             <div style={{
-              marginTop: 8, padding: '7px 10px', borderRadius: 10,
-              background: trimNotice.urgent ? 'rgba(217,116,63,0.12)' : 'rgba(26,26,26,0.05)',
-              color: trimNotice.urgent ? '#A8552A' : 'rgba(26,26,26,0.55)',
-              fontSize: 11, lineHeight: 1.4,
+              marginTop: 8, padding: '6px 9px', borderRadius: 10,
+              background: trimNotice.urgent ? COLOR.redSoft : COLOR.wash,
+              color: trimNotice.urgent ? COLOR.redInk : COLOR.inkSub,
+              fontSize: 11, lineHeight: 1.45, fontWeight: trimNotice.urgent ? 600 : 400,
             }}>
               {trimNotice.text}
             </div>
@@ -383,9 +399,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
               한 날짜의 영상은 한 번만 만든다는 정책이라 "다시 만들기"는 두지 않는다. */}
           {genState === 'idle' && !entry.trimmed && (
             <button onClick={() => onMakeVideo(entry)} style={{
-              marginTop: 8, width: '100%', padding: '11px 0', borderRadius: 12,
-              background: '#1A1A1A', color: '#fff', border: 'none',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              ...BUTTON_PRIMARY, marginTop: 8, width: '100%', minHeight: 44, borderRadius: 12, fontSize: 13,
             }}>영상 만들기</button>
           )}
 
@@ -424,15 +438,15 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
 
   if (entries.length === 0) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
-        <div style={{ padding: '60px 22px 12px' }}>
-          <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>Archive</div>
-          <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.7px', marginTop: 7 }}>아카이브</div>
+      <div style={SCREEN}>
+        <div style={{ padding: '58px 22px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={TAPE_GREEN()}>모아둔 하루</span>
+          <h1 style={TITLE}>아카이브</h1>
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: 0.45 }}>
-          <div style={{ fontSize: 14, color: 'rgba(26,26,26,0.6)', textAlign: 'center', lineHeight: 1.8 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center', lineHeight: 1.7 }}>
             아직 저장된 하루가 없어요<br />
-            <span style={{ fontSize: 12 }}>하루를 마무리하면 여기에 쌓여요</span>
+            <span style={{ fontSize: 13, fontWeight: 400, color: COLOR.inkMuted }}>하루를 마무리하면 여기에 쌓여요</span>
           </div>
         </div>
         <TabBar active="archive" onTabChange={onTabChange} />
@@ -441,20 +455,20 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
-      <div style={{ padding: '60px 22px 12px' }}>
-        <div style={{ ...MONO, fontSize: 11, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)' }}>Archive</div>
-        <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.7px', marginTop: 7 }}>아카이브</div>
+    <div style={SCREEN}>
+      <div style={{ padding: '58px 22px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={TAPE_GREEN()}>모아둔 하루</span>
+        <h1 style={TITLE}>아카이브</h1>
         {months.length > 1 && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             {months.map(m => (
               <button key={m} onClick={() => setActiveMonth(m)} style={{
-                padding: '7px 14px', borderRadius: 50,
-                background: activeMonth === m ? '#1A1A1A' : '#FFFFFF',
-                color: activeMonth === m ? '#FFFFFF' : '#1A1A1A',
-                border: activeMonth === m ? 'none' : '1px solid rgba(26,26,26,0.15)',
-                fontSize: 13, fontWeight: activeMonth === m ? 500 : 400,
-                cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                minHeight: 36, padding: '0 14px', borderRadius: 18,
+                background: activeMonth === m ? COLOR.ink : COLOR.white,
+                color: activeMonth === m ? COLOR.white : COLOR.ink,
+                border: `1.5px solid ${COLOR.ink}`,
+                fontSize: 13, fontWeight: activeMonth === m ? 700 : 400,
+                cursor: 'pointer', fontFamily: FONT_BODY,
               }}>{m}</button>
             ))}
           </div>
@@ -462,9 +476,9 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
       </div>
 
       <div style={{
-        flex: 1, overflow: 'auto', padding: '4px 22px 24px',
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: 14, alignContent: 'start',
+        flex: 1, overflow: 'auto', padding: '18px 22px 24px',
+        display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        columnGap: 14, rowGap: 28, alignContent: 'start',
       }}>
         {filtered.map(entry => (
           <ArchiveCard key={entry.id} entry={entry} initialOpen={entry.id === initialArchiveId} onDelete={() => handleDelete(entry)} onMakeVideo={onMakeVideo} />
