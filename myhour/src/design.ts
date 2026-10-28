@@ -24,7 +24,8 @@ export const COLOR = {
 } as const;
 
 export const FONT_BODY = "-apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif";
-export const FONT_HAND = "'Gaegu', -apple-system, 'Apple SD Gothic Neo', sans-serif";
+// 손글씨는 온글잎 윤탱체(2026-10-28 펌킨 선택, index.css @font-face). 윤탱체에 없는 드문 글자는 Gaegu로 채운다
+export const FONT_HAND = "'OwnglyphYuntaeng', 'Gaegu', -apple-system, 'Apple SD Gothic Neo', sans-serif";
 
 /**
  * 화면 맨 위 여백. 폰에서는 App이 --top-inset에 실제 상태 표시줄 높이(safe-area-inset-top)를 넣고,
@@ -61,7 +62,8 @@ export function tape(background: string, color: string, rotate = -2, fontSize = 
     color,
     padding: '1px 10px',
     fontFamily: FONT_HAND,
-    fontWeight: 700,
+    // 윤탱체는 굵기가 하나뿐이라 700을 주면 브라우저가 가짜 굵기를 덧입혀 뭉개진다
+    fontWeight: 400,
     fontSize,
     lineHeight: 1.35,
     transform: `rotate(${rotate}deg)`,

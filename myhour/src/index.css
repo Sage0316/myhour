@@ -1,3 +1,13 @@
+/* 손글씨: 온글잎 윤탱체 (© VoyagerX, inc. & Yunseon Kim — 파일은 수정하지 않고 그대로 쓴다, THIRD_PARTY_NOTICES.md) */
+@font-face {
+  font-family: 'OwnglyphYuntaeng';
+  src: url('./assets/fonts/OwnglyphYuntaeng.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  /* 윤탱체는 같은 크기에서 글자가 개구보다 작게 보여서 15% 키운다 (영상 쪽 scenes.ts와 같은 값) */
+  size-adjust: 115%;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {

@@ -176,7 +176,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={TAPE_GREEN()}>오늘의 하꾸</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ fontFamily: FONT_HAND, fontWeight: 700, fontSize: 72, lineHeight: 1, color: COLOR.red, letterSpacing: '-1px' }}>
+            <span style={{ fontFamily: FONT_HAND, fontWeight: 400, fontSize: 72, lineHeight: 1, color: COLOR.red, letterSpacing: '-1px' }}>
               {month}·{day}
             </span>
             <span style={{ fontSize: 17, fontWeight: 700, color: COLOR.navy }}>{dateWeekday}</span>

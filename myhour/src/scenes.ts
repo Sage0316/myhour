@@ -2,6 +2,7 @@
 // 모든 좌표는 540×960 논리 좌표계 기준.
 import type { MyRecord } from './store';
 import { TYPE_COLORS } from './store';
+import yuntaengUrl from './assets/fonts/OwnglyphYuntaeng.woff2?url';
 
 export const W = 540;
 export const H = 960;
@@ -9,18 +10,21 @@ export const H = 960;
 export const PAPER = '#FAF9F7';
 export const INK = '#1A1A1A';
 
-// 그림일기용 손글씨 폰트 (개구/Gaegu, OFL — 크레파스 느낌). 로드 실패 시 시스템 폰트로 폴백.
-export const HAND = "'DiaryHand', system-ui, sans-serif";
+// 영상 손글씨: 온글잎 윤탱체(2026-10-28 펌킨 선택). 윤탱체에 없는 드문 글자(2,780자 밖)는
+// 예전 손글씨 개구(Gaegu, OFL)로, 그것도 없으면 시스템 글꼴로 채운다.
+export const HAND = "'DiaryHand', 'DiaryHandFallback', system-ui, sans-serif";
 let handFontLoading: Promise<void> | null = null;
 
 export function ensureDiaryFont(): Promise<void> {
   if (!handFontLoading) {
     handFontLoading = (async () => {
       try {
-        const url = `${import.meta.env.BASE_URL}fonts/Gaegu-Regular.ttf`;
-        const face = new FontFace('DiaryHand', `url(${url})`);
-        await face.load();
-        document.fonts.add(face);
+        const faces = [
+          // 윤탱체는 같은 크기에서 글자가 작게 보여서 15% 키운다 (index.css와 같은 값)
+          new FontFace('DiaryHand', `url(${yuntaengUrl})`, { sizeAdjust: '115%' } as FontFaceDescriptors),
+          new FontFace('DiaryHandFallback', `url(${import.meta.env.BASE_URL}fonts/Gaegu-Regular.ttf)`),
+        ];
+        await Promise.allSettled(faces.map(async face => { await face.load(); document.fonts.add(face); }));
       } catch { /* 폴백 폰트로 진행 */ }
     })();
   }
