@@ -22,6 +22,19 @@ describe('journal archive repository', () => {
     expect(journalRepository.loadArchive('2026-07-25')[0].title).toBe('반지와 떡볶이');
   });
 
+  // 무드도 영상에 실제로 들어간 값 — 빠지면 카드가 '지침' 대신 키워드 추측 '잔잔함'을 보여 준다
+  it('keeps the stored video mood through a save/load round trip', () => {
+    journalRepository.saveArchive([{
+      id: 'archive_2',
+      date: '2026-10-28',
+      records: [],
+      isWrapped: true,
+      trimmed: false,
+      mood: '지침',
+    }]);
+    expect(journalRepository.loadArchive('2026-10-28')[0].mood).toBe('지침');
+  });
+
   it('leaves the title undefined for entries saved before it existed', () => {
     localStorage.setItem(ARCHIVE_KEY, JSON.stringify([{
       id: 'archive_legacy',

@@ -451,11 +451,18 @@ export function sweepArchive() {
 }
 
 // 아카이브에서 뒤늦게 영상을 만들었을 때: 항목을 완성 상태로 바꾸고 원본 정리
-export function markArchiveGenerated(entry: ArchiveEntry) {
+// details: 영상에 실제로 들어간 제목·무드 — 아카이브 카드가 영상과 같은 것을 보여 준다
+export function markArchiveGenerated(entry: ArchiveEntry, details: { title?: string; mood?: string } = {}) {
   const entries = loadArchive();
   const idx = entries.findIndex(item => item.id === entry.id);
   if (idx < 0) return;
-  entries[idx] = { ...entries[idx], isWrapped: true, trimmed: false };
+  entries[idx] = {
+    ...entries[idx],
+    isWrapped: true,
+    trimmed: false,
+    ...(details.title?.trim() ? { title: details.title.trim() } : {}),
+    ...(details.mood?.trim() ? { mood: details.mood.trim() } : {}),
+  };
   saveArchive(entries);
 }
 

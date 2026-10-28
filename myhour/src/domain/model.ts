@@ -53,6 +53,8 @@ export const archiveEntrySchema = z.object({
   trimmed: z.boolean().optional(),
   // 영상에 실제로 들어간 제목 (사용자가 고쳤거나 AI가 지은 것). 없으면 generateTitle로 폴백
   title: z.string().trim().max(60).optional(),
+  // 영상에 실제로 들어간 무드 (하루 마감에서 보던 칩). 없으면 guessMood로 폴백
+  mood: z.string().trim().max(20).optional(),
 });
 
 export type JournalArchiveEntry = z.infer<typeof archiveEntrySchema>;

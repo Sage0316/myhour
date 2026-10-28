@@ -141,6 +141,19 @@ assert.equal(capturedProviderRequest.init.headers.Authorization, 'Bearer test-ke
 assert.equal(capturedProviderRequest.init.headers['x-api-key'], undefined);
 assert.equal(capturedProviderRequest.body.model, 'gpt-5.6-sol');
 assert.equal(capturedProviderRequest.body.reasoning.effort, 'low');
+assert.ok(capturedProviderRequest.body.max_output_tokens <= 4_000, 'low는 예전 상한 그대로');
+
+// medium은 생각 토큰까지 담을 만큼 출력 상한을 넉넉히 준다 (부족하면 답이 잘린다)
+{
+  let mediumRequest;
+  await directWith(async (url, init) => {
+    mediumRequest = JSON.parse(init.body);
+    return new Response('nope', { status: 500 });
+  }, { OPENAI_MODEL: 'gpt-6.1-sol', OPENAI_REASONING_EFFORT: 'medium' });
+  assert.equal(mediumRequest.model, 'gpt-6.1-sol');
+  assert.equal(mediumRequest.reasoning.effort, 'medium');
+  assert.ok(mediumRequest.max_output_tokens >= 8_000, 'medium 출력 상한은 8천 이상');
+}
 assert.equal(capturedProviderRequest.body.store, false, '사용자 기록이 OpenAI에 저장되지 않게 요청해야 한다');
 assert.equal(capturedProviderRequest.body.text.format.type, 'json_schema');
 assert.equal(capturedProviderRequest.body.text.format.strict, true);

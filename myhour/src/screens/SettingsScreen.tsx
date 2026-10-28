@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { disableReminders, enableReminders, getRemindersEnabled, isNativeApp } from '../notifications/localReminders';
-import { topPad, CARD, COLOR, FONT_BODY, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
+import { topPad, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
 import { useApp } from '../appContext';
 import { type AppSettings, TYPE_LABELS, getSessionDate, intervalLabel, notifyLabel, captureModeLabel } from '../store';
 import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
@@ -465,6 +465,19 @@ function DataSection() {
 }
 
 const DEV_TOOLS_AVAILABLE = import.meta.env.MODE !== 'app';
+// 한 번 열면 끌 때까지 기억한다 — 설정 화면을 나가면 풀려서 마감 잠금을 풀러 다시 오기 번거로웠다
+const DEV_TOOLS_KEY = 'hakku_dev_tools_v1';
+
+function readDevTools(): boolean {
+  try { return localStorage.getItem(DEV_TOOLS_KEY) === '1'; } catch { return false; }
+}
+
+function writeDevTools(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(DEV_TOOLS_KEY, '1');
+    else localStorage.removeItem(DEV_TOOLS_KEY);
+  } catch { /* 기억 못 해도 이번 화면에서는 열린다 */ }
+}
 
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   const { settings, updateSettings, isWrapped, unlockToday } = useApp();
@@ -472,7 +485,23 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   // 웹 버전에서 빌드 버전을 일곱 번 두드리면 테스트 도구가 열린다. 개발자는 하루 마감 잠금 때문에
   // 다음 날까지 기다리지 않아도 된다. 앱스토어 앱(--mode app)에는 숨은 기능을 두지 않는다.
   const [versionTaps, setVersionTaps] = useState(0);
-  const devToolsOpen = DEV_TOOLS_AVAILABLE && versionTaps >= 7;
+  const [devToolsRemembered, setDevToolsRemembered] = useState(readDevTools);
+  const devToolsOpen = DEV_TOOLS_AVAILABLE && (devToolsRemembered || versionTaps >= 7);
+
+  function tapVersion() {
+    const next = versionTaps + 1;
+    setVersionTaps(next);
+    if (DEV_TOOLS_AVAILABLE && next === 7) {
+      writeDevTools(true);
+      setDevToolsRemembered(true);
+    }
+  }
+
+  function closeDevTools() {
+    writeDevTools(false);
+    setDevToolsRemembered(false);
+    setVersionTaps(0);
+  }
   const [paywallPreview, setPaywallPreview] = useState(false);
   // 사진첩 자동 저장은 앱에서만 된다 (웹은 사진첩에 직접 쓸 수 없다)
   const native = isNativeApp();
@@ -599,7 +628,10 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
         {devToolsOpen && (
           <>
-            <SectionHeader label="테스트 도구" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <SectionHeader label="테스트 도구" />
+              <button type="button" onClick={closeDevTools} style={{ ...PILL_BUTTON, minHeight: 32, fontSize: 13 }}>닫기</button>
+            </div>
             <div style={{ ...CARD, overflow: 'hidden', marginBottom: 12 }}>
               <button
                 type="button"
@@ -638,7 +670,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
         <button
           type="button"
-          onClick={() => setVersionTaps(n => n + 1)}
+          onClick={tapVersion}
           aria-label="빌드 버전"
           style={{ display: 'block', width: '100%', textAlign: 'center', fontSize: 11, color: COLOR.inkMuted, fontFamily: "'JetBrains Mono', monospace", padding: '8px 0', background: 'none', border: 'none' }}
         >

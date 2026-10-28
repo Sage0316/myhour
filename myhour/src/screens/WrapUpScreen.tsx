@@ -245,11 +245,11 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
       if (entry) {
         // 아카이브 모드: 새 항목을 만들지 않고 기존 항목에 영상을 붙인다
         await saveVideoToIDB(archiveVideoKey(entry), blob);
-        markArchiveGenerated(entry);
+        markArchiveGenerated(entry, { title, mood: selectedMood.mood });
         consumeVideoForDate(entry.date);
         onSave(entry.id);
       } else {
-        const result = await wrapUpService.complete(sessionDate, records, blob, title);
+        const result = await wrapUpService.complete(sessionDate, records, blob, title, selectedMood.mood);
         onSave(result.archiveId);
       }
     } catch (e) {
@@ -265,7 +265,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
 
   function handleSkipVideo() {
     try {
-      const result = wrapUpService.skip(sessionDate, records);
+      const result = wrapUpService.skip(sessionDate, records, selectedMood.mood);
       onSave(result.archiveId);
     } catch {
       setGenError('저장에 실패했어요. 저장 공간이 부족할 수 있어요.');

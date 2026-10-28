@@ -77,6 +77,10 @@ export class BrowserJournalRepository implements JournalRepository {
           ...(typeof source.title === 'string' && source.title.trim()
             ? { title: source.title.trim() }
             : {}),
+          // 무드도 같은 이유로 옮긴다 — 빠지면 카드가 키워드 추측 무드로 돌아간다
+          ...(typeof source.mood === 'string' && source.mood.trim()
+            ? { mood: source.mood.trim() }
+            : {}),
         };
         const parsed = archiveEntrySchema.safeParse(candidate);
         return parsed.success ? [parsed.data] : [];

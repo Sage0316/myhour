@@ -272,12 +272,19 @@ function directorResponseSchema() {
   };
 }
 
+// max_output_tokens에는 생각(reasoning) 토큰도 들어간다. 강도를 올리면 생각만으로 수천 토큰을 쓰므로
+// low 시절 상한(4천)을 그대로 두면 답이 중간에 잘려 invalid_provider_output이 난다.
+const OUTPUT_BUDGET = {
+  low: { base: 1_000, cap: 4_000 },
+  medium: { base: 8_000, cap: 12_000 },
+  high: { base: 14_000, cap: 20_000 },
+  xhigh: { base: 20_000, cap: 32_000 },
+};
+
 async function callProvider(body, env) {
   if (!env.OPENAI_API_KEY) throw new Error('provider_not_configured');
-  const supportedEfforts = ['low', 'medium', 'high', 'xhigh'];
-  const reasoningEffort = supportedEfforts.includes(env.OPENAI_REASONING_EFFORT)
-    ? env.OPENAI_REASONING_EFFORT
-    : 'low';
+  const reasoningEffort = OUTPUT_BUDGET[env.OPENAI_REASONING_EFFORT] ? env.OPENAI_REASONING_EFFORT : 'medium';
+  const budget = OUTPUT_BUDGET[reasoningEffort];
   const providerResponse = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -285,10 +292,10 @@ async function callProvider(body, env) {
       'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: env.OPENAI_MODEL || 'gpt-5.6-sol',
+      model: env.OPENAI_MODEL || 'gpt-6.1-sol',
       input: buildPrompt(body),
       reasoning: { effort: reasoningEffort },
-      max_output_tokens: Math.min(4_000, 1_000 + body.records.length * 30),
+      max_output_tokens: Math.min(budget.cap, budget.base + body.records.length * 30),
       // 일기 원문은 응답 생성에만 쓰고 OpenAI 측 저장 대상에서 제외한다.
       store: false,
       text: {

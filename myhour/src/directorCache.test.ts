@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  dedupe, directorCacheKey, readDirectorCache, resetInFlight, stableHash, writeDirectorCache,
+  dedupe, directorCacheKey, directorMoodForDate, readDirectorCache, resetInFlight, stableHash, writeDirectorCache,
 } from './directorCache';
 import { consumeVideoForDate, hasVideoForDate } from './videoEntitlement';
 import type { DirectorOutput } from './llmDirector';
@@ -125,5 +125,16 @@ describe('자동 호출 1회 + 재사용', () => {
     writeDirectorCache(parts.date, directorCacheKey(parts), result);
     // 다른 강도 단계는 아직 받아둔 결과가 없다
     expect(readDirectorCache(parts.date, directorCacheKey({ ...parts, intensityLevel: 2 }))).toBeNull();
+  });
+});
+
+describe('그 날짜의 AI 무드', () => {
+  it('returns the mood when every cached result agrees, and nothing when they differ', () => {
+    expect(directorMoodForDate('2026-10-28')).toBeNull();
+    writeDirectorCache('2026-10-28', 'k1', { ...result, moodChip: '지침' } as DirectorOutput);
+    writeDirectorCache('2026-10-28', 'k2', { ...result, moodChip: '지침' } as DirectorOutput);
+    expect(directorMoodForDate('2026-10-28')).toBe('지침');
+    writeDirectorCache('2026-10-28', 'k3', { ...result, moodChip: '잔잔함' } as DirectorOutput);
+    expect(directorMoodForDate('2026-10-28')).toBeNull();
   });
 });

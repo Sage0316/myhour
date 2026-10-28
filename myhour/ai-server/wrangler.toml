@@ -17,8 +17,8 @@ namespace_id = "1001" # 계정 안에서 고유한 양의 정수로 변경
 [vars]
 # capacitor://localhost = iOS 앱(Capacitor) 안에서 열린 하꾸
 ALLOWED_ORIGINS = "https://sage0316.github.io,capacitor://localhost"
-OPENAI_MODEL = "gpt-5.6-sol"
-OPENAI_REASONING_EFFORT = "low"
+OPENAI_MODEL = "gpt-6.1-sol"
+OPENAI_REASONING_EFFORT = "medium"
 # 구독 확인. 웹 버전을 닫는 날(U16)에 "true"로 바꾸고 REVENUECAT_SECRET_KEY를 등록한다
 REQUIRE_SUBSCRIPTION = "false"
 
@@ -44,5 +44,5 @@ namespace_id = "1101"
 
 [env.preview.vars]
 ALLOWED_ORIGINS = "https://preview.example.com"
-OPENAI_MODEL = "gpt-5.6-sol"
-OPENAI_REASONING_EFFORT = "low"
+OPENAI_MODEL = "gpt-6.1-sol"
+OPENAI_REASONING_EFFORT = "medium"

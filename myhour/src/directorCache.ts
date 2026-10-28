@@ -111,3 +111,13 @@ export function isInFlight(key: string): boolean {
 export function resetInFlight(): void {
   inFlight.clear();
 }
+
+/**
+ * 그 날짜의 AI 연출 결과들이 모두 같은 무드(moodChip)를 가리키면 그 무드. 무드 저장 전(2026-10-28 이전)에
+ * 만든 아카이브 항목이 키워드 추측 무드 대신 실제로 보던 무드를 보여 주게 하는 폴백이다.
+ * 첫 결과 뒤로는 무드가 고정돼 보통 하나로 모인다. 엇갈리면 추측하지 않는다.
+ */
+export function directorMoodForDate(date: string): string | null {
+  const moods = new Set(Object.values(readBucket(date)).map(out => out?.moodChip).filter(Boolean));
+  return moods.size === 1 ? [...moods][0] as string : null;
+}

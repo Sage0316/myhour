@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, needsTrimNotice, daysUntilTrim, getSessionDate, loadSettings } from '../store';
+import { loadArchive, guessMood, MOOD_LIST, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, needsTrimNotice, daysUntilTrim, getSessionDate, loadSettings } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 import { shareFileNative } from '../native/shareFile';
+import { directorMoodForDate } from '../directorCache';
 import { canShareToReels, shareToReels } from '../native/instagramReels';
 import { isNativeApp } from '../notifications/localReminders';
 import {
@@ -274,7 +275,9 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
 }
 
 function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { entry: ArchiveEntry; onDelete: () => void; onMakeVideo: (entry: ArchiveEntry) => void; initialOpen?: boolean }) {
-  const mood = guessMood(entry.records);
+  // 영상에 실제로 들어간 무드·제목을 우선 — 없으면(구버전 항목) 기록에서 추측한다
+  const savedMood = entry.mood ?? directorMoodForDate(entry.date);
+  const mood = MOOD_LIST.find(item => item.mood === savedMood) ?? guessMood(entry.records);
   // 영상에 실제로 들어간 제목을 우선 — 없으면(구버전 항목) 기록에서 만들어 쓴다
   const title = entry.title?.trim() || generateTitle(entry.records);
   const [genState, setGenState] = useState<'idle' | 'generating' | 'done'>('idle');
