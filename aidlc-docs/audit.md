@@ -137,3 +137,27 @@ git pull --ff-only"
 **Context**: U5 OpenAI 제공자 마이그레이션 운영 배포와 무과금 상태 검증 완료
 
 ---
+
+## 기록하기 기본값·글 길이 변경 (AI-DLC 절차 밖 소규모 변경, 사후 기록)
+**Timestamp**: 2026-10-28T07:28:51Z
+**User Input**: "좋아 그럼 25자로 하고 일단 푸시 한 번 하자" → "메인에 먼저 올리자 그냥 너가 바로 올려"
+**AI Response**: "기록 방식을 고정하지 않았을 때 기록하기 화면의 기본 모드를 '글'에서 '사진'으로, 글 기록 최대 길이를 90자에서 25자로 바꿨다. `pnpm check` 통과, 브라우저에서 기본 '사진' 선택과 25자 제한을 확인한 뒤 커밋 `536fccb`를 `main`에 게시했다. CI와 GitHub Pages 배포 성공을 확인했다. 디자인 시안 논의 중 결정된 소규모 변경이라 AI-DLC 단계 문서 없이 진행했고, 이 항목으로 사후 기록한다."
+**Context**: 사용자 승인에 따른 `main` 게시 및 Pages 자동 배포
+
+---
+
+## AI 연출 횟수 제한 변경 및 운영 Worker 배포
+**Timestamp**: 2026-10-28T07:45:24Z
+**User Input**: "연출은 최대 3번까지만 다시 하도록 바꿔야 해 미친 거 아님? 20번이나 바꾸게 해주게 ,ㅡㅡㅡ" → "서버 배포해"
+**AI Response**: "AI Worker 한도를 설치당 하루 20회에서 날짜별 4회(첫 연출 1번 + 다시 연출 3번)와 하루 전체 상한 8회로 바꾸고, 공급자 오류로 실패한 시도는 세지 않도록 성공 후에만 차감하게 했다. 한도 초과는 `redo_limit_exceeded`로 구분해 앱 안내 문구를 추가했다. Worker 테스트를 추가하고 `pnpm check` 통과 후 커밋 `fe3413f`를 `main`에 게시했다. GitHub 앱 권한으로 워크플로 실행이 403으로 막혀 사용자가 직접 Deploy Workers를 실행했다. preview는 KV ID가 `REPLACE_WITH_PREVIEW_KV_ID` 그대로라 실패했고(미구성 환경), production `worker: ai` 배포는 성공했다(버전 `d7b718dd-c2e2-4ccb-adf0-489a741c959b`). Push Worker는 건드리지 않았다."
+**Context**: 사용자 승인에 따른 운영 `hakku-ai` Worker 배포, 비용 통제 변경
+
+---
+
+## iOS 앱스토어 출시 워크플로 시작 — Workspace Detection
+**Timestamp**: 2026-10-28T07:47:53Z
+**User Input**: "이제 앱스토어 작업 시작하자"
+**AI Response**: "AI-DLC 새 워크플로를 시작한다. 기존 `aidlc-state.md`를 확인해 brownfield(U1–U7 구현·운영 중)로 판단했다. 별도 reverse-engineering 폴더는 없지만 `PROJECT_CONTEXT.md`와 `IMPLEMENTATION_SUMMARY.md`가 통합 맥락 문서 역할을 하므로 Reverse Engineering은 생략하고 Requirements Analysis로 진행한다. 확장 설정은 기존 결정(Security Baseline 적용, Property-Based Testing 적용, Resiliency 미적용)을 유지한다."
+**Context**: Workspace Detection 완료, 대화에서 이미 나온 결정(개인 계정 고민, 유료 출시, 3일 무료+15일권 3,300원+한달권 5,500원, Windows·2013년형 Mac만 보유, Apple Developer 미가입)을 요구사항 질문 파일에 반영
+
+---

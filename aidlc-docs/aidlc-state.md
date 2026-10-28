@@ -22,6 +22,20 @@
 - 비용 없는 운영 `/health` 검증은 HTTP 200, `{"ok":true}`, GitHub Pages Origin CORS 허용으로 통과했다.
 - 다음 단계는 사용자의 실제 앱에서 AI 영상 생성 1회를 확인하는 것이다. 이 요청부터 OpenAI API 비용이 발생할 수 있다.
 
+## 2026-10-28 iOS 앱스토어 출시 워크플로
+
+- 목표: 하꾸를 iOS 앱으로 감싸 앱스토어에 유료 출시
+- 당일 선행 변경: 기록하기 기본값 '사진', 글 기록 25자(`536fccb`), AI 연출 날짜당 4회 제한(`fe3413f`, 운영 `hakku-ai` 배포 완료)
+
+### 🔵 INCEPTION PHASE
+- [x] Workspace Detection — brownfield, 기존 맥락 문서 사용
+- [-] Reverse Engineering — 생략 (`PROJECT_CONTEXT.md`, `IMPLEMENTATION_SUMMARY.md`로 대체)
+- [ ] Requirements Analysis — 질문 파일 작성, 사용자 답변 대기 (`inception/requirements/requirement-verification-questions.md`)
+- [ ] User Stories
+- [ ] Workflow Planning
+- [ ] Application Design
+- [ ] Units Generation
+
 ## 적용된 확장
 
 - Security Baseline: 적용
