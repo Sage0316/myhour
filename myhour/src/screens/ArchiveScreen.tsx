@@ -5,6 +5,7 @@ import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 import { shareFileNative } from '../native/shareFile';
+import { canShareToReels, shareToReels } from '../native/instagramReels';
 import { isNativeApp } from '../notifications/localReminders';
 import {
   BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, tape, topPad,
@@ -86,10 +87,24 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
   // iOS는 영상 프레임을 길게 누르면 화면에 박힌 글자를 Live Text로 선택해버려서 저장을 방해한다
   const noCallout: React.CSSProperties = { WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' };
+  // 앱: [인스타 릴스] + [저장·공유](공유 시트 — 사진 저장, 스레드, X 등) / 웹: [다운로드]
+  const native = isNativeApp();
+  const actionStyle: React.CSSProperties = {
+    ...PILL_BUTTON, minHeight: 44, padding: '0 18px', fontSize: 14,
+    cursor: blob ? 'pointer' : 'default', opacity: blob ? 1 : 0.5,
+    ...noCallout,
+  };
 
   // mp4로 만든 뒤엔 navigator.share(files)가 iOS에서 한 번에 시스템 공유 시트(동영상 저장 포함)를
   // 띄워준다 — 이전엔 webm이라 공유 자체가 안 되는 형식이었던 게 진짜 원인이었다.
   // blob은 미리 들고 있어야 한다: share() 앞에 await가 하나라도 끼면 iOS가 제스처 신뢰를 잃는다.
+  // 인스타 릴스: 영상을 담은 채로 릴스 편집 화면을 바로 연다 (앱 전용)
+  function handleReels(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!blob) return;
+    shareToReels(blob).catch(error => alert(error instanceof Error ? error.message : '인스타그램을 열지 못했어요.'));
+  }
+
   function handleSave(e: React.MouseEvent) {
     e.stopPropagation();
     if (!blob) return;
@@ -129,17 +144,21 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', ...noCallout }}
         onClick={e => e.stopPropagation()}
       />
-      <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20 }}>
+      <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: 20, display: 'flex', gap: 8 }}>
+        {native && canShareToReels() && (
+          <button
+            onClick={handleReels}
+            disabled={!blob}
+            aria-label="인스타 릴스로 공유"
+            style={{ ...actionStyle, background: COLOR.yellow }}
+          >인스타 릴스</button>
+        )}
         <button
           onClick={handleSave}
           disabled={!blob}
-          aria-label="영상 다운로드"
-          style={{
-            ...PILL_BUTTON, minHeight: 44, padding: '0 18px', fontSize: 14,
-            cursor: blob ? 'pointer' : 'default', opacity: blob ? 1 : 0.5,
-            ...noCallout,
-          }}
-        >다운로드</button>
+          aria-label={native ? '저장하거나 다른 앱으로 공유' : '영상 다운로드'}
+          style={actionStyle}
+        >{native ? '저장·공유' : '다운로드'}</button>
       </div>
       <button
         onClick={onClose}

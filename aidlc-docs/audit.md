@@ -353,3 +353,11 @@ git pull --ff-only"
 **Context**: 사용자 피드백 반영
 
 ---
+
+## 인스타 릴스·다른 앱 공유 버튼 (U11 확장)
+**Timestamp**: 2026-10-28T10:40:07Z
+**User Input**: "인스타 릴스, 스레드, x에 바로 공유하는 버튼 만들기 되나?" / (제안: 인스타 릴스 버튼 + 공유 시트로 스레드·X) "그럼 그렇게 하자"
+**AI Response**: "스레드와 X는 영상을 담아 바로 여는 공식 방법이 없어 공유 시트(저장·공유)로, 인스타 릴스는 Meta 공식 Sharing to Reels(UIPasteboard + instagram-reels://share, Facebook 앱 ID)로 구현했다. 앱 전용 Swift 플러그인(HakkuBridgeViewController.swift)을 등록하고 SceneDelegate가 그 화면을 쓰게 했으며 LSApplicationQueriesSchemes에 instagram-reels를 넣었다. VITE_META_APP_ID가 없으면 릴스 버튼을 숨긴다. 웹은 기존 다운로드 그대로. pnpm check·e2e 통과, Swift 컴파일은 iOS build check로 확인."
+**Context**: 사용자 요청 반영, Meta 앱 ID는 사용자가 나중에 발급
+
+---
