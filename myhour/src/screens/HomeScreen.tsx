@@ -7,7 +7,7 @@ import type { MyRecord } from '../store';
 import TabBar from '../components/TabBar';
 import { useMediaSrc } from '../useMediaSrc';
 import {
-  BUTTON_PRIMARY, BUTTON_SECONDARY, COLOR, FONT_HAND, SCREEN, TAPE_GREEN, TAPE_SKY,
+  BUTTON_PRIMARY, BUTTON_SECONDARY, COLOR, FONT_HAND, SCREEN, TAPE_GREEN, TAPE_SKY, topPad,
 } from '../design';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -171,7 +171,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
   const isEmpty = sorted.length === 0 && !isWrapped;
 
   return (
-    <div style={{ flex: 1, padding: '52px 22px 0', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
+    <div style={{ flex: 1, padding: `${topPad(52)} 22px 0`, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: 4 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={TAPE_GREEN()}>오늘의 하꾸</span>

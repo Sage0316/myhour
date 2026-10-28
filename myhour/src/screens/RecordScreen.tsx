@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_SKY,
+  BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_SKY, topPad,
 } from '../design';
 import type { RecordType } from '../store';
 import { deleteVideoFromIDB, saveVideoToIDB } from '../store';
@@ -692,7 +692,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       {/* 앨범 선택은 capture 속성 없이 — iOS에서 사진 보관함이 열린다 */}
       <input ref={albumInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
 
-      <div style={{ padding: '52px 18px 0', display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) 44px', alignItems: 'center' }}>
+      <div style={{ padding: `${topPad(52)} 18px 0`, display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) 44px', alignItems: 'center' }}>
         <button onClick={onClose} aria-label="기록 화면 닫기" style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>

@@ -6,7 +6,7 @@ import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 import {
-  BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, COLOR, SCREEN, TAPE_GREEN, TAPE_SKY, TITLE,
+  BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, COLOR, SCREEN, TAPE_GREEN, TAPE_SKY, TITLE, topPad,
 } from '../design';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -109,7 +109,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
 
   return (
     <div style={SCREEN}>
-      <div style={{ padding: '58px 22px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ padding: `${topPad(58)} 22px 14px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={TAPE_GREEN()}>{dateShort} {dateWeekday}</span>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <h1 style={TITLE}>오늘</h1>

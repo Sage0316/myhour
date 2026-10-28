@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CARD, COLOR, FONT_BODY, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
+import { topPad, CARD, COLOR, FONT_BODY, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
 import { useApp } from '../appContext';
 import { type AppSettings, TYPE_LABELS, intervalLabel, notifyLabel, captureModeLabel } from '../store';
 import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
@@ -386,7 +386,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
   return (
     <div style={SCREEN}>
-      <div style={{ padding: '58px 22px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ padding: `${topPad(58)} 22px 8px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={TAPE_GREEN()}>나의 하꾸</span>
         <h1 style={TITLE}>설정</h1>
       </div>

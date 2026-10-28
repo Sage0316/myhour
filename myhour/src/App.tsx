@@ -110,7 +110,9 @@ function AppContent() {
 
   if (isMobile) {
     return (
-      <div style={{ height: '100dvh', width: '100%', overflow: 'hidden', background: '#FBF7EC' }}>
+      // 홈 화면 앱(PWA)에서는 iOS가 100dvh를 상태 표시줄 높이만큼 짧게 잡아 아래에 빈 띠가 생긴다.
+      // 화면에 고정해 네 모서리를 붙이면 실제 화면 전체를 채운다.
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#FBF7EC' }}>
         {activeScreen}
       </div>
     );

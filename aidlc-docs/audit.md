@@ -219,3 +219,11 @@ git pull --ff-only"
 **Context**: U12 시안 일치 보정
 
 ---
+
+## U12 디자인 — 아이폰 홈 화면 앱 위·아래 잘림 수정
+**Timestamp**: 2026-10-28T08:29:09Z
+**User Input**: "앱 밑으로 내려야겠다 위에 잘린다" (아이폰 PWA 캡처: 상태 표시줄 밑으로 '오늘의 하꾸' 테이프가 들어가고 탭바 아래 빈 띠)
+**AI Response**: "화면 위 여백을 safe-area-inset-top 기준으로 계산하는 topPad()를 design.ts에 두고 6개 화면에 적용했다(일반 브라우저는 기존 52/58px 그대로). iOS 홈 화면 앱이 100dvh를 상태 표시줄만큼 짧게 잡는 문제로 생긴 아래 빈 띠는 모바일 루트를 position: fixed; inset: 0으로 바꿔 해결했다. pnpm check와 e2e 통과."
+**Context**: U12 실제 기기 피드백 반영
+
+---

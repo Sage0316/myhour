@@ -5,7 +5,7 @@ import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 import {
-  BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, tape,
+  BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, tape, topPad,
 } from '../design';
 
 // 화면용 바탕색. TYPE_COLORS는 영상 렌더링에도 쓰이므로 여기서만 종이 톤으로 바꾼다.
@@ -439,7 +439,7 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
   if (entries.length === 0) {
     return (
       <div style={SCREEN}>
-        <div style={{ padding: '58px 22px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ padding: `${topPad(58)} 22px 12px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={TAPE_GREEN()}>모아둔 하루</span>
           <h1 style={TITLE}>아카이브</h1>
         </div>
@@ -456,7 +456,7 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
 
   return (
     <div style={SCREEN}>
-      <div style={{ padding: '58px 22px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ padding: `${topPad(58)} 22px 12px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={TAPE_GREEN()}>모아둔 하루</span>
         <h1 style={TITLE}>아카이브</h1>
         {months.length > 1 && (

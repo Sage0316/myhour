@@ -25,6 +25,14 @@ export const COLOR = {
 export const FONT_BODY = "-apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif";
 export const FONT_HAND = "'Gaegu', -apple-system, 'Apple SD Gothic Neo', sans-serif";
 
+/**
+ * 화면 맨 위 여백. 홈 화면 앱(PWA)과 iOS 앱은 상태 표시줄 밑까지 그리므로,
+ * 노치·다이내믹 아일랜드 높이(safe-area-inset-top)만큼 내려야 위가 잘리지 않는다.
+ */
+export function topPad(extra: number): string {
+  return `max(${extra}px, calc(env(safe-area-inset-top, 0px) + ${extra - 38}px))`;
+}
+
 /** 크림색 모눈 종이 배경 */
 export const PAPER: React.CSSProperties = {
   backgroundColor: COLOR.paper,
