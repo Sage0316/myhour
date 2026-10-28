@@ -4,6 +4,8 @@ import type { MyRecord, ArchiveEntry } from '../store';
 import { useMediaSrc } from '../useMediaSrc';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
+import { shareFileNative } from '../native/shareFile';
+import { isNativeApp } from '../notifications/localReminders';
 import {
   BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, tape, topPad,
 } from '../design';
@@ -92,6 +94,11 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
     e.stopPropagation();
     if (!blob) return;
     const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+    if (isNativeApp()) {
+      // iOS 앱: 공유 시트의 "동영상 저장"으로 사진 앱에 넣는다
+      shareFileNative(blob, `${filename}.${ext}`).catch(() => alert('영상을 저장하지 못했어요. 다시 시도해 주세요.'));
+      return;
+    }
     const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/mp4' });
     if (navigator.canShare?.({ files: [file] })) {
       navigator.share({ files: [file] }).catch(() => { /* 공유 시트 취소 등 — 조용히 무시 */ });

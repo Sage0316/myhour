@@ -6,6 +6,7 @@ import { type AppSettings, TYPE_LABELS, getSessionDate, intervalLabel, notifyLab
 import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
 import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush, syncPushSchedule } from '../push';
 import TabBar from '../components/TabBar';
+import { shareFileNative } from '../native/shareFile';
 import { exportCompleteBackup, restoreCompleteBackup, type BackupProgress } from '../backup/backupService';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -302,10 +303,13 @@ function DataSection() {
     try {
       const result = await exportCompleteBackup(progress => setStatus(progressText(progress)));
       const file = new File([result.blob], result.filename, { type: 'application/zip' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: '하꾸 전체 백업' });
-      } else {
-        triggerDownload(result.blob, result.filename);
+      // iOS 앱은 공유 시트의 "파일에 저장"으로 보관한다
+      if (!await shareFileNative(result.blob, result.filename, '하꾸 전체 백업')) {
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: '하꾸 전체 백업' });
+        } else {
+          triggerDownload(result.blob, result.filename);
+        }
       }
       setStatus(`완료 · 미디어 ${result.mediaCount}개 포함`);
     } catch (exportError) {

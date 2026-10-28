@@ -290,3 +290,11 @@ git pull --ff-only"
 **Context**: U10 Functional Design + Code Generation 완료
 
 ---
+
+## U11 영상 저장·공유 — 코드 생성 완료
+**Timestamp**: 2026-10-28T09:11:51Z
+**User Input**: "응 계속 진행해줘"
+**AI Response**: "iOS 앱에서는 영상 저장과 백업 내보내기를 iOS 공유 시트(동영상 저장/파일에 저장)로 처리하도록 share·filesystem 플러그인과 shareFileNative 도우미를 추가했다. 웹 동작은 그대로. pnpm check(테스트 77개)와 e2e 통과."
+**Context**: U11 Code Generation 완료
+
+---
