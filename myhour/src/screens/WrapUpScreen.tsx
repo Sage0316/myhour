@@ -497,7 +497,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
             <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.2)', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 3, background: COLOR.yellow, width: `${progress * 100}%`, transition: 'width 0.3s ease' }} />
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,246,201,0.75)', marginTop: -4 }}>다 만들 때까지 앱을 켜 두세요</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,246,201,0.75)', marginTop: -4 }}>영상이 생성되는 동안 화면을 유지해 주세요</div>
             <button
               type="button"
               onClick={() => generationAbortRef.current?.abort()}
