@@ -1,5 +1,5 @@
 // 마지막 장면(마무리 문장) — 다꾸 스타일 여러 장. 날짜마다 돌아가며 써서 연속 이틀 같은 장면이 나오지 않는다.
-// 2026-10-28 펌킨이 핀터레스트에서 고른 분위기(깅엄·손그림 별·데님 레이스·집게 메모지·하트 체크·패치워크 — 소용돌이 별밤은 시안에서 뺐고,
+// 2026-10-28 펌킨이 핀터레스트에서 고른 분위기(깅엄·데님 레이스·집게 메모지·하트 체크·패치워크 — 소용돌이 별밤은 시안에서 뺐고,
 // 패치워크는 첫 장면 시안에서 옮겨 왔다)를
 // 사진을 쓰지 않고 캔버스로 직접 그렸다. 모든 좌표는 540×960 논리 좌표계.
 import { W, H, HAND, roundRectPath, seededRnd } from './scenes';
@@ -117,57 +117,64 @@ function closingGinghamStars(ctx: CanvasRenderingContext2D, o: ClosingOpts, t: n
   ctx.globalAlpha = 1;
 }
 
-// ─── 2. 손그림 풍경 + 하늘색 별 ─────────────────────────────────────────────
+// ─── 2. 수채화 노을 + 초승달 ────────────────────────────────────────────────
+// 예전 '손그림 풍경 + 하늘색 별'은 레퍼런스(특정 작가 그림)와 구성이 너무 비슷해 2026-10-28 교체했다.
 
-function paintedStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, rot: number, seed: string) {
-  const rnd = seededRnd(seed); rnd();
-  ctx.save(); ctx.translate(x, y); ctx.rotate(rot * Math.PI / 180);
-  const path = new Path2D();
-  const points = 8;
-  for (let i = 0; i < points * 2; i++) {
-    const rr = (i % 2 ? r * 0.42 : r) * (0.85 + rnd() * 0.3);
-    const a = -Math.PI / 2 + (i * Math.PI) / points;
-    path.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+/** 수채화 번짐 — 같은 색 반투명 원을 겹쳐 가장자리가 고르지 않게 */
+function watercolorBlot(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, seed: string) {
+  const rnd = seededRnd(seed);
+  for (let i = 0; i < 9; i++) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(x + (rnd() - 0.5) * r * 0.7, y + (rnd() - 0.5) * r * 0.5, r * (0.5 + rnd() * 0.5), r * (0.3 + rnd() * 0.35), rnd() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
   }
-  path.closePath();
-  ctx.fillStyle = '#7FA3D6'; ctx.fill(path);
-  ctx.save(); ctx.clip(path);
-  ctx.strokeStyle = 'rgba(60,90,140,0.35)'; ctx.lineWidth = 1.2;
-  for (let i = 0; i < 40; i++) {
-    const sx = (rnd() - 0.5) * r * 2, sy = (rnd() - 0.5) * r * 2;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + (rnd() - 0.5) * 30, sy + (rnd() - 0.5) * 30); ctx.stroke();
-  }
-  ctx.restore();
-  ctx.restore();
 }
 
-function closingPaintedStars(ctx: CanvasRenderingContext2D, o: ClosingOpts, t: number) {
+/** 붓으로 찍은 반짝임 (네 갈래) */
+function paintedSparkle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  ctx.fillStyle = 'rgba(255,248,225,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(x, y - r); ctx.quadraticCurveTo(x + r * 0.15, y - r * 0.15, x + r, y);
+  ctx.quadraticCurveTo(x + r * 0.15, y + r * 0.15, x, y + r);
+  ctx.quadraticCurveTo(x - r * 0.15, y + r * 0.15, x - r, y);
+  ctx.quadraticCurveTo(x - r * 0.15, y - r * 0.15, x, y - r);
+  ctx.fill();
+}
+
+function closingWatercolorDusk(ctx: CanvasRenderingContext2D, o: ClosingOpts, t: number) {
   const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#D9D2DE'); sky.addColorStop(0.45, '#E4DDE3'); sky.addColorStop(1, '#CFC9C2');
+  sky.addColorStop(0, '#6E6A9E'); sky.addColorStop(0.45, '#C99BB4'); sky.addColorStop(0.8, '#F2C2A0'); sky.addColorStop(1, '#F6DDB8');
   ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-  // 붓질 언덕
-  const rnd = seededRnd('hills');
-  const hills: [string, number, number][] = [['#9DB07A', 0.62, 0.48], ['#7E9A5C', 0.7, 0.62], ['#B9C27E', 0.78, 0.74], ['#6F8B4E', 0.86, 0.9]];
-  for (const [color, top, slope] of hills) {
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.moveTo(0, H * top);
-    for (let x = 0; x <= W; x += 30) ctx.lineTo(x, H * top - Math.sin(x / W * Math.PI) * 60 * slope + (rnd() - 0.5) * 10);
-    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
-  }
-  ctx.strokeStyle = 'rgba(60,80,40,0.25)'; ctx.lineWidth = 2;
-  for (let i = 0; i < 120; i++) {
-    const x = rnd() * W, y = H * 0.6 + rnd() * H * 0.4;
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 6 + rnd() * 10, y - 4 - rnd() * 8); ctx.stroke();
-  }
+  // 번진 물감 얼룩
+  watercolorBlot(ctx, 120, 260, 160, 'rgba(255,255,255,0.03)', 'w1');
+  watercolorBlot(ctx, 420, 620, 180, 'rgba(255,214,170,0.10)', 'w2');
+  watercolorBlot(ctx, 160, 840, 200, 'rgba(255,236,210,0.12)', 'w3');
+  // 종이 결
+  const rnd = seededRnd('paper-grain');
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for (let i = 0; i < 500; i++) ctx.fillRect(rnd() * W, rnd() * H, 2, 1);
   const e = ease(t);
-  paintedStar(ctx, 140, 170 + (1 - e) * 8, 92 * e, -8, 'p1');
-  paintedStar(ctx, 420, 470 + (1 - e) * 8, 80 * e, 12, 'p2');
-  paintedStar(ctx, 120, 760 + (1 - e) * 8, 64 * e, 4, 'p3');
+  // 초승달 — 달 원 안에서 작은 원을 하늘색으로 덮는다 (지우면 하늘까지 뚫린다)
+  ctx.save();
   ctx.globalAlpha = e;
-  noteCard(ctx, W / 2 + 30, 330, 360, 220, 3, '#FBF7EC');
-  washi(ctx, W / 2 + 30, 222, 110, 30, -4, C.green, 'stripe');
-  closingText(ctx, o.closing, W / 2 + 30, 315, 300, C.ink, 38);
-  footer(ctx, o.dateStr, W / 2 + 30, 412, 'rgba(43,38,34,0.55)');
+  ctx.beginPath(); ctx.arc(410, 150, 62, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = '#FBE7A1'; ctx.fillRect(340, 80, 140, 140);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = sky; ctx.beginPath(); ctx.arc(436, 132, 56, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // 붓 반짝임
+  ctx.save(); ctx.globalAlpha = e;
+  for (const [x, y, r] of [[90, 120, 12], [200, 80, 7], [300, 210, 9], [70, 330, 8], [480, 300, 10], [250, 340, 6]] as const) paintedSparkle(ctx, x, y, r);
+  ctx.restore();
+  // 아래 구름 띠
+  ctx.fillStyle = 'rgba(255,240,226,0.55)';
+  for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.ellipse(40 + i * 80, H - 60 + Math.sin(i) * 14, 90, 46, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.globalAlpha = e;
+  noteCard(ctx, W / 2, H / 2 + 40 + (1 - e) * 12, 380, 300, -2, '#FFFBF3');
+  washi(ctx, W / 2, H / 2 + 40 - 150, 130, 32, 3, '#C9B8E6', 'dot', 'rgba(255,255,255,0.7)');
+  closingText(ctx, o.closing, W / 2, H / 2 + 20, 320, '#4B3F6B', 40);
+  footer(ctx, o.dateStr, W / 2, H / 2 + 150, 'rgba(75,63,107,0.6)');
   ctx.globalAlpha = 1;
 }
 
@@ -390,7 +397,7 @@ function closingPatchwork(ctx: CanvasRenderingContext2D, o: ClosingOpts, t: numb
 
 export const CLOSING_VARIANTS = [
   { name: '핑크 깅엄 + 별 스티커', draw: closingGinghamStars },
-  { name: '손그림 풍경 + 하늘 별', draw: closingPaintedStars },
+  { name: '수채화 노을 + 초승달', draw: closingWatercolorDusk },
   { name: '데님 + 레이스 + 도트', draw: closingDenimLace },
   { name: '하늘 체크 + 집게 메모지', draw: closingClipNote },
   { name: '네이비 체크 + 하트', draw: closingHeartPlaid },
