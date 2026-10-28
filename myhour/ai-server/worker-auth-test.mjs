@@ -175,3 +175,40 @@ console.log('✅ AI ERROR CODES OK');
 
   console.log('✅ MOOD LOCK OK (강도가 무드를 바꾸지 못한다)');
 }
+
+// 연출 횟수: 한 날짜에 첫 연출 1번 + 다시 연출 3번. 실패한 시도는 세지 않는다.
+{
+  const okProvider = async () => new Response(JSON.stringify({
+    output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ ...directorBase, closing: '라면 국물을 다 마시고 불을 껐다.' }) }] }],
+  }), { status: 200 });
+  const quotaEnv = { ...env, AI_STATE: new MemoryKV(), OPENAI_API_KEY: 'test-key' };
+  const fresh = await worker.fetch(request('/v1/install', { installationId: crypto.randomUUID() }), quotaEnv);
+  const { token: quotaToken } = await fresh.json();
+  const realFetch = globalThis.fetch;
+  const direct = async (date, provider = okProvider) => {
+    globalThis.fetch = provider;
+    try {
+      const res = await worker.fetch(request('/v1/direct', { ...directBody, date }, quotaToken), quotaEnv);
+      return { status: res.status, body: await res.json() };
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  };
+
+  const failed = await direct('10월 28일 수요일', providerStatus(500));
+  assert.equal(failed.body.error, 'provider_unavailable');
+  for (let i = 0; i < 4; i++) {
+    assert.equal((await direct('10월 28일 수요일')).status, 200, `${i + 1}번째 연출은 허용돼야 한다 (실패한 시도는 세지 않는다)`);
+  }
+  const fifth = await direct('10월 28일 수요일');
+  assert.equal(fifth.status, 429);
+  assert.equal(fifth.body.error, 'redo_limit_exceeded', '같은 날짜의 다섯 번째 연출은 막아야 한다');
+
+  for (let i = 0; i < 4; i++) {
+    assert.equal((await direct('10월 27일 화요일')).status, 200, '다른 날짜는 따로 센다');
+  }
+  const overDaily = await direct('10월 26일 월요일');
+  assert.equal(overDaily.body.error, 'daily_quota_exceeded', '날짜를 바꿔 가며 보내도 하루 전체 상한에 걸린다');
+
+  console.log('✅ AI QUOTA OK (날짜당 연출 1번 + 다시 3번)');
+}

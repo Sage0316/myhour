@@ -167,6 +167,7 @@ async function getInstallationToken(signal?: AbortSignal): Promise<string> {
 const ERROR_MESSAGES: Record<string, string> = {
   unauthorized: 'AI 연결이 만료됐어요. 다시 시도해 주세요.',
   daily_quota_exceeded: '오늘 쓸 수 있는 AI 분석을 다 썼어요. 내일 다시 시도해 주세요.',
+  redo_limit_exceeded: '이 날은 AI 연출을 다시 하기 3번을 다 썼어요.',
   rate_limit_exceeded: '요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
   invalid_request: '기록 형식이 올바르지 않아 분석하지 못했어요.',
   origin_not_allowed: '허용되지 않은 주소에서 온 요청이에요.',

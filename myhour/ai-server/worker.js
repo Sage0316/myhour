@@ -1,6 +1,9 @@
 const MAX_BODY_BYTES = 220_000;
 const TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
-const DAILY_QUOTA = 20;
+// 한 날짜의 연출은 첫 연출 1번 + 다시 연출 3번까지다. 매번 OpenAI 비용이 나간다.
+const DIRECTIONS_PER_DATE = 4;
+// date는 클라이언트가 보내는 값이라 바꿔 가며 보내면 날짜별 한도를 피할 수 있다 — 하루 전체에도 상한을 둔다
+const DAILY_QUOTA = 8;
 const encoder = new TextEncoder();
 
 function base64url(bytes) {
@@ -157,13 +160,28 @@ export function normalizeResult(value, records, lockedMood) {
   };
 }
 
-async function enforceQuota(installationId, env) {
+function quotaKeys(installationId, date) {
   const day = new Date().toISOString().slice(0, 10);
-  const key = `quota:${day}:${installationId}`;
-  const used = Number(await env.AI_STATE.get(key) ?? 0);
-  if (used >= DAILY_QUOTA) return false;
-  await env.AI_STATE.put(key, String(used + 1), { expirationTtl: 2 * 24 * 60 * 60 });
-  return true;
+  return {
+    daily: `quota:${day}:${installationId}`,
+    perDate: `quota-date:${day}:${installationId}:${encodeURIComponent(date)}`,
+  };
+}
+
+/** 한도를 넘었으면 오류 코드를, 아니면 null을 돌려준다. 횟수는 연출이 성공한 뒤에만 센다. */
+async function quotaError(installationId, date, env) {
+  const keys = quotaKeys(installationId, date);
+  if (Number(await env.AI_STATE.get(keys.perDate) ?? 0) >= DIRECTIONS_PER_DATE) return 'redo_limit_exceeded';
+  if (Number(await env.AI_STATE.get(keys.daily) ?? 0) >= DAILY_QUOTA) return 'daily_quota_exceeded';
+  return null;
+}
+
+async function consumeQuota(installationId, date, env) {
+  const keys = quotaKeys(installationId, date);
+  for (const key of [keys.perDate, keys.daily]) {
+    const used = Number(await env.AI_STATE.get(key) ?? 0);
+    await env.AI_STATE.put(key, String(used + 1), { expirationTtl: 2 * 24 * 60 * 60 });
+  }
 }
 
 async function rateAllowed(env, key) {
@@ -369,8 +387,12 @@ export default {
         }
         const body = await readJson(request);
         if (!validRequest(body)) return response(request, env, { error: 'invalid_request' }, 400);
-        if (!await enforceQuota(installationId, env)) return response(request, env, { error: 'daily_quota_exceeded' }, 429);
-        return response(request, env, { result: await callProvider(body, env) });
+        const limited = await quotaError(installationId, body.date, env);
+        if (limited) return response(request, env, { error: limited }, 429);
+        // 공급자 오류로 실패한 시도는 다시 연출 횟수를 쓰지 않는다
+        const result = await callProvider(body, env);
+        await consumeQuota(installationId, body.date, env);
+        return response(request, env, { result });
       }
       return response(request, env, { error: 'not_found' }, 404);
     } catch (error) {
