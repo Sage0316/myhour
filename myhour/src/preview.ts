@@ -78,6 +78,10 @@ async function main() {
   // AI가 준 기록 이모지를 직접 지정한 경우 (짧은 글에 특히 잘 맞음)
   drawDiaryScene(cell('그림일기 · AI지정(다짐)'), rec('a1', 'text', '그래도 화이팅', '오늘의 다짐'), MOOD_EMOJI, t, '💪');
   drawDiaryScene(cell('그림일기 · 긴 글'), rec('c3', 'text', '오늘은 아침부터 회의가 세 개나 있어서 정신이 하나도 없었다. 그래도 점심에 혼자 나가서 김치찌개 먹으면서 잠깐 숨 돌린 게 제일 좋았던 순간. 저녁엔 운동 가려고 했는데 결국 침대에 누워버렸다.'), MOOD_EMOJI, t);
+  // 입력 한도 50자를 꽉 채운 글 — 두 레이아웃 모두에서 잘리지 않아야 한다
+  const full50 = '퇴근길에 비가 와서 우산도 없이 뛰었는데 편의점 앞에서 고양이를 만나서 기분이 좀 풀렸다';
+  drawDiaryScene(cell('그림일기 · 50자 (1)'), rec('c5', 'text', full50.slice(0, 50)), MOOD_EMOJI, t);
+  drawDiaryScene(cell('그림일기 · 50자 (2)'), rec('c6', 'text', full50.slice(0, 50)), MOOD_EMOJI, t);
   // 키워드에도 안 걸리고 AI도 없을 때 — 무작위 이모지 대신 중립 연필이 나와야 한다
   drawDiaryScene(cell('그림일기 · 매칭 없음(연필)'), rec('c4', 'text', '앱 계속 테스트 중 힘들다'), MOOD_EMOJI, t);
 

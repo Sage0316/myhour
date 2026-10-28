@@ -271,8 +271,8 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
   );
 }
 
-// 영상에서 기록 하나는 1~2초만 보인다 — 한 줄 13자 안팎으로 두 줄이면 그 안에 읽힌다
-const TEXT_MAX = 25;
+// 영상에서 글 기록 하나는 3초 보인다. 25자였다가 펌킨 요청으로 50자 (그림일기 두 레이아웃 모두 4~5줄로 들어간다)
+const TEXT_MAX = 50;
 
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');

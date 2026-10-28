@@ -187,7 +187,7 @@ export function tornRectPath(ctx: CanvasRenderingContext2D, x: number, y: number
 
 // ─── 글 ─────────────────────────────────────────────────────────────────────
 
-/** 글 길이별 [글자 크기, 줄 간격, 최대 줄 수]. 지금은 25자 제한이지만 예전 긴 기록도 들어온다 */
+/** 글 길이별 [글자 크기, 줄 간격, 최대 줄 수]. 지금은 50자 제한이지만 예전 긴 기록도 들어온다 */
 function textMetrics(len: number): [number, number, number] {
   if (len <= 10) return [58, 78, 2];
   if (len <= 18) return [50, 70, 3];
