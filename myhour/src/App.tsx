@@ -20,6 +20,21 @@ const LABEL_STYLE: React.CSSProperties = {
   color: 'rgba(26,26,26,0.5)',
 };
 
+/**
+ * 아이폰 홈 화면 앱(PWA)은 상태 표시줄 밑까지 그리면서도 창 높이를 상태 표시줄만큼 짧게 알려준다.
+ * 그래서 100%나 100dvh로는 아래에 빈 띠가 남는다. 그때만 실제 화면 높이를 쓴다.
+ * 차이가 상태 표시줄 정도(80px 이하)일 때만 쓰고, 그 밖에는 null을 돌려 평소처럼 100%를 쓴다.
+ */
+function measureStandaloneHeight(): number | null {
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches
+    || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  if (!standalone) return null;
+  const portrait = window.innerHeight >= window.innerWidth;
+  const screenHeight = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+  const gap = screenHeight - window.innerHeight;
+  return gap > 0 && gap <= 80 ? screenHeight : null;
+}
+
 function FrameWrapper({ label, children, dark }: { label: string; children: React.ReactNode; dark?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -41,11 +56,19 @@ function AppContent() {
   });
   const { addRecord, reset } = useApp();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 600);
+  const [standaloneHeight, setStandaloneHeight] = useState(measureStandaloneHeight);
 
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 600);
+    const handler = () => {
+      setIsMobile(window.innerWidth < 600);
+      setStandaloneHeight(measureStandaloneHeight());
+    };
     window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
+    window.addEventListener('orientationchange', handler);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('orientationchange', handler);
+    };
   }, []);
 
   useEffect(() => {
@@ -110,9 +133,11 @@ function AppContent() {
 
   if (isMobile) {
     return (
-      // 홈 화면 앱(PWA)에서는 iOS가 100dvh를 상태 표시줄 높이만큼 짧게 잡아 아래에 빈 띠가 생긴다.
-      // 화면에 고정해 네 모서리를 붙이면 실제 화면 전체를 채운다.
-      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#FBF7EC' }}>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0,
+        height: standaloneHeight ? `${standaloneHeight}px` : '100%',
+        overflow: 'hidden', background: '#FBF7EC',
+      }}>
         {activeScreen}
       </div>
     );
