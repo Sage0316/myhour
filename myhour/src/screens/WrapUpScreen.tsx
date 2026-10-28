@@ -262,26 +262,30 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
           </button>
         </div>
 
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.6px', lineHeight: 1.25 }}>
-          {entry ? '이 날을 영상으로 만들어요' : '오늘을 영상으로 마무리해요'}
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: '-0.6px', lineHeight: 1.2 }}>
+          {entry ? '이 날을 영상으로' : '오늘을 영상으로'}<br />
+          <span style={{ color: COLOR.red }}>{entry ? '만들어요' : '마무리해요'}</span>
         </h1>
 
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: COLOR.inkSub, marginBottom: 9 }}>
             {entry ? '이 날 남긴 기록' : '오늘 남긴 기록'} · {records.length}
           </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {clipColors.map((bg, i) => (
-              <div key={i} style={{ width: 34, height: 46, borderRadius: 7, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', background: bg }} />
+              <div key={i} style={{ background: COLOR.white, padding: '3px 3px 10px', boxShadow: '0 1px 4px rgba(43,38,34,0.2)', transform: `rotate(${[-4, 3, -2, 4, -3][i % 5]}deg)` }}>
+                <div style={{ width: 38, height: 46, background: bg }} />
+              </div>
             ))}
             <svg aria-hidden="true" width="22" height="16" viewBox="0 0 26 16" style={{ margin: '0 2px' }}><path d="M2 8h20M15 2l7 6-7 6" fill="none" stroke={COLOR.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <div style={{ ...NIGHT, width: 34, height: 46, borderRadius: 7, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ ...NIGHT, width: 44, height: 60, borderRadius: 8, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M7 4.5v15l12.5-7.5z" /></svg>
             </div>
           </div>
         </div>
 
-        <div style={{ ...CARD, borderRadius: 18, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ ...CARD, position: 'relative', borderRadius: 18, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div aria-hidden="true" style={{ position: 'absolute', top: -10, right: 34, width: 58, height: 18, background: 'rgba(240,170,170,0.8)', transform: 'rotate(5deg)' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={highlight('rgba(255,214,90,0.85)')}>{entry ? '이 날의 기록' : '오늘의 기록'}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -473,6 +477,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               aria-label="오늘 기록으로 영상 생성하기"
               style={{ ...NIGHT, width: '100%', minHeight: 110, position: 'relative', borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: records.length === 0 || alreadyGenerated ? 'default' : 'pointer', opacity: records.length === 0 || alreadyGenerated ? 0.5 : 1, border: `1.5px solid ${COLOR.ink}`, fontFamily: FONT_BODY }}
             >
+              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" style={{ position: 'absolute', left: 18, top: 14, transform: 'rotate(-12deg)' }}><path d="M12 2.5l2.6 6 6.4.6-4.9 4.2 1.5 6.3L12 16.3 6.4 19.6l1.5-6.3L3 9.1l6.4-.6z" fill="#FFD25A" stroke={COLOR.ink} strokeWidth="1.4" strokeLinejoin="round" /></svg>
               <div style={{ width: 52, height: 52, borderRadius: 26, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill={COLOR.navy}><path d="M7 4.5v15l12.5-7.5z" /></svg>
               </div>

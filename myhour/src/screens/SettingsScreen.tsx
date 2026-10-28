@@ -100,8 +100,9 @@ function PushSection() {
     <div>
       <SectionHeader label="알림" />
       <div style={{ ...CARD, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IconTile bg="#E3EDCF"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></IconTile>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>기록 시간 알림</div>
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
               {ready
@@ -126,6 +127,15 @@ function PushSection() {
         )}
       </div>
     </div>
+  );
+}
+
+/** 줄 앞의 작은 아이콘 타일 — 알림·데이터·AI 줄의 글자 시작 위치를 맞춘다 */
+function IconTile({ bg, children }: { bg: string; children: React.ReactNode }) {
+  return (
+    <span aria-hidden="true" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 10, background: bg, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={bg === COLOR.navy ? COLOR.yellow : COLOR.ink} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+    </span>
   );
 }
 
@@ -230,8 +240,9 @@ function AISection() {
     <div>
       <SectionHeader label="AI 촬영감독" />
       <div style={{ ...CARD, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IconTile bg={COLOR.navy}><path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8z" /><path d="M4 11 3.2 7.6a1 1 0 0 1 .7-1.2L17 3l.9 3.4z" /></IconTile>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>AI 분석 사용</div>
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
               {configured ? (consented ? '제목·무드·BGM을 AI가 추천해요' : '켜면 하루 마감에서 AI가 연출해요') : '서버 연결 전이에요'}
@@ -324,20 +335,22 @@ function DataSection() {
           disabled={busy}
           style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 60, padding: '12px 16px', background: 'none', border: 'none', borderBottom: `1.5px dashed ${COLOR.dash}`, cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, textAlign: 'left' }}
         >
+          <IconTile bg="#CFE6FA"><path d="M12 15V3M7 8l5-5 5 5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></IconTile>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 내보내기</div>
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>설정·기록·아카이브·모든 미디어를 해시와 함께 저장</div>
           </div>
-          <div style={{ fontSize: 18, color: COLOR.inkMuted }}>↑</div>
+
         </button>
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 60, padding: '12px 16px', cursor: 'pointer', borderBottom: 'none' }}>
           <input type="file" accept=".zip,.hakku.zip,application/zip" onChange={handleImport} disabled={busy} style={{ display: 'none' }} />
+          <IconTile bg="#FFF0B8"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></IconTile>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 가져오기</div>
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>경로·크기·해시 검증 후 원자적으로 복원</div>
           </div>
-          <div style={{ fontSize: 18, color: COLOR.inkMuted }}>↓</div>
+
         </label>
       </div>
 

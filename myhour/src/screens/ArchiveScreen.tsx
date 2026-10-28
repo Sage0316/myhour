@@ -300,7 +300,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
         <DayDetailSheet entry={entry} onClose={() => setShowDetail(false)} />
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-        <div style={{ position: 'relative', background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, borderRadius: 6, padding: '6px 6px 8px' }}>
+        <div style={{ position: 'relative', background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, borderRadius: 6, padding: '6px 6px 8px', transform: `rotate(${Number(entry.date.slice(-2)) % 2 ? 1.5 : -1.5}deg)` }}>
         <span style={{ ...tape(tapeBg, tapeInk, -3, 16), position: 'absolute', top: -12, left: 12, zIndex: 2, padding: '0 9px' }}>{entry.date.slice(5).replace('-', '.')}</span>
         <div style={{
           position: 'relative', width: '100%', aspectRatio: '3/4',
