@@ -42,7 +42,7 @@
 - [x] U10 예약 알림 — 기능 설계·코드 생성 완료, 실기기 확인은 TestFlight 이후 (`construction/plans/u10-local-reminders-code-generation-plan.md`)
 - [x] U11 저장·공유 — 코드 생성 완료, 실기기 확인은 TestFlight 이후 (`construction/plans/u11-save-share-code-generation-plan.md`)
 - [x] U9 서버 허용 주소 — AI·배경음악 서버에 `capacitor://localhost` 추가, 배포 워크플로에 media 선택지 추가. 운영 배포는 사용자가 Deploy Workers(production, all) 실행
-- [ ] U14 출시용 정리
+- [x] U14 출시용 정리 — 앱 빌드에서 테스트 도구·웹 전용 파일 제외, 개발자 문구 정리 (`construction/plans/u14-release-cleanup-code-generation-plan.md`)
 - [ ] U13 결제·페이월
 - [ ] U15 클라우드 빌드
 - [ ] U16 앱스토어 제출

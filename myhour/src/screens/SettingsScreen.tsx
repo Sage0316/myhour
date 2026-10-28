@@ -66,7 +66,7 @@ function ToggleSwitch({ checked, onChange, disabled, label }: {
   );
 }
 
-// 기록 시간 푸시 알림 — 서버(push-server/) 배포 전에는 준비 중 상태로 표시
+// 기록 시간 알림 — 앱은 폰 예약 알림, 웹은 푸시 서버(push-server/)를 쓴다
 function PushSection() {
   const { settings, isWrapped } = useApp();
   const [enabled, setEnabled] = useState(false);
@@ -117,7 +117,7 @@ function PushSection() {
               {ready
                 ? `${settings.startTime}부터 ${intervalLabel(settings.interval)} 간격으로 알려드려요`
                 : PUSH_SERVER_URL === ''
-                  ? '알림 서버 배포 후 사용할 수 있어요 (준비 완료)'
+                  ? '지금은 알림을 쓸 수 없어요'
                   : 'iOS 16.4 이상 + 홈 화면 설치가 필요해요'}
             </div>
           </div>
@@ -254,7 +254,7 @@ function AISection() {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>AI 분석 사용</div>
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
-              {configured ? (consented ? '제목·무드·BGM을 AI가 추천해요' : '켜면 하루 마감에서 AI가 연출해요') : '서버 연결 전이에요'}
+              {configured ? (consented ? '제목·무드·BGM을 AI가 추천해요' : '켜면 하루 마감에서 AI가 연출해요') : '지금은 AI 연출을 쓸 수 없어요'}
             </div>
           </div>
           <ToggleSwitch
@@ -323,7 +323,7 @@ function DataSection() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    if (!confirm('현재 데이터를 검증된 백업 내용으로 교체할까요? 검증이나 복원에 실패하면 기존 데이터는 유지됩니다.')) return;
+    if (!confirm('지금 데이터를 백업 파일 내용으로 바꿀까요?\n문제가 생기면 지금 데이터는 그대로 남아요.')) return;
     setBusy(true);
     setError(null);
     setStatus('백업 검증 중');
@@ -350,7 +350,7 @@ function DataSection() {
           <IconTile bg="#CFE6FA"><path d="M12 15V3M7 8l5-5 5 5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></IconTile>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 내보내기</div>
-            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>설정·기록·아카이브·모든 미디어를 해시와 함께 저장</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>기록·영상·설정을 파일 하나로 저장해요</div>
           </div>
 
         </button>
@@ -360,7 +360,7 @@ function DataSection() {
           <IconTile bg="#FFF0B8"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></IconTile>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15 }}>데이터 가져오기</div>
-            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>경로·크기·해시 검증 후 원자적으로 복원</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>백업 파일로 되돌려요. 실패하면 지금 데이터는 그대로예요</div>
           </div>
 
         </label>
@@ -376,13 +376,15 @@ function DataSection() {
   );
 }
 
+const DEV_TOOLS_AVAILABLE = import.meta.env.MODE !== 'app';
+
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   const { settings, updateSettings, isWrapped, unlockToday } = useApp();
   const [openRow, setOpenRow] = useState<string | null>(null);
-  // 빌드 버전을 일곱 번 두드리면 테스트 도구가 열린다. 실사용자가 우연히 발견할 일은 없고,
-  // 개발자는 하루 마감 잠금 때문에 다음 날까지 기다리지 않아도 된다.
+  // 웹 버전에서 빌드 버전을 일곱 번 두드리면 테스트 도구가 열린다. 개발자는 하루 마감 잠금 때문에
+  // 다음 날까지 기다리지 않아도 된다. 앱스토어 앱(--mode app)에는 숨은 기능을 두지 않는다.
   const [versionTaps, setVersionTaps] = useState(0);
-  const devToolsOpen = versionTaps >= 7;
+  const devToolsOpen = DEV_TOOLS_AVAILABLE && versionTaps >= 7;
 
   function toggle(id: string) {
     setOpenRow(prev => prev === id ? null : id);

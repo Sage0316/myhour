@@ -306,3 +306,11 @@ git pull --ff-only"
 **Context**: U9 Code Generation 완료, 배포 대기
 
 ---
+
+## U14 출시용 정리 — 코드 생성 완료
+**Timestamp**: 2026-10-28T09:13:58Z
+**User Input**: "응 계속 진행해줘"
+**AI Response**: "앱 빌드에서 테스트 도구(마감 잠금 풀기)를 코드째 제외하고, 설정 화면의 개발자 문구를 사용자 문구로 바꿨다. 앱 번들에서 BGM 시청 페이지와 _headers를 뺐다. 웹 버전 동작은 그대로. pnpm check(테스트 77개)와 e2e 통과."
+**Context**: U14 Code Generation 완료. 남은 단위 U13·U15·U16은 별도 계획 승인 필요
+
+---
