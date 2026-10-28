@@ -244,8 +244,8 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
             <span style={{ ...MONO, fontSize: 13, color: seconds >= 5 ? 'rgba(255,255,255,0.45)' : '#fff' }}>{mm}:{ss}</span>
           </div>
           {seconds >= 5 && (
-            <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: 50, padding: '4px 12px', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
-              영상에는 앞 5초만 담겨요
+            <div style={{ background: 'rgba(0,0,0,0.55)', borderRadius: 50, padding: '5px 14px', fontSize: 12, color: 'rgba(255,255,255,0.9)' }}>
+              이 이후에 녹화되는 건 영상에 들어가지 않아요
             </div>
           )}
         </div>
@@ -417,13 +417,14 @@ function AudioRecordMode({ onCapture }: { onCapture: (blob: Blob) => void }) {
         <>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 60 }}>
             {[12, 28, 18, 40, 22, 35, 16, 44, 20, 30, 14, 38].map((h, i) => (
-              <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: COLOR.ink }} />
+              // 5초가 지나면 파형도 회색으로 — 영상 촬영 화면과 같은 신호
+              <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: seconds >= 5 ? '#D6CFC3' : COLOR.ink, transition: 'background 0.6s ease' }} />
             ))}
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ ...MONO, fontSize: 32, color: seconds >= 5 ? COLOR.inkMuted : COLOR.ink, letterSpacing: 3 }}>{mm}:{ss}</div>
             <div style={{ fontSize: 13, color: COLOR.inkMuted, marginTop: 8 }}>
-              {seconds >= 5 ? '영상에는 앞 5초만 담겨요' : '녹음 중'}
+              {seconds >= 5 ? '이 이후에 녹음되는 건 영상에 들어가지 않아요' : '녹음 중'}
             </div>
           </div>
           <RecordButton onClick={stop} label="음성 녹음 중지" recording />
