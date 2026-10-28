@@ -23,8 +23,17 @@ describe('마지막 장면 고르기', () => {
 describe('첫 장면(공책 표지) 고르기', () => {
   it('alternates covers day by day', async () => {
     const { COVER_VARIANTS, coverVariantIndex } = await import('./scenesCover');
-    expect(COVER_VARIANTS.length).toBe(2);
+    expect(COVER_VARIANTS.length).toBe(7);
     expect(coverVariantIndex('2026-10-28', '')).not.toBe(coverVariantIndex('2026-10-29', ''));
     expect(coverVariantIndex('2026-10-28', 'x')).toBe(coverVariantIndex('2026-10-28', 'y'));
+  });
+});
+
+describe('표지 라벨 모양', () => {
+  it('keeps the same label shape when the same day is remade, and uses every shape across days', async () => {
+    const { LABEL_SHAPES, labelShapeIndex } = await import('./scenesCover');
+    expect(labelShapeIndex('2026-10-28', 'a')).toBe(labelShapeIndex('2026-10-28', 'b'));
+    const seen = new Set(Array.from({ length: 60 }, (_, i) => labelShapeIndex(new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10), '')));
+    expect(seen.size).toBe(LABEL_SHAPES.length);
   });
 });
