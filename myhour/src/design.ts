@@ -12,9 +12,10 @@ export const COLOR = {
   redSoft: '#FBE3D6',
   redInk: '#8A3E17',
   navy: '#1F3A6B',
-  sky: 'rgba(132,190,236,0.85)',
+  // 글씨가 올라가는 테이프는 비치지 않게 불투명색(종이 위에 겹쳤을 때와 같은 색)으로 둔다
+  sky: '#96C7EC',
   skyInk: '#173055',
-  green: 'rgba(184,214,120,0.75)',
+  green: '#C9DE95',
   greenInk: '#3D5222',
   yellow: '#FFE27A',
   beige: '#E7E1D3',

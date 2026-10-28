@@ -13,7 +13,7 @@ const THUMB_BG: Record<MyRecord['type'], string> = {
   photo: COLOR.beige, meme: COLOR.beige, video: COLOR.beige, text: COLOR.white, audio: COLOR.white,
 };
 const TAPE_COLORS: [string, string][] = [
-  [COLOR.sky, COLOR.skyInk], ['rgba(240,170,170,0.85)', '#6A1F1F'], [COLOR.green, COLOR.greenInk],
+  [COLOR.sky, COLOR.skyInk], ['#F2B6B4', '#6A1F1F'], [COLOR.green, COLOR.greenInk],
 ];
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
