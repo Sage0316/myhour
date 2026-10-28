@@ -119,7 +119,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '4px 22px 0', minHeight: 0 }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 22px 0', minHeight: 0 }}>
         {sortedRecords.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 80 }}>
             <div style={{ fontSize: 14, color: COLOR.inkMuted, textAlign: 'center', lineHeight: 1.6, whiteSpace: 'pre-line' }}>

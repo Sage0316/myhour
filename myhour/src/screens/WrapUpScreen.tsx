@@ -274,7 +274,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
 
   return (
     <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={entry ? '지난 날짜 영상 만들기' : '하루 마감'} style={SCREEN}>
-      <div style={{ flex: 1, padding: `${topPad(52)} 22px 0`, display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto' }}>
+      <div style={{ flex: 1, padding: `${topPad(52)} 22px 0`, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', overflowX: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ ...TAPE_GREEN(), alignSelf: 'center' }}>{entry ? '영상 만들기' : '하루 마감'} · {dateShort}</span>
           <button onClick={onClose} aria-label={entry ? '영상 만들기 닫기' : '하루 마감 닫기'} style={{ width: 44, height: 44, marginRight: -10, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', padding: 0 }}>

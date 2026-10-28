@@ -265,7 +265,7 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
             </div>
           </div>
         </div>
-        <div style={{ overflowY: 'auto', padding: '12px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ overflowY: 'auto', overflowX: 'hidden', padding: '12px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {sorted.map(r => <DetailRow key={r.id} record={r} />)}
         </div>
       </div>
@@ -502,7 +502,7 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
       </div>
 
       <div style={{
-        flex: 1, overflow: 'auto', padding: '18px 22px 24px',
+        flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '18px 22px 24px',
         display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
         columnGap: 14, rowGap: 28, alignContent: 'start',
       }}>
