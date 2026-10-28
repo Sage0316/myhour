@@ -40,7 +40,7 @@
 - [x] U12 디자인 리뉴얼 — 코드 생성 완료, 실제 기기 피드백 반영 (`construction/plans/u12-design-renewal-code-generation-plan.md`)
 - [x] U8 iOS 앱 틀 — 코드 생성 완료, 클라우드 컴파일 확인 대기 (`construction/plans/u8-ios-app-shell-code-generation-plan.md`)
 - [x] U10 예약 알림 — 기능 설계·코드 생성 완료, 실기기 확인은 TestFlight 이후 (`construction/plans/u10-local-reminders-code-generation-plan.md`)
-- [x] U11 저장·공유 — 코드 생성 완료, 실기기 확인은 TestFlight 이후 (`construction/plans/u11-save-share-code-generation-plan.md`)
+- [x] U11 저장·공유 — 코드 생성 완료 (+ 찍은 사진·영상 기록 사진첩 자동 저장), 실기기 확인은 TestFlight 이후 (`construction/plans/u11-save-share-code-generation-plan.md`)
 - [x] U9 서버 허용 주소 — AI·배경음악 서버에 `capacitor://localhost` 추가, 배포 워크플로에 media 선택지 추가. 운영 배포는 사용자가 Deploy Workers(production, all) 실행
 - [x] U14 출시용 정리 — 앱 빌드에서 테스트 도구·웹 전용 파일 제외, 개발자 문구 정리 (`construction/plans/u14-release-cleanup-code-generation-plan.md`)
 - [ ] U13 결제·페이월

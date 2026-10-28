@@ -7,6 +7,7 @@ import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
 import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush, syncPushSchedule } from '../push';
 import TabBar from '../components/TabBar';
 import { shareFileNative } from '../native/shareFile';
+import { isAutoSaveEnabled, setAutoSaveEnabled } from '../native/saveToPhotos';
 import { exportCompleteBackup, restoreCompleteBackup, type BackupProgress } from '../backup/backupService';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -385,6 +386,14 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   // 다음 날까지 기다리지 않아도 된다. 앱스토어 앱(--mode app)에는 숨은 기능을 두지 않는다.
   const [versionTaps, setVersionTaps] = useState(0);
   const devToolsOpen = DEV_TOOLS_AVAILABLE && versionTaps >= 7;
+  // 사진첩 자동 저장은 앱에서만 된다 (웹은 사진첩에 직접 쓸 수 없다)
+  const native = isNativeApp();
+  const [autoSave, setAutoSave] = useState(isAutoSaveEnabled);
+
+  function toggleAutoSave() {
+    setAutoSaveEnabled(!autoSave);
+    setAutoSave(!autoSave);
+  }
 
   function toggle(id: string) {
     setOpenRow(prev => prev === id ? null : id);
@@ -481,6 +490,15 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
             <div style={{ flex: 1, fontSize: 15 }}>저장 방식</div>
             <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 17 }}>아카이브 저장 후 열기</div>
           </div>
+          {native && (
+            <div style={{ minHeight: 60, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: `1.5px dashed ${COLOR.dash}` }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15 }}>사진첩에 자동 저장</div>
+                <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>카메라로 찍은 사진·영상 기록을 사진 앱에도 넣어요</div>
+              </div>
+              <ToggleSwitch label="사진첩에 자동 저장" checked={autoSave} onChange={toggleAutoSave} />
+            </div>
+          )}
         </SettingGroup>
 
         <PushSection />

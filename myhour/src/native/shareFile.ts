@@ -16,10 +16,13 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function writeToCache(blob: Blob, filename: string): Promise<string> {
-  // 지난번 공유 파일은 지운다 (캐시라 iOS가 알아서 비우기도 하지만 쌓이지 않게)
-  await Filesystem.rmdir({ path: SHARE_DIR, directory: Directory.Cache, recursive: true }).catch(() => {});
-  const path = `${SHARE_DIR}/${filename}`;
+/**
+ * 앱 캐시 폴더 dir/에 파일을 쓰고 file:// 주소를 돌려준다. 지난번에 그 폴더에 쓴 파일은 지운다
+ * (캐시라 iOS가 알아서 비우기도 하지만 쌓이지 않게).
+ */
+export async function writeBlobToCache(blob: Blob, filename: string, dir: string = SHARE_DIR): Promise<string> {
+  await Filesystem.rmdir({ path: dir, directory: Directory.Cache, recursive: true }).catch(() => {});
+  const path = `${dir}/${filename}`;
   let uri = '';
   for (let offset = 0; offset === 0 || offset < blob.size; offset += CHUNK_BYTES) {
     const data = toBase64(new Uint8Array(await blob.slice(offset, offset + CHUNK_BYTES).arrayBuffer()));
@@ -39,7 +42,7 @@ async function writeToCache(blob: Blob, filename: string): Promise<string> {
  */
 export async function shareFileNative(blob: Blob, filename: string, title?: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;
-  const uri = await writeToCache(blob, filename);
+  const uri = await writeBlobToCache(blob, filename);
   try {
     await Share.share({ title, files: [uri] });
   } catch (error) {

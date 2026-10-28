@@ -3,11 +3,12 @@ import {
   BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_SKY, topPad,
 } from '../design';
 import type { RecordType } from '../store';
-import { deleteVideoFromIDB, saveVideoToIDB } from '../store';
+import { deleteVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB } from '../store';
 import { useApp, type RecordMedia } from '../appContext';
 import { createStableId } from '../domain/model';
 import { assertCaptureCapacity } from '../media/capabilities';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
+import { saveCaptureToPhotos } from '../native/saveToPhotos';
 
 interface RecordScreenProps {
   onClose: () => void;
@@ -540,6 +541,8 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   const photoSourceRef = useRef<'camera' | 'album'>('camera');
   const pendingMediaRef = useRef<RecordMedia | null>(null);
   const pendingBlobRef = useRef<Blob | null>(null);
+  // 카메라로 찍은 원본 사진 — 기록을 저장할 때 사진첩(앱)에도 넣는다
+  const cameraOriginalRef = useRef<File | null>(null);
   const temporaryUrlRef = useRef<string | null>(null);
   const [retakeKey, setRetakeKey] = useState(0);
 
@@ -559,6 +562,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       pendingMediaRef.current = null;
     }
     pendingBlobRef.current = null;
+    cameraOriginalRef.current = null;
   }
 
   async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -573,6 +577,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       const prepared = await prepareImage(file);
       await assertCaptureCapacity('photo', prepared.blob);
       pendingBlobRef.current = prepared.blob;
+      cameraOriginalRef.current = photoSourceRef.current === 'camera' ? file : null;
       setCapturedContent(prepared.preview);
     } catch (error) {
       alert(error instanceof Error ? error.message : '사진을 처리하지 못했어요.');
@@ -612,8 +617,15 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       await saveVideoToIDB(key, blob);
       media = { key, type: blob.type, size: blob.size };
     }
+    // 사진첩 저장은 기다리지 않는다 — 실패해도 기록은 그대로 저장된다
+    const cameraOriginal = cameraOriginalRef.current;
+    if (type === 'photo' && cameraOriginal) void saveCaptureToPhotos(cameraOriginal, 'photo');
+    if (type === 'video' && media) {
+      void loadVideoBlobFromIDB(media.key).then(blob => blob && saveCaptureToPhotos(blob, 'video'));
+    }
     pendingMediaRef.current = null;
     pendingBlobRef.current = null;
+    cameraOriginalRef.current = null;
     onSave(type, type === 'audio' ? '' : capturedContent!, caption || undefined, media ?? undefined);
   }
 

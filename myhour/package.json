@@ -19,6 +19,7 @@
     "build:app": "tsc -b && vite build --mode app && cap sync ios"
   },
   "dependencies": {
+    "@capacitor-community/media": "9.1.0",
     "@capacitor/core": "8.5.3",
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/ios": "8.5.3",
