@@ -15,9 +15,12 @@
     "test:browser-verify": "node scripts/browser-verify.mjs",
     "test:workers": "node push-server/roundtrip-test.mjs && node push-server/worker-auth-test.mjs && node push-server/schedule-test.mjs && node ai-server/worker-auth-test.mjs && node media-server/worker-test.mjs",
     "check": "pnpm run lint && pnpm run test:coverage && pnpm run test:workers && pnpm run build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:app": "tsc -b && vite build --mode app && cap sync ios"
   },
   "dependencies": {
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
     "@fontsource/gaegu": "^5.3.0",
     "jszip": "^3.10.1",
     "react": "^19.2.7",
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
+    "@capacitor/cli": "8.5.3",
     "@playwright/test": "^1.61.1",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",

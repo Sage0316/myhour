@@ -42,7 +42,8 @@
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      if ('serviceWorker' in navigator) {
+      // iOS 앱(capacitor://) 안에서는 파일이 앱에 들어 있어 서비스워커가 필요 없다
+      if ('serviceWorker' in navigator && location.protocol !== 'capacitor:') {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/myhour/sw.js');
         });

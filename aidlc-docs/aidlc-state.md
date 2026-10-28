@@ -37,8 +37,8 @@
 - [x] Units Generation — 실행 계획의 작업 단위 목록(U8–U16)으로 확정
 
 ### 🟢 CONSTRUCTION PHASE
-- [x] U12 디자인 리뉴얼 — 코드 생성 완료, 사용자 확인 대기 (`construction/plans/u12-design-renewal-code-generation-plan.md`)
-- [ ] U8 iOS 앱 틀
+- [x] U12 디자인 리뉴얼 — 코드 생성 완료, 실제 기기 피드백 반영 (`construction/plans/u12-design-renewal-code-generation-plan.md`)
+- [x] U8 iOS 앱 틀 — 코드 생성 완료, 클라우드 컴파일 확인 대기 (`construction/plans/u8-ios-app-shell-code-generation-plan.md`)
 - [ ] U10 예약 알림
 - [ ] U11 저장·공유
 - [ ] U9 서버 허용 주소
@@ -46,6 +46,10 @@
 - [ ] U13 결제·페이월
 - [ ] U15 클라우드 빌드
 - [ ] U16 앱스토어 제출
+
+### 앱스토어 출시 전 확인 항목
+- BGM `cornfield-chase.mp3`(FreePD "Cornfield Chase"): 영화 인터스텔라 OST와 제목이 같아 작곡 저작권 위험을 배제할 수 없다. 출시 전에 다른 CC0 곡으로 교체한다 (사용자: "그건 나중에 하고"). 나머지 20곡은 0lhi/FreePD 미러(CC0 1.0, 커밋 cf011c7)에 실제 존재함을 2026-10-28 대조로 확인
+- 앱 아이콘은 기존 브랜드 마크를 그대로 썼다. 다꾸 디자인에 맞춘 아이콘이 필요하면 U16에서 교체
 
 ## 적용된 확장
 

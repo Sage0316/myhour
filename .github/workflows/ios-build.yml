@@ -1,0 +1,60 @@
+name: iOS build check
+
+# 서명 없이 iOS 앱이 컴파일되는지만 확인한다 (Apple 계정·인증서 불필요).
+# 앱스토어용 서명 빌드와 TestFlight 업로드는 계정이 생긴 뒤 별도 워크플로로 만든다.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'myhour/ios/**'
+      - 'myhour/capacitor.config.ts'
+      - 'myhour/package.json'
+      - 'myhour/pnpm-lock.yaml'
+      - 'myhour/index.html'
+      - 'myhour/vite.config.ts'
+      - '.github/workflows/ios-build.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: myhour
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: myhour/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Build web bundle for the app and sync into the iOS project
+        run: pnpm run build:app
+        env:
+          VITE_AI_WORKER_URL: ${{ vars.VITE_AI_WORKER_URL }}
+          VITE_PUSH_SERVER_URL: ${{ vars.VITE_PUSH_SERVER_URL }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+      - name: Show Xcode version
+        run: xcodebuild -version
+      - name: Compile for the iOS simulator without code signing
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
