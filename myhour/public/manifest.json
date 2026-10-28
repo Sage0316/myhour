@@ -6,8 +6,8 @@
   "scope": "/myhour/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#FFFFFF",
-  "theme_color": "#1A1A1A",
+  "background_color": "#FBF7EC",
+  "theme_color": "#FBF7EC",
   "categories": ["lifestyle", "photo"],
   "lang": "ko",
   "icons": [

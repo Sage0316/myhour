@@ -60,7 +60,15 @@ button {
 }
 
 @media (max-width: 599px) {
-  html, body { background: #FBF7EC; overflow: hidden; height: 100dvh; }
+  /* 화면과 같은 모눈종이를 페이지 바탕에도 깐다. iOS 홈 화면 앱은 페이지를 화면보다 조금 짧게 잡아서
+     맨 아래에 페이지 바탕만 보이는 띠가 생기는데, 바탕이 같은 모눈이면 띠가 화면에 이어져 보인다 */
+  html, body {
+    background-color: #FBF7EC;
+    background-image: linear-gradient(rgba(120,150,110,0.13) 1px, transparent 1px), linear-gradient(90deg, rgba(120,150,110,0.13) 1px, transparent 1px);
+    background-size: 18px 18px;
+    overflow: hidden;
+    height: 100dvh;
+  }
   #root { padding: 0; min-height: 100dvh; width: 100%; overflow: hidden; }
 }
 
