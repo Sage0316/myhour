@@ -7,6 +7,8 @@ import ArchiveScreen from './screens/ArchiveScreen';
 import type { ArchiveEntry } from './store';
 import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
+import { isOnboarded } from './onboarding';
 import { AppProvider } from './context';
 import { useApp } from './appContext';
 import { getSessionDate } from './store';
@@ -42,6 +44,7 @@ function AppContent() {
     return match ? decodeURIComponent(match[1]) : null;
   });
   const { addRecord, reset, settings, isWrapped } = useApp();
+  const [showOnboarding, setShowOnboarding] = useState(() => !isOnboarded());
 
   // iOS 앱: 예약 알림은 며칠분만 걸려 있으므로 설정이 바뀌거나, 하루를 마감하거나,
   // 앱이 다시 앞으로 나올 때마다 다시 채운다. 알림을 켜지 않았으면 syncReminders가 아무것도 하지 않는다.
@@ -115,7 +118,9 @@ function AppContent() {
     }
   }
 
-  const activeScreen = modal === 'record' ? (
+  const activeScreen = showOnboarding ? (
+    <OnboardingScreen onDone={() => setShowOnboarding(false)} />
+  ) : modal === 'record' ? (
     <RecordScreen
       onClose={closeModal}
       onSave={(type, content, caption, media) => { addRecord(type, content, caption, media); setModal(null); }}
@@ -143,7 +148,8 @@ function AppContent() {
     );
   }
 
-  const mainLabel = modal === 'record' ? '하꾸 · 기록하기'
+  const mainLabel = showOnboarding ? '하꾸 · 설명서'
+    : modal === 'record' ? '하꾸 · 기록하기'
     : modal === 'wrapup' ? '하꾸 · 하루 마감'
     : activeTab === 'home' ? '하꾸 · 홈'
     : activeTab === 'today' ? '하꾸 · 오늘'
