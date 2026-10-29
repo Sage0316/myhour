@@ -1,7 +1,7 @@
 // 영상 오른쪽 아래의 작은 로고 (2026-10-29, 펌킨이 시안 W1로 고름). 한국어는 HAKKU, 영어는 MyHour(펌킨이 같은 획으로 그린 워드마크).
 // SNS에 공유된 영상을 몇 초만 보고 넘겨도 앱 이름이 보이게 하려는 것 — 엔딩 카드의 "하꾸"는 끝까지 봐야 보인다.
 // 영상은 구독자만 만들 수 있어서 "돈 내면 없어지는" 워터마크가 아니다. 그래서 설정에서 끌 수 있다(기본 켜짐).
-// 진한 로고에 흰 테두리를 둘러 크림색 종이·체크무늬·사진 어디서든 읽힌다. 흰 로고는 밝은 장면에서 안 보였다.
+// 연회색 로고에 아주 옅은 흰 테두리 — 장면을 가리지 않는 은은한 워터마크. (진한 검정은 '도장 같다'고 해서 2026-10-29 펌킨 요청으로 연회색)
 
 import { getLang } from './i18n';
 
@@ -20,7 +20,9 @@ export function setWatermarkEnabled(on: boolean): void {
 const MARK_H = 78 * 409 / 1340.2;
 const RIGHT = 22;
 const BOTTOM = 27;
-const INK_ALPHA = 1;
+const INK = '#C9C3B9'; // 따뜻한 연회색 (크림 종이와 같은 결)
+const INK_ALPHA = 0.9;
+const HALO_ALPHA = 0.45;
 const HALO = 2.5;
 
 /** 로고에 흰 테두리를 미리 입혀 둔 캔버스. 프레임마다 이걸 한 번 그리기만 한다 */
@@ -50,13 +52,21 @@ export async function loadWatermark(scale: number): Promise<HTMLCanvasElement | 
   const out = document.createElement('canvas');
   out.width = w; out.height = h;
   const o = out.getContext('2d')!;
-  o.globalAlpha = 0.95;
+  o.globalAlpha = HALO_ALPHA;
   for (let i = 0; i < 8; i++) {
     const a = i * Math.PI / 4;
     o.drawImage(silhouette, Math.cos(a) * pad, Math.sin(a) * pad);
   }
+  // 로고 모양을 연회색으로 칠해 얹는다 (원본 로고는 검정)
+  const ink = document.createElement('canvas');
+  ink.width = w; ink.height = h;
+  const k = ink.getContext('2d')!;
+  k.drawImage(img, pad, pad, markW * scale, markH * scale);
+  k.globalCompositeOperation = 'source-in';
+  k.fillStyle = INK;
+  k.fillRect(0, 0, w, h);
   o.globalAlpha = INK_ALPHA;
-  o.drawImage(img, pad, pad, markW * scale, markH * scale);
+  o.drawImage(ink, 0, 0);
   return out;
 }
 
