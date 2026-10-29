@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import {
   BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_SKY, topPad,
 } from '../design';
-import type { RecordType } from '../store';
+import type { MyRecord, RecordType } from '../store';
+import { H, W, ensureDiaryFont } from '../scenes';
+import { drawDiaryScene } from '../scenesDakku';
+import { LONG_TEXT_CHARS } from '../videoGenerator';
 import { deleteVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB } from '../store';
 import { useApp, type RecordMedia } from '../appContext';
 import { createStableId } from '../domain/model';
@@ -274,20 +277,48 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
 // 영상에서 글 기록 하나는 3초 보인다. 25자였다가 펌킨 요청으로 50자 (그림일기 두 레이아웃 모두 4~5줄로 들어간다)
 const TEXT_MAX = 50;
 
+/** 실제 영상 장면(그림일기)을 그대로 그린 미리보기. 무드 스티커는 마감할 때 정해져서 여기선 뺀다 */
+function DiaryPreview({ text }: { text: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [fontReady, setFontReady] = useState(false);
+  useEffect(() => { void ensureDiaryFont().then(() => setFontReady(true)); }, []);
+  useEffect(() => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+    drawDiaryScene(ctx, { id: 'preview', slotTime: currentClock(), type: 'text', content: text, createdAt: 0 } as MyRecord, null, 1);
+  }, [text, fontReady]);
+  return (
+    <canvas
+      ref={canvasRef}
+      width={W}
+      height={H}
+      aria-hidden="true"
+      style={{ height: '100%', maxHeight: 300, aspectRatio: '9 / 16', border: `1.5px solid ${COLOR.ink}`, borderRadius: 14, boxSizing: 'border-box' }}
+    />
+  );
+}
+
+function currentClock(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
   const ready = text.trim().length > 0;
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0 }}>
       <label style={{
-        flexShrink: 0, height: 112, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
+        // 50자가 세 줄로 다 보이는 높이 — 글이 늘어도 칸이 커지지 않고, 안에서 스크롤되지도 않게
+        flexShrink: 0, height: 144, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
         ...CARD, borderRadius: 18, padding: '14px 18px 10px',
       }}>
         <textarea
           // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
           {...noAutofill('text')}
           value={text}
-          rows={2}
+          rows={3}
           maxLength={TEXT_MAX}
           onChange={e => setText(e.target.value.slice(0, TEXT_MAX))}
           placeholder="지금 이 순간을 한 줄로"
@@ -303,12 +334,10 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
       </label>
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>영상에서는 1~2초 동안 이렇게 보여요</span>
-        <div aria-hidden="true" style={{ position: 'relative', height: '100%', maxHeight: 300, aspectRatio: '9 / 16', border: `1.5px solid ${COLOR.ink}`, borderRadius: 14, background: COLOR.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', boxSizing: 'border-box' }}>
-          <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.45, color: ready ? COLOR.white : 'rgba(255,255,255,0.45)', textAlign: 'center', wordBreak: 'keep-all' }}>
-            {ready ? text : '여기 쓴 한 줄'}
-          </span>
-        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>
+          영상에서는 {text.trim().length > LONG_TEXT_CHARS ? 6 : 3}초 동안 이런 그림일기로 보여요
+        </span>
+        <DiaryPreview text={ready ? text.trim() : '여기 쓴 한 줄'} />
       </div>
 
       <button

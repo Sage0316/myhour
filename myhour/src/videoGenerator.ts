@@ -149,6 +149,9 @@ async function yieldToBrowser(signal?: AbortSignal): Promise<void> {
   throwIfAborted(signal);
 }
 
+/** 사진은 짧게 두고, 이보다 긴 글만 두 배(6초)로 보여줘서 끝까지 읽히게 한다 (펌킨 요청). 글 기록 화면의 미리보기 안내도 이 값을 쓴다 */
+export const LONG_TEXT_CHARS = 25;
+
 async function renderSegment(duration: number, draw: DrawFn, onFrame?: () => void, signal?: AbortSignal) {
   const frames = Math.round(duration * FPS);
   const frameMs = 1000 / FPS;
@@ -416,8 +419,6 @@ async function renderVideo(
   const RECORD_DUR = 3;
   const CLOSE_DUR = 2;
   const MEDIA_MAX = 5; // 영상·음성 장면 상한 — 몽타주 리듬 유지
-  // 사진은 짧게 두고, 25자를 넘는 글만 두 배로 보여줘서 끝까지 읽히게 한다 (펌킨 요청)
-  const LONG_TEXT = 25;
   const segDurations = records.map(r => {
     if (r.type === 'audio') {
       const buf = voiceBufMap.get(r.id);
@@ -427,7 +428,7 @@ async function renderVideo(
       const d = clipDurMap.get(r.id);
       return d ? Math.min(Math.max(d, RECORD_DUR), MEDIA_MAX) : RECORD_DUR;
     }
-    if (r.type === 'text' && r.content.length > LONG_TEXT) return RECORD_DUR * 2;
+    if (r.type === 'text' && r.content.length > LONG_TEXT_CHARS) return RECORD_DUR * 2;
     return RECORD_DUR;
   });
   const totalFrames = Math.round((TITLE_DUR + segDurations.reduce((a, b) => a + b, 0) + CLOSE_DUR) * FPS);
