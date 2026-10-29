@@ -617,3 +617,11 @@ git pull --ff-only"
 **Context**: 사용자 시안 선택 반영
 
 ---
+
+## 앱 아이콘 교체
+**Timestamp**: 2026-10-29T17:04:07Z
+**User Input**: (폴라로이드·타임라인·재생 아이콘 이미지) "그리고 이건 앱 아이콘" → 1024px PNG 첨부
+**AI Response**: "받은 PNG는 둥근 모서리 바깥이 투명이라 iOS에서 검정으로 채워짐 → 같은 모눈종이(48px 간격, #FBF7EC/#E8E5D7)로 모서리를 채운 정사각형 원본을 만들어 design/app-icon-1024.png로 보관. iOS AppIcon·apple-touch-icon·PWA 192/512(any)·maskable 192/512(76% 축소)·favicon 교체, manifest를 any/maskable로 분리(예전엔 한 파일이 둘 다라 원형 마스크에서 별이 잘릴 수 있었음). 크기별(180~40px) 미리보기 확인. 테스트·e2e 통과."
+**Context**: 사용자 결정 반영
+
+---
