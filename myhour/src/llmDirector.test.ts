@@ -7,10 +7,10 @@ import type { MyRecord } from './store';
 const MEDIA_KEY_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.mp3$/;
 
 describe('BGM static asset catalog', () => {
-  it('keeps all 21 unique files outside the JavaScript bundle', () => {
-    expect(BGM_CATALOG).toHaveLength(21);
-    expect(new Set(BGM_CATALOG.map(item => item.file)).size).toBe(21);
-    expect(Object.values(BGM_FILES).every(files => files.length === 3)).toBe(true);
+  it('keeps all 35 unique files outside the JavaScript bundle', () => {
+    expect(BGM_CATALOG).toHaveLength(35);
+    expect(new Set(BGM_CATALOG.map(item => item.file)).size).toBe(35);
+    expect(Object.values(BGM_FILES).every(files => files.length >= 3)).toBe(true);
   });
 
   // 곡은 R2에 있고 hakku-media 워커가 파일명을 화이트리스트로 검사한다.
@@ -21,7 +21,7 @@ describe('BGM static asset catalog', () => {
   });
 
   it('always builds a media Worker URL for catalog files', () => {
-    expect(bgmAssetUrl('slice-of-life.mp3')).toBe(`${DEFAULT_MEDIA_BASE_URL}/bgm/slice-of-life.mp3`);
+    expect(bgmAssetUrl('be-chillin.mp3')).toBe(`${DEFAULT_MEDIA_BASE_URL}/bgm/be-chillin.mp3`);
     expect(() => bgmAssetUrl('../secret.mp3')).toThrow('지원하지 않는');
   });
 });

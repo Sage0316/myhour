@@ -29,24 +29,29 @@ export function toIntensityLevel(intensity: number): IntensityLevel {
 export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic' | 'sad';
 
 export const BGM_TRACKS: Record<BgmTrack, string> = {
-  calm: '차분한 lo-fi',
-  bright: '경쾌한 멜로디',
-  emotional: '감성적인 비트',
+  calm: '여유로운 재즈',
+  bright: '경쾌한 팝·펑크',
+  emotional: '벅찬 시네마틱',
   piano: '잔잔한 피아노',
-  ukulele: '가벼운 우쿨렐레',
+  ukulele: '장난스럽고 귀여운',
   nostalgic: '따뜻한 노스탤지어',
   sad: '차분한 슬픔·위로',
 };
 
-// 무드별 곡 풀 — AI는 무드만 고르고, 그 안에서 매번 랜덤으로 한 곡이 뽑힌다 (전곡 CC0).
-// 파일명은 R2의 myhour-media 객체 키와 정확히 일치해야 한다. 2026-07 라이선스 감사에서 출처 미상이던
-// calm/bright/emotional.mp3는 삭제하고 study-and-relax/pickled-pink/cornfield-chase로 교체했다.
+// 무드별 곡 풀 — AI는 무드만 고르고, 그 안에서 매번 랜덤으로 한 곡이 뽑힌다 (전곡 CC0, FreePD).
+// 파일명은 R2의 myhour-media 객체 키와 정확히 일치해야 한다. 2026-10-29 펌킨이 "로파이밖에 없다"고 해서
+// 듣기 페이지로 고른 26곡으로 바꿨다(새 24곡은 media-server/bgm-sources.json + upload-bgm.yml로 올림).
+// 묶음 이름(calm 등)은 AI 워커의 응답 enum이라 그대로 두고 안의 곡만 바꿨다 — calm은 이제 재즈,
+// bright는 팝·펑크, ukulele은 장난스러운 곡이다. 슬픈 날의 위로곡(piano·nostalgic·sad)은 예전 곡을 유지한다.
 export const BGM_FILES: Record<BgmTrack, readonly string[]> = {
-  calm: ['study-and-relax.mp3', 'slice-of-life.mp3', 'lagoon.mp3'],
-  bright: ['pickled-pink.mp3', 'just-like-that.mp3', 'city-sunshine.mp3'],
-  emotional: ['cornfield-chase.mp3', 'shining-stars.mp3', 'magic-garden.mp3'],
+  calm: ['be-chillin.mp3', 'martini-sunset.mp3', 'flutey-jazz.mp3', 'compy-jazz.mp3', 'bass-meant-jazz.mp3'],
+  bright: [
+    'city-sunshine.mp3', 'funshine.mp3', 'advertime.mp3', 'motions.mp3', 'still-pickin.mp3',
+    'funkeriffic.mp3', 'groovin.mp3', 'gotta-keep-on-movin.mp3', 'downtown-boogie.mp3', 'sunny-rasta.mp3', 'hippety-hop.mp3',
+  ],
+  emotional: ['inspiration.mp3', 'journey-of-hope.mp3', 'finally-see-the-light.mp3', 'connecting-rainbows.mp3'],
   piano: ['piano.mp3', 'landras-dream.mp3', 'piano-magic.mp3'],
-  ukulele: ['ukulele.mp3', 'ukulele-song.mp3', 'funshine.mp3'],
+  ukulele: ['spring-chicken.mp3', 'llama-in-pajama.mp3', 'my-giant-bunny-friend.mp3', 'le-baguette.mp3', 'the-entertainer.mp3', 'vintage-party.mp3'],
   nostalgic: ['nostalgic.mp3', 'travelers-notebook.mp3', 'tournesol.mp3'],
   sad: ['winter.mp3', 'isolation-waltz.mp3', 'cold-journey.mp3'],
 };
