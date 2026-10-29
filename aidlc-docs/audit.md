@@ -585,3 +585,11 @@ git pull --ff-only"
 **Context**: 사용자 시안 선택 반영
 
 ---
+
+## BGM 교체 1단계: R2 업로드 버튼
+**Timestamp**: 2026-10-29T16:36:03Z
+**User Input**: "근데 난 이거 음악이 마음에 안 들어" → "지금 너무 로파이 밖에 없어 짜증나" → (듣기 페이지에서 39곡 중 26곡 '좋아') "다 정했어!" → (슬픈 날 곡 질문) "응 좋아 위로곡은 너가 골라줘"
+**AI Response**: "FreePD(CC0) 미러에서 장르를 넓힌 후보 39곡을 40초 미리듣기 페이지로 만들어 선택받음(좋아 26, 별로 13). 세션에 Cloudflare 권한이 없어 R2 업로드는 GitHub Actions 'Upload BGM to R2'(workflow_dispatch, workers-production 환경 시크릿)로 만듦. 곡 목록은 media-server/bgm-sources.json — 출처 커밋 고정 + sha256 확인 후에만 업로드. 새 파일 24곡(City Sunshine·Funshine은 이미 R2에 있음). 앱 곡 목록 변경은 업로드 성공 뒤에 올린다(먼저 바꾸면 BGM이 404로 조용히 빠짐)."
+**Context**: 사용자 선택 반영, 업로드는 사용자 버튼 대기
+
+---

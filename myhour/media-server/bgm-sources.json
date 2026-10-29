@@ -1,0 +1,127 @@
+{
+  "_comment": "R2(myhour-media)에 올릴 BGM. 출처는 0lhi/freepd(FreePD 미러, 전곡 CC0)의 아래 커밋에 고정하고, 받은 파일을 sha256으로 확인한 뒤에만 올린다. upload-bgm.yml이 읽는다",
+  "repo": "0lhi/freepd",
+  "commit": "cf011c7016595833b550a88ff127f089188b25f8",
+  "files": [
+    {
+      "key": "advertime.mp3",
+      "source": "Upbeat/Advertime.mp3",
+      "sha256": "6f0d4433cf788304d60add551cc460dd877865e6d84a2ab3fa7d15ba3f55d6ce"
+    },
+    {
+      "key": "motions.mp3",
+      "source": "Upbeat/Motions.mp3",
+      "sha256": "af6380fde14f41dc4762a0a69c558bfd03a8a88c10cb5c8f578a6d0bcb4750be"
+    },
+    {
+      "key": "still-pickin.mp3",
+      "source": "Upbeat/Still Pickin.mp3",
+      "sha256": "12e9061971fb64798468d54c27b3a0b762bda15a8898b8b5b7ee9efa706f5db3"
+    },
+    {
+      "key": "funkeriffic.mp3",
+      "source": "Miscellaneous/Funkeriffic.mp3",
+      "sha256": "e30cdab0e7e3c0d9fd7169f51c187356bed5d48b69ddd68a0ce5847e3929b235"
+    },
+    {
+      "key": "groovin.mp3",
+      "source": "Miscellaneous/Groovin.mp3",
+      "sha256": "d96d17e3646175c6f2be0ffdbf57b928f8c020660f4e4e861ffdfcd919eb9a11"
+    },
+    {
+      "key": "gotta-keep-on-movin.mp3",
+      "source": "Miscellaneous/Gotta Keep On Movin.mp3",
+      "sha256": "0844e8cb7f10adcff4258eca87dd1aa7a1069617ff8397f0b3980a9d40e71e25"
+    },
+    {
+      "key": "downtown-boogie.mp3",
+      "source": "Miscellaneous/Downtown Boogie.mp3",
+      "sha256": "fac095f68050e9f9325269b06f261f85441209e2f5742e3fc2234115bb9fdc00"
+    },
+    {
+      "key": "sunny-rasta.mp3",
+      "source": "World/Sunny Rasta.mp3",
+      "sha256": "88e1a20549701be20204e98aedc1635a8f8acf7760bc561235c1f921a75b9d2c"
+    },
+    {
+      "key": "hippety-hop.mp3",
+      "source": "Electronic/Hippety Hop.mp3",
+      "sha256": "9e7fafd519e1280fb2cbb41b31110a23eb700d7f55eebaf5e7fd4b561b6e0410"
+    },
+    {
+      "key": "be-chillin.mp3",
+      "source": "Upbeat/Be Chillin.mp3",
+      "sha256": "1abaa9455ced505f10306b34d1fe569a43be28809ae39e62f422c69f312a74cb"
+    },
+    {
+      "key": "martini-sunset.mp3",
+      "source": "Miscellaneous/Martini Sunset.mp3",
+      "sha256": "b9d12b5d59c187e07316cab61e82ccbea0f48f2f64a3e8062abbf1861acc7add"
+    },
+    {
+      "key": "flutey-jazz.mp3",
+      "source": "Miscellaneous/Flutey Jazz.mp3",
+      "sha256": "3f215025780c179b138de83364ab6bd6e922fc57efe4688d3f570bf93105e103"
+    },
+    {
+      "key": "compy-jazz.mp3",
+      "source": "Miscellaneous/Compy Jazz.mp3",
+      "sha256": "bd7e017374891f01dc5ffad74880ecb773131ffe3706f60c49c1aa79cc2e3f24"
+    },
+    {
+      "key": "bass-meant-jazz.mp3",
+      "source": "Miscellaneous/Bass Meant Jazz.mp3",
+      "sha256": "c876b42602e23df4e46b1c4a686e4e155d32852ea852b77a2e76fdc0c5e71745"
+    },
+    {
+      "key": "spring-chicken.mp3",
+      "source": "Comedy/Spring Chicken.mp3",
+      "sha256": "cb6e536674d7cade8631977cd7edc3c56940e3646f542502d3648756b65340e9"
+    },
+    {
+      "key": "llama-in-pajama.mp3",
+      "source": "Comedy/Llama in Pajama.mp3",
+      "sha256": "3016ae15b98ea952cd0ccc1bd42c9596d4e78968fed8dc96c6ee6d375c1ed988"
+    },
+    {
+      "key": "my-giant-bunny-friend.mp3",
+      "source": "Comedy/My Giant Bunny Friend.mp3",
+      "sha256": "696d1e335debd934813e8f4e8703d98ec456d1b87ded7ed630787e60c06c2a5e"
+    },
+    {
+      "key": "le-baguette.mp3",
+      "source": "World/Le Baguette.mp3",
+      "sha256": "35962cd9dc3aaae76581f689b2fee70f52800d5919e34ce2d9a25c3bdbc02f73"
+    },
+    {
+      "key": "the-entertainer.mp3",
+      "source": "Comedy/The Entertainer.mp3",
+      "sha256": "a7297aacdb0702cacdcd086a018e4419cf56c98dea08bfa70a50665fd7ce80c1"
+    },
+    {
+      "key": "vintage-party.mp3",
+      "source": "Comedy/Vintage Party.mp3",
+      "sha256": "a1177d3d36e13236d0499113aa08e986136a1a98b8a1cec427e7f3d8492c1d4f"
+    },
+    {
+      "key": "inspiration.mp3",
+      "source": "Upbeat/Inspiration.mp3",
+      "sha256": "a254227da398809c79a0c753073a3a92c7341672abc92bb0166b6326e126f0b4"
+    },
+    {
+      "key": "journey-of-hope.mp3",
+      "source": "Miscellaneous/Journey of Hope.mp3",
+      "sha256": "4beec7dac7b90aee1882e5796ece422403ad1cd4306236a4ed01424ccbe71e4f"
+    },
+    {
+      "key": "finally-see-the-light.mp3",
+      "source": "Miscellaneous/Finally See The Light.mp3",
+      "sha256": "3e9faa496e470d449869fc934e3b4332c197f09bcee28577241aade42a0f15a4"
+    },
+    {
+      "key": "connecting-rainbows.mp3",
+      "source": "World/Connecting Rainbows.mp3",
+      "sha256": "85f77462ba2ff846ed5bfa911a267f8a8ea0b2c579b58278a2bcef1e26efb81a"
+    }
+  ]
+}
