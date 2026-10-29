@@ -649,3 +649,11 @@ git pull --ff-only"
 **Context**: 사용자 피드백 반영 (이전 요청 오해 정정)
 
 ---
+
+## 백업 내보내기 실패 수정
+**Timestamp**: 2026-10-29T17:16:52Z
+**User Input**: "버그 발견 내보내기 하니까 “Importing a module script failed.” 이렇게 나옴"
+**AI Response**: "백업 성공 전엔 앱을 지우지 말라고 먼저 안내. 원인: backupService가 JSZip을 내보낼 때 동적 import로 받아오는데, 앱을 켜 둔 채 새 버전이 배포되면 예전 화면이 찾는 파일이 바뀌어 실패. JSZip을 정적 import로 바꿔 시작할 때 함께 싣고(내보내기 클릭 시 추가 요청 0건, 다운로드 성공 확인), 커진 번들 경고 기준을 700kB로 올림. 테스트·e2e 통과."
+**Context**: 실기기 버그 수정 (데이터 보호)
+
+---

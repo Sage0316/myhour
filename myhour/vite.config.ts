@@ -23,6 +23,11 @@ function dropWebOnlyFiles(): Plugin {
 export default defineConfig(({ mode }) => ({
   plugins: mode === 'app' ? [react(), dropWebOnlyFiles()] : [react()],
   base: mode === 'app' ? './' : '/myhour/',
+  build: {
+    // 백업용 JSZip을 처음부터 함께 싣게 되면서(backupService.ts 참고) 본 번들이 500kB를 조금 넘는다 (gzip 약 180kB).
+    // 일부러 한 묶음으로 둔 것이라 경고 기준만 올린다 — 다시 나눠 지연 로딩하면 배포 직후 백업이 실패한다
+    chunkSizeWarningLimit: 700,
+  },
   define: {
     __BUILD_VERSION__: JSON.stringify(
       new Date().toISOString().slice(2, 16).replace('T', '.').replaceAll(':', '').replaceAll('-', ''),

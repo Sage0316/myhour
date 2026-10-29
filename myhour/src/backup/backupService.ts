@@ -1,4 +1,8 @@
+import JSZip from 'jszip';
 import { z } from 'zod';
+// JSZip은 처음부터 함께 싣는다(2026-10-29). 예전엔 백업할 때 따로 받아왔는데, 앱을 켜 둔 채 새 버전이 배포되면
+// 켜져 있던 예전 화면이 찾는 파일이 서버에서 사라져 "Importing a module script failed"로 백업이 실패했다.
+// 백업은 앱을 지우기 직전에 쓰는 기능이라 이런 식으로 실패하면 안 된다.
 import {
   appDataSchema,
   settingsSchema,
@@ -79,7 +83,6 @@ async function parseJsonFile<T>(blob: Blob, schema: z.ZodType<T>): Promise<T> {
 export async function exportCompleteBackup(
   onProgress?: (progress: BackupProgress) => void,
 ): Promise<BackupExport> {
-  const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
   const settings = loadSettings();
   const current = loadAppData(settings.startTime);
@@ -141,7 +144,6 @@ export async function restoreCompleteBackup(
   onProgress?: (progress: BackupProgress) => void,
 ): Promise<{ mediaCount: number; restoredBytes: number }> {
   if (backupFile.size > MAX_UNCOMPRESSED_BYTES) throw new Error('백업 파일이 허용 크기를 초과했어요.');
-  const { default: JSZip } = await import('jszip');
   const zip = await JSZip.loadAsync(await backupFile.arrayBuffer(), { checkCRC32: true, createFolders: false });
   const entries = Object.values(zip.files).filter(entry => !entry.dir);
   if (entries.length > MAX_ENTRIES) throw new Error('백업 항목 수가 너무 많아요.');

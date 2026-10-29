@@ -129,6 +129,7 @@ pnpm test:e2e
 - 무료 음원 추가는 GitHub의 0lhi/FreePD(퍼블릭 도메인) 미러에서 — raw.githubusercontent.com은 네트워크 정책에서 접근 가능(2026-07 기준). freepd.com 본 사이트는 폐쇄됨. 시청 페이지: /myhour/bgm.html
 - **BGM 라이선스 감사 (2026-07-20): 전곡(21곡) CC0 확정** — 전부 0lhi/FreePD(CC0 1.0) 미러 출처 (15곡 md5 대조 + 6곡 미러에서 직접 다운로드). 상업 사용 무제한, 표기 불필요. 원곡명 매핑: ukulele=Happy Whistling Ukulele, ukulele-song=Ukulele Song, landras-dream=Landra's Dream, piano=Lovely Piano Song, nostalgic=Nostalgic Piano, piano-magic=Piano Magic Motive, magic-garden=Magic in the Garden, just-like-that=And Just Like That, tournesol=Champ de tournesol, lagoon=The Lagoon (+ 원곡명 그대로인 곡들). 소스 미상이던 bright/calm/emotional은 삭제하고 Pickled Pink/Study and Relax/Cornfield Chase로 교체함
 - BGM 무드 풀 7종 (llmDirector BGM_FILES, **2026-10-29 펌킨이 듣기 페이지로 고른 곡으로 교체**, 35곡): calm=여유로운 재즈 / bright=팝·펑크 / emotional=시네마틱 / ukulele=장난스러운 곡 / piano·nostalgic·sad=위로곡(예전 곡 유지). 묶음 이름은 AI 워커 응답 enum이라 그대로 두고 곡만 바꿨다. 펌킨은 로파이를 싫어한다. 새 곡은 `media-server/bgm-sources.json`(출처 커밋 고정+sha256) → `Upload BGM to R2` 워크플로로 R2에 올린다 — **곡 목록을 바꾸기 전에 R2 업로드가 먼저**(아니면 BGM이 404로 조용히 빠진다)
+- **백업의 JSZip은 지연 로딩하지 않는다 (2026-10-29)**: 예전엔 `await import('jszip')`로 내보낼 때 받아왔는데, 앱을 켜 둔 채 새 버전이 배포되면 예전 화면이 찾는 파일이 사라져 iOS에서 "Importing a module script failed"로 백업이 실패했다(실기기 신고). 백업은 앱을 지우기 직전에 쓰는 기능이라 정적 import로 본 번들에 싣고, 그래서 커진 번들 경고는 vite.config의 `chunkSizeWarningLimit`로 올렸다. 다시 나누지 말 것
 - 사용자 데이터는 전부 폰 안 — 홈 화면 아이콘 삭제 = 데이터 소실. 백업/가져오기는 설정에 있음
 
 ## 푸시 알림 (배포 완료 — 2026-07-19)
