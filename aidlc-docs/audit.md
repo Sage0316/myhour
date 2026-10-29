@@ -625,3 +625,11 @@ git pull --ff-only"
 **Context**: 사용자 결정 반영
 
 ---
+
+## 영어판 MyHour 워드마크
+**Timestamp**: 2026-10-29T17:08:11Z
+**User Input**: (펌킨이 HAKKU와 같은 획으로 직접 그린 MyHour 워드마크 PNG) "짜잔~~~"
+**AI Response**: "흰 배경 PNG를 검정·하늘색 획별로 투명 배경으로 분리(가장자리 부드럽게 유지)해 public/brand/myhour-wordmark-transparent.png로 추가. 영상 로고가 언어에 따라 HAKKU/MyHour로 바뀌고, 두 파일의 여백 차이를 보정해 글자 높이를 맞춤. 영어 폰으로 실제 영상을 만들어 확인. 테스트 통과."
+**Context**: 사용자 디자인 반영
+
+---
