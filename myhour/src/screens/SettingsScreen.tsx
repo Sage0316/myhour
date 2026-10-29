@@ -13,6 +13,7 @@ import { getVideoAccess, isBillingActive, MANAGE_SUBSCRIPTIONS_URL, redeemOfferC
 import { formatMonthDay } from '../billing/access';
 import type { Subscription, VideoAccess } from '../billing/access';
 import PaywallScreen from './PaywallScreen';
+import TrialSheet from './TrialSheet';
 import { exportCompleteBackup, restoreCompleteBackup, type BackupProgress } from '../backup/backupService';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -510,6 +511,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
     setVersionTaps(0);
   }
   const [paywallPreview, setPaywallPreview] = useState(false);
+  const [trialPreview, setTrialPreview] = useState(false);
   // 사진첩 자동 저장은 앱에서만 된다 (웹은 사진첩에 직접 쓸 수 없다)
   const native = isNativeApp();
   const [autoSave, setAutoSave] = useState(isAutoSaveEnabled);
@@ -684,6 +686,14 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
               결제 화면 미리보기
             </button>
             {paywallPreview && <PaywallScreen onClose={() => setPaywallPreview(false)} onSubscribed={() => setPaywallPreview(false)} />}
+            <button
+              type="button"
+              onClick={() => setTrialPreview(true)}
+              style={{ ...CARD, width: '100%', minHeight: 50, padding: '0 16px', marginBottom: 12, textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink, fontSize: 15, cursor: 'pointer' }}
+            >
+              무료 체험 안내 미리보기
+            </button>
+            {trialPreview && <TrialSheet preview onClose={() => setTrialPreview(false)} />}
             <div style={{ fontSize: 11, color: COLOR.inkMuted, padding: '0 16px 12px', lineHeight: 1.5 }}>
               테스트용입니다. 실제 사용에서는 하루에 영상 하나가 정책이에요.
             </div>

@@ -46,3 +46,17 @@ test('첫 실행 설명서: 네 장을 넘기고 시작하면 홈이 나오고 �
   await expect(page.getByRole('navigation', { name: '주요 메뉴' })).toBeVisible();
   await expect(guide).toHaveCount(0);
 });
+
+test('무료 체험 안내: 아래에서 올라오고 체험 뒤 가격이 보이며 나중에 할게요로 닫힌다', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hakku_dev_tools_v1', '1'));
+  await page.goto('/myhour/');
+  await page.getByRole('button', { name: '설정' }).click();
+  await page.getByRole('button', { name: '무료 체험 안내 미리보기' }).click();
+  const sheet = page.getByRole('dialog', { name: '3일 무료 체험' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toContainText('자동 결제');
+  await sheet.getByRole('radio', { name: /Standard/ }).click();
+  await expect(sheet).toContainText('Standard 월 ₩3,300');
+  await sheet.getByRole('button', { name: '나중에 할게요' }).click();
+  await expect(sheet).toHaveCount(0);
+});

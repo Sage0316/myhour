@@ -9,6 +9,8 @@ import SettingsScreen from './screens/SettingsScreen';
 import WrapUpScreen from './screens/WrapUpScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import { isOnboarded } from './onboarding';
+import TrialSheet from './screens/TrialSheet';
+import { isBillingActive } from './billing/purchases';
 import { AppProvider } from './context';
 import { useApp } from './appContext';
 import { getSessionDate } from './store';
@@ -45,6 +47,8 @@ function AppContent() {
   });
   const { addRecord, reset, settings, isWrapped } = useApp();
   const [showOnboarding, setShowOnboarding] = useState(() => !isOnboarded());
+  // 설명서를 막 다 본 순간 무료 체험을 아래에서 올려 보여 준다 (결제가 되는 앱에서만)
+  const [showTrial, setShowTrial] = useState(false);
 
   // iOS 앱: 예약 알림은 며칠분만 걸려 있으므로 설정이 바뀌거나, 하루를 마감하거나,
   // 앱이 다시 앞으로 나올 때마다 다시 채운다. 알림을 켜지 않았으면 syncReminders가 아무것도 하지 않는다.
@@ -119,7 +123,7 @@ function AppContent() {
   }
 
   const activeScreen = showOnboarding ? (
-    <OnboardingScreen onDone={() => setShowOnboarding(false)} />
+    <OnboardingScreen onDone={() => { setShowOnboarding(false); if (isBillingActive()) setShowTrial(true); }} />
   ) : modal === 'record' ? (
     <RecordScreen
       onClose={closeModal}
@@ -144,6 +148,7 @@ function AppContent() {
         '--bottom-inset': 'max(8px, calc(env(safe-area-inset-bottom, 0px) - 30px))',
       } as React.CSSProperties}>
         {activeScreen}
+        {showTrial && <TrialSheet onClose={() => setShowTrial(false)} />}
       </div>
     );
   }
@@ -159,6 +164,7 @@ function AppContent() {
     <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 0 48px' }}>
       <FrameWrapper label={mainLabel}>
         {activeScreen}
+        {showTrial && <TrialSheet onClose={() => setShowTrial(false)} />}
       </FrameWrapper>
     </main>
   );
