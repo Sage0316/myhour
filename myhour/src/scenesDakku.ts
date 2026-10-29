@@ -3,6 +3,7 @@
 // 색은 앱 화면(design.ts)과 같은 팔레트를 쓴다. 모든 좌표는 540×960 논리 좌표계.
 import type { MyRecord } from './store';
 import { W, H, HAND, pickContentEmoji, roundRectPath, seededRnd, wrapLines } from './scenes';
+import { L } from './i18n';
 export const C = {
   ink: '#2B2622', paper: '#FBF7EC', red: '#C9381F', sky: '#96C7EC', skyInk: '#173055',
   green: '#C9DE95', yellow: '#FFE27A', pink: '#F2B6B4', kraft: '#D8BF98', white: '#FFFFFF',
@@ -243,7 +244,7 @@ function diaryMemo(ctx: CanvasRenderingContext2D, record: MyRecord, moodEmoji: s
 
   labelTape(ctx, record.slotTime, 46, 70, -3, C.sky, C.skyInk, 32);
   ctx.font = `32px ${HAND}`; ctx.fillStyle = 'rgba(43,38,34,0.75)';
-  ctx.fillText('의 기록', 172, 106);
+  ctx.fillText(L('의 기록', 'moment'), 172, 106);
 
   const cw = W - 104;
   const [size, lh, maxLines] = textMetrics(record.content.length);
@@ -280,7 +281,7 @@ function diaryMemo(ctx: CanvasRenderingContext2D, record: MyRecord, moodEmoji: s
     ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.stroke();
     drawEmoji(ctx, moodEmoji, cx + cw - 46, cy + ch - 50, 36);
     ctx.font = `24px ${HAND}`; ctx.fillStyle = 'rgba(43,38,34,0.7)';
-    ctx.textAlign = 'right'; ctx.fillText('오늘 기분', cx + cw - 92, cy + ch - 42); ctx.textAlign = 'left';
+    ctx.textAlign = 'right'; ctx.fillText(L('오늘 기분', "today's mood"), cx + cw - 92, cy + ch - 42); ctx.textAlign = 'left';
   }
   ctx.restore();
 
@@ -437,7 +438,7 @@ function albumScrap(ctx: CanvasRenderingContext2D, record: MyRecord, img: HTMLIm
   const tw = ctx.measureText(record.slotTime).width;
   ctx.fillStyle = 'rgba(150,199,236,0.85)'; ctx.fillRect(44, 92, tw + 14, 20);
   ctx.fillStyle = C.ink; ctx.fillText(record.slotTime, 51, 106);
-  ctx.font = `30px ${HAND}`; ctx.fillStyle = 'rgba(43,38,34,0.7)'; ctx.fillText('찰칵 ✎', 70 + tw, 106);
+  ctx.font = `30px ${HAND}`; ctx.fillStyle = 'rgba(43,38,34,0.7)'; ctx.fillText(L('찰칵 ✎', 'snap ✎'), 70 + tw, 106);
 
   ctx.globalAlpha = ease;
   ctx.save(); rotateAround(ctx, W / 2, 440, -3);
@@ -481,7 +482,7 @@ export function drawMemeScene(
   img: HTMLImageElement | null,
   t: number,
 ) {
-  const caption = record.caption?.trim() || '오늘의 한 장';
+  const caption = record.caption?.trim() || L('오늘의 한 장', "today's shot");
   if (pickVariant(record.id) === 'A') albumPolaroid(ctx, record, img, t, caption);
   else albumScrap(ctx, record, img, t, caption);
 }

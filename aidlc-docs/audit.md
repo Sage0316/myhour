@@ -657,3 +657,11 @@ git pull --ff-only"
 **Context**: 실기기 버그 수정 (데이터 보호)
 
 ---
+
+## 영상 장면 글자 영어화
+**Timestamp**: 2026-10-29T17:30:12Z
+**User Input**: (서율 지적 전달) "영문 영상에서도 표지와 마지막 페이지 일부가 아직 hakku diary / HAKKU DIARY / 오늘의 기록 N개 / 기록 N개 / 하꾸 · 날짜 / 노란 표지의 hakku 로 코드에 고정되어 있어"
+**AI Response**: "scenesCover/Closing/Dakku의 고정 문구를 L()로: myhour diary·MYHOUR DIARY·N moments today(1이면 moment)·날짜 · N moments·버블 글씨 myhour(한 글자 길어 140→118)·MyHour · 날짜, 그림일기 '의 기록'→moment·'오늘 기분'→today's mood, 앨범 '찰칵'→snap·'오늘의 한 장'→today's shot. 영어 폰으로 표지 7종·엔딩 6종·그림일기·앨범 렌더 확인. 남은 것: AI 연출이 영어로 답하게 하기(제목·마무리·자막)."
+**Context**: 서율 리뷰 반영
+
+---

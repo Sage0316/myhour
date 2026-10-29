@@ -5,6 +5,7 @@
 import { W, H, HAND, roundRectPath, seededRnd } from './scenes';
 import { C, fitHand, heart, noShadow, rotateAround, softShadow, star, washi, wrapWords } from './scenesDakku';
 import { goldStar, heartPath, starPath, weave as weaveRect } from './scenesCover';
+import { L } from './i18n';
 
 export interface ClosingOpts {
   closing: string;
@@ -34,10 +35,10 @@ function closingText(ctx: CanvasRenderingContext2D, text: string, cx: number, cy
 }
 
 function footer(ctx: CanvasRenderingContext2D, dateStr: string, cx: number, y: number, color: string) {
-  const size = fitHand(ctx, `하꾸 · ${dateStr}`, 24, W - 120);
+  const size = fitHand(ctx, `${L('하꾸', 'MyHour')} · ${dateStr}`, 24, W - 120);
   ctx.font = `${size}px ${HAND}`;
   ctx.fillStyle = color; ctx.textAlign = 'center';
-  ctx.fillText(`하꾸 · ${dateStr}`, cx, y);
+  ctx.fillText(`${L('하꾸', 'MyHour')} · ${dateStr}`, cx, y);
   ctx.textAlign = 'left';
 }
 

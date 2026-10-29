@@ -2,6 +2,7 @@
 // 패치워크는 사용자 요청으로 마지막 장면으로 옮겼다)를 사진 없이 캔버스로 그렸다. 마지막 장면처럼 날짜마다 차례로 돌아간다.
 import { W, H, HAND, seededRnd } from './scenes';
 import { C, noShadow, rotateAround, softShadow, wrapWords } from './scenesDakku';
+import { L, getLang } from './i18n';
 
 export interface CoverOpts {
   title: string;
@@ -146,7 +147,7 @@ function labelLines(ctx: CanvasRenderingContext2D, o: CoverOpts, cx: number, cy:
   const title = wrapWords(ctx, o.title, half * 2 - 10, 1)[0] ?? o.title;
   centerHand(ctx, title, cx, cy - 18, half * 2, 44, C.ink);
   centerHand(ctx, o.dateStr, cx, cy + 40, half * 2 + 30, 30, C.ink);
-  centerHand(ctx, `오늘의 기록 ${o.count}개`, cx, cy + 98, half * 2 - 80, 24, 'rgba(43,38,34,0.7)');
+  centerHand(ctx, L(`오늘의 기록 ${o.count}개`, `${o.count} ${o.count === 1 ? 'moment' : 'moments'} today`), cx, cy + 98, half * 2 - 80, 24, 'rgba(43,38,34,0.7)');
 }
 
 /** 표지 가운데 흰 라벨. 모양은 날짜로 고르고, 안에는 늘 제목·날짜·기록 수가 들어간다 */
@@ -162,20 +163,20 @@ function coverLabel(ctx: CanvasRenderingContext2D, o: CoverOpts, cx: number, cy:
     ovalPath(ctx, cx, cy + 10, 215, 140, seed);
     softShadow(ctx); ctx.fillStyle = '#FFFFFF'; ctx.fill(); noShadow(ctx);
     ctx.strokeStyle = ink; ctx.lineWidth = 3; ctx.stroke();
-    arcText(ctx, 'hakku diary', cx, cy + 10, 181, 110, ink, 24);
+    arcText(ctx, L('hakku diary', 'myhour diary'), cx, cy + 10, 181, 110, ink, 24);
   } else if (shape === 'hex') {
     hexPath(ctx, cx, cy + 34, 420, 290, 22);
     softShadow(ctx); ctx.fillStyle = '#F5F2EC'; ctx.fill(); noShadow(ctx);
     hexPath(ctx, cx, cy + 34, 394, 262, 18);
     ctx.strokeStyle = 'rgba(120,100,80,0.8)'; ctx.lineWidth = 3; ctx.stroke();
-    centerHand(ctx, 'hakku diary', cx, cy - 58, 200, 24, 'rgba(120,100,80,0.9)');
+    centerHand(ctx, L('hakku diary', 'myhour diary'), cx, cy - 58, 200, 24, 'rgba(120,100,80,0.9)');
   } else if (shape === 'bracket') {
     bracketPath(ctx, cx, cy + 40, 410, 250);
     softShadow(ctx); ctx.fillStyle = '#FFFFFF'; ctx.fill(); noShadow(ctx);
     ctx.strokeStyle = C.ink; ctx.lineWidth = 4; ctx.stroke();
     ctx.font = `bold 20px Georgia, 'Times New Roman', serif`;
     ctx.fillStyle = C.ink; ctx.textAlign = 'center';
-    ctx.fillText('HAKKU DIARY', cx, cy - 56);
+    ctx.fillText(L('HAKKU DIARY', 'MYHOUR DIARY'), cx, cy - 56);
     ctx.textAlign = 'left';
   } else {
     ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5;
@@ -193,7 +194,7 @@ function coverLabel(ctx: CanvasRenderingContext2D, o: CoverOpts, cx: number, cy:
     ctx.font = `44px ${HAND}`;
     const title = wrapWords(ctx, o.title, 360, 1)[0] ?? o.title;
     centerHand(ctx, title, cx, cy + 34, 370, 44, C.ink);
-    centerHand(ctx, `${o.dateStr} · 기록 ${o.count}개`, cx, cy + 82, 370, 26, 'rgba(43,38,34,0.75)');
+    centerHand(ctx, L(`${o.dateStr} · 기록 ${o.count}개`, `${o.dateStr} · ${o.count} ${o.count === 1 ? 'moment' : 'moments'}`), cx, cy + 82, 370, 26, 'rgba(43,38,34,0.75)');
   } else {
     labelLines(ctx, o, cx, cy, ink === C.ink ? C.ink : ink, shape === 'oval' ? 150 : 155);
   }
@@ -352,7 +353,8 @@ function coverBubbleYellow(ctx: CanvasRenderingContext2D, o: CoverOpts, t: numbe
   ctx.fillStyle = '#FFF59A'; ctx.fillRect(0, 0, sw, H);
   const e = ease(t);
   ctx.save(); ctx.globalAlpha = e;
-  bubbleWord(ctx, 'hakku', W / 2 + sw / 2, H * 0.27 + (1 - e) * 10, 140);
+  // 영어는 한 글자 더 길어서 조금 작게
+  bubbleWord(ctx, L('hakku', 'myhour'), W / 2 + sw / 2, H * 0.27 + (1 - e) * 10, getLang() === 'en' ? 118 : 140);
   ctx.restore();
   coverLabel(ctx, o, W / 2 + sw / 2, H * 0.42, C.ink, t);
 }

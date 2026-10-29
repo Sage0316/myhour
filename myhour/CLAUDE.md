@@ -24,7 +24,7 @@
   폰 언어 첫 번째가 한국어면 한국어, 그 외 전부 영어. 설정 "언어 · Language"에서 직접 고를 수 있고(`hakku_lang_v1`), 바꾸면 앱을 다시 불러온다
 - **테스트는 한국어로 고정**된다(`import.meta.env.MODE === 'test'`). e2e도 `playwright.config.ts`의 `locale: 'ko-KR'` — 빼면 한국어 이름으로 찾는 테스트가 전부 깨진다. 영어 확인은 `e2e/app.spec.ts`의 '영어 폰'
 - 영어판 이름은 **MyHour** (스토어 "MyHour: AI Video Diary", 서율이랑 정함). 한국어판은 하꾸
-- 번역 진행: 탭 메뉴·홈·store 표시 문구(시간·요일·기록 종류·간격) 완료. 남은 곳: 설정·기록·오늘·마감·아카이브·결제 화면, 영상 장면 글자, AI 연출 영어 응답, 무드/이모지 키워드 영어 사전, iOS 홈 화면 이름(InfoPlist.strings)
+- 번역 진행: 탭 메뉴·홈·store 표시 문구(시간·요일·기록 종류·간격)·설명서·무료 체험 시트·**영상 장면 글자(표지 myhour diary·N moments today, 엔딩 MyHour · 날짜, 그림일기 moment·today's mood, 앨범 snap·today's shot — 2026-10-29 서율 지적)** 완료. 남은 곳: 설정·기록·오늘·마감·아카이브·결제 화면, AI 연출 영어 응답(제목·마무리·자막이 아직 한국어로 옴), 무드/이모지 키워드 영어 사전, iOS 홈 화면 이름(InfoPlist.strings)
 
 ## 기술 스택
 - Vite 8 + React + TypeScript
