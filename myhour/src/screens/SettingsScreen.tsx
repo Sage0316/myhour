@@ -4,7 +4,6 @@ import { disableReminders, enableReminders, getRemindersEnabled, isNativeApp } f
 import { topPad, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
 import { useApp } from '../appContext';
 import { type AppSettings, TYPE_LABELS, getSessionDate, intervalLabel, notifyLabel, captureModeLabel } from '../store';
-import { hasAIConsent, isAIConfigured, setAIConsent } from '../llmDirector';
 import { PUSH_SERVER_URL, isPushSupported, getPushEnabled, enablePush, disablePush, syncPushSchedule } from '../push';
 import TabBar from '../components/TabBar';
 import { shareFileNative } from '../native/shareFile';
@@ -239,43 +238,6 @@ function SettingGroup({ header, children }: { header: string; children: React.Re
       <SectionHeader label={header} />
       <div style={{ ...CARD, overflow: 'hidden' }}>
         {children}
-      </div>
-    </div>
-  );
-}
-
-function AISection() {
-  const [consented, setConsented] = useState(hasAIConsent);
-  const configured = isAIConfigured();
-
-  function toggleConsent() {
-    const next = !consented;
-    setAIConsent(next);
-    setConsented(next);
-  }
-
-  return (
-    <div>
-      <SectionHeader label="AI 촬영감독" />
-      <div style={{ ...CARD, overflow: 'hidden', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <IconTile bg={COLOR.navy}><path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8z" /><path d="M4 11 3.2 7.6a1 1 0 0 1 .7-1.2L17 3l.9 3.4z" /></IconTile>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15 }}>AI 분석 사용</div>
-            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
-              {configured ? (consented ? '제목·무드·BGM을 AI가 추천해요' : '켜면 하루 마감에서 AI가 연출해요') : '지금은 AI 연출을 쓸 수 없어요'}
-            </div>
-          </div>
-          <ToggleSwitch
-            label="AI 분석 사용"
-            checked={consented}
-            onChange={toggleConsent}
-            disabled={!configured}
-          />
-        </div>
-        <div style={{ fontSize: 12, color: COLOR.inkMuted, lineHeight: 1.6 }}>
-          켜면 텍스트 기록과 캡션만 하꾸 AI 서버로 보내 제목·무드·BGM을 추천해요. 사진·영상·음성 원본은 전송하지 않아요.
-        </div>
       </div>
     </div>
   );
@@ -660,8 +622,6 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         <PushSection />
 
         <DataSection />
-
-        <AISection />
 
         {devToolsOpen && (
           <>

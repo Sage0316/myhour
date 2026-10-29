@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { L } from '../i18n';
 import { useApp } from '../appContext';
 import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate } from '../store';
 import type { MoodItem } from '../store';
 import { ensureDiaryFont, fallbackEmojisFor, splitEmojis } from '../scenes';
 import {
-  analyzeDay, hasAIConsent, isAIConfigured, BGM_TRACKS, bgmAssetUrl, pickBgmFile,
+  analyzeDay, hasAIConsent, isAIConfigured, setAIConsent, BGM_TRACKS, bgmAssetUrl, pickBgmFile,
   trackForMood, intensityForTrack, toIntensityLevel, directorKeyFor,
 } from '../llmDirector';
 import { readDirectorCache } from '../directorCache';
@@ -145,7 +146,12 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
 
   // AI는 **사용자가 확정 버튼을 누를 때만** 부른다.
   // 화면을 열었다는 이유로 부르면, "영상 없이 마감"만 눌러도 비용이 나간다.
-  const aiAvailable = hasAIConsent() && isAIConfigured() && records.length > 0 && !alreadyGenerated && access !== null && !locked;
+  // AI 감독은 기본 기능이다(2026-10-29). 글·캡션을 AI 서버로 보내기 전에 처음 한 번만 동의를 받는다 — 애플 5.1.2(i)
+  const [aiConsent, setAiConsentState] = useState(hasAIConsent);
+  const [skipAI, setSkipAI] = useState(false);
+  const aiPossible = isAIConfigured() && records.length > 0 && !alreadyGenerated && access !== null && !locked;
+  const aiAvailable = aiConsent && aiPossible;
+  const askConsent = !aiConsent && !skipAI && aiPossible;
   const aiKey = aiAvailable ? directorKeyFor(records, sessionDate, intensityLevel, moodLock) : null;
   // 이 강도의 결과가 이미 화면에 적용돼 있는가
   const directorIsCurrent = aiKey !== null && directorKey === aiKey;
@@ -391,6 +397,26 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                 </div>
               </div>
             </>
+          )}
+
+          {askConsent && (
+            <div style={{ border: `1.5px solid ${COLOR.ink}`, borderRadius: 12, background: '#FFFDF6', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>🎬 {L('AI 감독에게 연출을 맡길까요?', 'Let the AI director edit your day?')}</div>
+              <div style={{ fontSize: 13, color: COLOR.inkSub, lineHeight: 1.55 }}>
+                {L('오늘 쓴 글과 캡션을 읽고 제목·자막·음악을 골라줘요. 사진·영상·음성은 보내지 않아요.', "It reads today's text and captions to pick a title, captions and music. Photos, videos and voice never leave your phone.")}
+              </div>
+              <div style={{ fontSize: 12, color: COLOR.red, lineHeight: 1.5 }}>
+                {L('AI 없이 만들어도 영상 횟수는 똑같이 차감돼요.', 'Making a film without AI still uses one of your films.')}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={() => setSkipAI(true)} style={{ ...BUTTON_SECONDARY, flex: 1, minHeight: 44, borderRadius: 12, fontSize: 14 }}>
+                  {L('AI 없이 만들기', 'Without AI')}
+                </button>
+                <button type="button" onClick={() => { setAIConsent(true); setAiConsentState(true); }} style={{ ...BUTTON_SECONDARY, flex: 1.3, minHeight: 44, borderRadius: 12, fontSize: 14, background: COLOR.yellow }}>
+                  {L('좋아요', 'Sounds good')}
+                </button>
+              </div>
+            </div>
           )}
 
           {aiAvailable && (
