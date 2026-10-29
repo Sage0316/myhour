@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import type { AppSettings } from '../store';
 import { planReminders } from './reminderPlan';
+import { L } from '../i18n';
 
 // iOS 앱에서만 쓰는 기록 시간 알림. 웹 버전은 기존 웹 푸시(push.ts)를 그대로 쓴다.
 const ENABLED_KEY = 'hakku_local_reminders_v1';
@@ -53,7 +54,7 @@ export async function syncReminders(settings: AppSettings, sessionDate: string, 
 export async function enableReminders(settings: AppSettings, sessionDate: string, wrappedSessionDate: string | null): Promise<void> {
   const { display } = await LocalNotifications.requestPermissions();
   if (display !== 'granted') {
-    throw new Error('알림이 꺼져 있어요. 아이폰 설정 > 하꾸 > 알림에서 켜 주세요.');
+    throw new Error(L('알림이 꺼져 있어요. 아이폰 설정 > 하꾸 > 알림에서 켜 주세요.', 'Notifications are off. Turn them on in iPhone Settings > MyHour > Notifications.'));
   }
   writeEnabled(true);
   await syncReminders(settings, sessionDate, wrappedSessionDate);

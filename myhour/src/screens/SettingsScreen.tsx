@@ -107,7 +107,7 @@ function PushSection() {
         setEnabled(true);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '알림 설정에 실패했어요');
+      setError(e instanceof Error ? e.message : L('알림 설정에 실패했어요', 'Couldn\'t update notifications'));
     }
     setBusy(false);
   }
@@ -119,17 +119,17 @@ function PushSection() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <IconTile bg="#E3EDCF"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></IconTile>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15 }}>기록 시간 알림</div>
+            <div style={{ fontSize: 15 }}>{L('기록 시간 알림', 'Record reminders')}</div>
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
               {ready
-                ? `${settings.startTime}부터 ${intervalLabel(settings.interval)} 간격으로 알려드려요`
+                ? L(`${settings.startTime}부터 ${intervalLabel(settings.interval)} 간격으로 알려드려요`, `From ${settings.startTime}, every ${intervalLabel(settings.interval)}`)
                 : PUSH_SERVER_URL === ''
-                  ? '지금은 알림을 쓸 수 없어요'
-                  : 'iOS 16.4 이상 + 홈 화면 설치가 필요해요'}
+                  ? L('지금은 알림을 쓸 수 없어요', 'Reminders aren\'t available right now')
+                  : L('iOS 16.4 이상 + 홈 화면 설치가 필요해요', 'Needs iOS 16.4+ and Add to Home Screen')}
             </div>
           </div>
           <ToggleSwitch
-            label="기록 시간 알림"
+            label={L('기록 시간 알림', 'Record reminders')}
             checked={enabled}
             onChange={toggle}
             disabled={!ready || busy}
@@ -138,7 +138,7 @@ function PushSection() {
         {error && <div style={{ fontSize: 11, color: COLOR.red, whiteSpace: 'pre-line' }}>{error}</div>}
         {enabled && (
           <div style={{ fontSize: 11, color: COLOR.inkMuted }}>
-            시간과 간격을 바꾸면 알림 일정도 자동으로 갱신돼요
+            {L('시간과 간격을 바꾸면 알림 일정도 자동으로 갱신돼요', 'Changing times or interval updates reminders automatically')}
           </div>
         )}
       </div>
@@ -155,6 +155,21 @@ function IconTile({ bg, children }: { bg: string; children: React.ReactNode }) {
   );
 }
 
+// 섹션 제목의 영어 표기 — 색 찾기는 한국어 이름으로 한다
+function sectionTitle(label: string): string {
+  switch (label) {
+    case '기록 시간': return L('기록 시간', 'Schedule');
+    case '알림 · 기록 방식': return L('알림 · 기록 방식', 'Reminders · Capture');
+    case '결과물': return L('결과물', 'Output');
+    case '알림': return L('알림', 'Notifications');
+    case '데이터': return L('데이터', 'Data');
+    case 'AI 촬영감독': return L('AI 촬영감독', 'AI Director');
+    case '구독': return L('구독', 'Subscription');
+    case '테스트 도구': return L('테스트 도구', 'Dev tools');
+    default: return label;
+  }
+}
+
 const SECTION_COLORS: Record<string, string> = {
   '기록 시간': 'rgba(132,190,236,0.6)',
   '알림 · 기록 방식': 'rgba(255,214,90,0.7)',
@@ -168,7 +183,7 @@ const SECTION_COLORS: Record<string, string> = {
 function SectionHeader({ label }: { label: string }) {
   return (
     <div style={{ padding: '0 2px 8px', display: 'flex' }}>
-      <h2 style={{ margin: 0, ...highlight(SECTION_COLORS[label] ?? 'rgba(132,190,236,0.6)'), color: COLOR.ink }}>{label}</h2>
+      <h2 style={{ margin: 0, ...highlight(SECTION_COLORS[label] ?? 'rgba(132,190,236,0.6)'), color: COLOR.ink }}>{sectionTitle(label)}</h2>
     </div>
   );
 }
@@ -266,7 +281,7 @@ function SubscriptionSection() {
     try {
       await redeemOfferCode();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '쿠폰 입력 창을 열지 못했어요.');
+      setMessage(error instanceof Error ? error.message : L('쿠폰 입력 창을 열지 못했어요.', 'Couldn\'t open the code entry.'));
     }
   }
 
@@ -276,23 +291,23 @@ function SubscriptionSection() {
     setMessage(null);
     try {
       const restored = await restorePurchases();
-      setMessage(restored ? '구독을 복원했어요.' : '복원할 구독이 없어요.');
+      setMessage(restored ? L('구독을 복원했어요.', 'Subscription restored.') : L('복원할 구독이 없어요.', 'No subscription to restore.'));
       await refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '구매를 복원하지 못했어요.');
+      setMessage(error instanceof Error ? error.message : L('구매를 복원하지 못했어요.', 'Couldn\'t restore purchases.'));
     } finally {
       setBusy(false);
     }
   }
 
-  const planName = subscription ? (subscription.plan === 'premium' ? 'Premium' : 'Standard') : '구독 안 함';
+  const planName = subscription ? (subscription.plan === 'premium' ? 'Premium' : 'Standard') : L('구독 안 함', 'Not subscribed');
   const detail = !subscription
-    ? '기록은 무료, 하루 영상은 구독으로 만들어요'
+    ? L('기록은 무료, 하루 영상은 구독으로 만들어요', 'Recording is free; daily films need a plan')
     : [
-      subscription.isTrial ? '무료 체험 중' : null,
-      access?.kind === 'allowed' && access.remaining !== null ? `남은 영상 ${access.remaining}개` : null,
-      access?.kind === 'standard_used_up' ? '이번 달 영상을 다 썼어요' : null,
-      subscription.periodEnd ? `다음 결제일 ${formatMonthDay(subscription.periodEnd)}` : null,
+      subscription.isTrial ? L('무료 체험 중', 'Free trial') : null,
+      access?.kind === 'allowed' && access.remaining !== null ? L(`남은 영상 ${access.remaining}개`, `${access.remaining} films left`) : null,
+      access?.kind === 'standard_used_up' ? L('이번 달 영상을 다 썼어요', 'No films left this month') : null,
+      subscription.periodEnd ? L(`다음 결제일 ${formatMonthDay(subscription.periodEnd)}`, `Renews ${formatMonthDay(subscription.periodEnd)}`) : null,
     ].filter(Boolean).join(' · ');
   const rowButton: React.CSSProperties = { display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', background: 'none', border: 'none', borderTop: `1.5px dashed ${COLOR.dash}`, cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, fontSize: 15, textAlign: 'left' };
 
@@ -307,12 +322,12 @@ function SubscriptionSection() {
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>{detail}</div>
           </div>
         </div>
-        <button type="button" onClick={() => setPaywallOpen(true)} style={rowButton}>{subscription ? '요금제 보기' : '3일 무료로 시작하기'}</button>
+        <button type="button" onClick={() => setPaywallOpen(true)} style={rowButton}>{subscription ? L('요금제 보기', 'View plans') : L('3일 무료로 시작하기', 'Start 3-day free trial')}</button>
         {subscription && (
-          <a href={MANAGE_SUBSCRIPTIONS_URL} target="_blank" rel="noreferrer" style={{ ...rowButton, textDecoration: 'none', boxSizing: 'border-box' }}>구독 관리·해지</a>
+          <a href={MANAGE_SUBSCRIPTIONS_URL} target="_blank" rel="noreferrer" style={{ ...rowButton, textDecoration: 'none', boxSizing: 'border-box' }}>{L('구독 관리·해지', 'Manage or cancel')}</a>
         )}
-        <button type="button" onClick={handleRedeem} style={rowButton}>쿠폰 코드 입력</button>
-        <button type="button" onClick={handleRestore} disabled={busy} style={rowButton}>{busy ? '복원 중…' : '구매 복원'}</button>
+        <button type="button" onClick={handleRedeem} style={rowButton}>{L('쿠폰 코드 입력', 'Redeem code')}</button>
+        <button type="button" onClick={handleRestore} disabled={busy} style={rowButton}>{busy ? L('복원 중…', 'Restoring…') : L('구매 복원', 'Restore purchases')}</button>
       </div>
       {message && <div role="status" style={{ fontSize: 12, color: COLOR.inkMuted, padding: '8px 4px' }}>{message}</div>}
       {paywallOpen && (
@@ -331,12 +346,12 @@ function DataSection() {
   const [busy, setBusy] = useState(false);
 
   function progressText(progress: BackupProgress): string {
-    const label = progress.phase === 'collecting' ? '데이터 수집'
-      : progress.phase === 'hashing' ? '무결성 계산'
-      : progress.phase === 'compressing' ? '백업 생성'
-      : progress.phase === 'validating' ? '백업 검증'
-      : progress.phase === 'restoring' ? '복원'
-      : '완료';
+    const label = progress.phase === 'collecting' ? L('데이터 수집', 'Collecting')
+      : progress.phase === 'hashing' ? L('무결성 계산', 'Checking')
+      : progress.phase === 'compressing' ? L('백업 생성', 'Packing')
+      : progress.phase === 'validating' ? L('백업 검증', 'Verifying')
+      : progress.phase === 'restoring' ? L('복원', 'Restoring')
+      : L('완료', 'Done');
     return `${label} · ${progress.completed}/${progress.total}`;
   }
 
@@ -352,21 +367,21 @@ function DataSection() {
   async function handleExport() {
     setBusy(true);
     setError(null);
-    setStatus('백업 준비 중');
+    setStatus(L('백업 준비 중', 'Preparing backup'));
     try {
       const result = await exportCompleteBackup(progress => setStatus(progressText(progress)));
       const file = new File([result.blob], result.filename, { type: 'application/zip' });
       // iOS 앱은 공유 시트의 "파일에 저장"으로 보관한다
-      if (!await shareFileNative(result.blob, result.filename, '하꾸 전체 백업')) {
+      if (!await shareFileNative(result.blob, result.filename, L('하꾸 전체 백업', 'MyHour full backup'))) {
         if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: '하꾸 전체 백업' });
+          await navigator.share({ files: [file], title: L('하꾸 전체 백업', 'MyHour full backup') });
         } else {
           triggerDownload(result.blob, result.filename);
         }
       }
-      setStatus(`완료 · 미디어 ${result.mediaCount}개 포함`);
+      setStatus(L(`완료 · 미디어 ${result.mediaCount}개 포함`, `Done · ${result.mediaCount} media files`));
     } catch (exportError) {
-      setError(exportError instanceof Error ? exportError.message : '백업을 만들지 못했어요.');
+      setError(exportError instanceof Error ? exportError.message : L('백업을 만들지 못했어요.', 'Couldn\'t create the backup.'));
     } finally {
       setBusy(false);
     }
@@ -376,16 +391,16 @@ function DataSection() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    if (!confirm('지금 데이터를 백업 파일 내용으로 바꿀까요?\n문제가 생기면 지금 데이터는 그대로 남아요.')) return;
+    if (!confirm(L('지금 데이터를 백업 파일 내용으로 바꿀까요?\n문제가 생기면 지금 데이터는 그대로 남아요.', 'Replace your current data with this backup?\nIf anything goes wrong, your current data stays as is.'))) return;
     setBusy(true);
     setError(null);
-    setStatus('백업 검증 중');
+    setStatus(L('백업 검증 중', 'Verifying backup'));
     try {
       const result = await restoreCompleteBackup(file, progress => setStatus(progressText(progress)));
-      setStatus(`복원 완료 · 미디어 ${result.mediaCount}개`);
+      setStatus(L(`복원 완료 · 미디어 ${result.mediaCount}개`, `Restored · ${result.mediaCount} media files`));
       setTimeout(() => window.location.reload(), 800);
     } catch (restoreError) {
-      setError(restoreError instanceof Error ? restoreError.message : '백업을 복원하지 못했어요.');
+      setError(restoreError instanceof Error ? restoreError.message : L('백업을 복원하지 못했어요.', 'Couldn\'t restore the backup.'));
     } finally {
       setBusy(false);
     }
@@ -402,8 +417,8 @@ function DataSection() {
         >
           <IconTile bg="#CFE6FA"><path d="M12 15V3M7 8l5-5 5 5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></IconTile>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15 }}>데이터 내보내기</div>
-            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>기록·영상·설정을 파일 하나로 저장해요</div>
+            <div style={{ fontSize: 15 }}>{L('데이터 내보내기', 'Export data')}</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>{L('기록·영상·설정을 파일 하나로 저장해요', 'Save records, films and settings in one file')}</div>
           </div>
 
         </button>
@@ -412,8 +427,8 @@ function DataSection() {
           <input type="file" accept=".zip,.hakku.zip,application/zip" onChange={handleImport} disabled={busy} style={{ display: 'none' }} />
           <IconTile bg="#FFF0B8"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></IconTile>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15 }}>데이터 가져오기</div>
-            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>백업 파일로 되돌려요. 실패하면 지금 데이터는 그대로예요</div>
+            <div style={{ fontSize: 15 }}>{L('데이터 가져오기', 'Import data')}</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>{L('백업 파일로 되돌려요. 실패하면 지금 데이터는 그대로예요', 'Restore from a backup. If it fails, nothing changes')}</div>
           </div>
 
         </label>
@@ -500,32 +515,32 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   }
 
   const langPref = loadLangPref();
-  const endModeLabel = settings.endMode === 'open' ? '종료 시간 미정' : settings.endTime;
+  const endModeLabel = settings.endMode === 'open' ? L('종료 시간 미정', 'Open-ended') : settings.endTime;
   const defaultTypeLabel = TYPE_LABELS[settings.defaultType];
 
   return (
     <div style={SCREEN}>
       <div style={{ padding: `${topPad(58)} 22px 8px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={TAPE_GREEN()}>나의 하꾸</span>
-        <h1 style={TITLE}>설정</h1>
+        <span style={TAPE_GREEN()}>{L('나의 하꾸', 'MyHour')}</span>
+        <h1 style={TITLE}>{L('설정', 'Settings')}</h1>
       </div>
 
       <div className="no-scrollbar scroll-column" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 22px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Schedule */}
         <SettingGroup header="기록 시간">
-          <SettingRow label="시작 시간" value={settings.startTime} open={openRow === 'startTime'} onToggle={() => toggle('startTime')}>
+          <SettingRow label={L('시작 시간', 'Start time')} value={settings.startTime} open={openRow === 'startTime'} onToggle={() => toggle('startTime')}>
             {START_TIMES.map(t => (
               <Option key={t} label={t} selected={settings.startTime === t} onSelect={() => set('startTime', t)} />
             ))}
           </SettingRow>
 
-          <SettingRow label="종료 방식" value={endModeLabel} open={openRow === 'endMode'} onToggle={() => toggle('endMode')}>
-            <Option label="종료 시간 미정" selected={settings.endMode === 'open'} onSelect={() => set('endMode', 'open')} />
-            <Option label="종료 시간 지정" selected={settings.endMode === 'fixed'} onSelect={() => updateSettings({ endMode: 'fixed' })} />
+          <SettingRow label={L('종료 방식', 'End time')} value={endModeLabel} open={openRow === 'endMode'} onToggle={() => toggle('endMode')}>
+            <Option label={L('종료 시간 미정', 'Open-ended')} selected={settings.endMode === 'open'} onSelect={() => set('endMode', 'open')} />
+            <Option label={L('종료 시간 지정', 'Set an end time')} selected={settings.endMode === 'fixed'} onSelect={() => updateSettings({ endMode: 'fixed' })} />
             {settings.endMode === 'fixed' && (
               <div style={{ paddingTop: 8 }}>
-                <div style={{ fontSize: 12, color: COLOR.inkMuted, marginBottom: 6 }}>종료 시간 선택</div>
+                <div style={{ fontSize: 12, color: COLOR.inkMuted, marginBottom: 6 }}>{L('종료 시간 선택', 'Pick an end time')}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {END_TIMES.map(t => (
                     <button key={t} onClick={() => set('endTime', t)} style={{
@@ -541,7 +556,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
             )}
           </SettingRow>
 
-          <SettingRow label="기록 간격" value={intervalLabel(settings.interval)} last open={openRow === 'interval'} onToggle={() => toggle('interval')}>
+          <SettingRow label={L('기록 간격', 'Interval')} value={intervalLabel(settings.interval)} last open={openRow === 'interval'} onToggle={() => toggle('interval')}>
             {([30, 60, 120] as const).map(v => (
               <Option key={v} label={intervalLabel(v)} selected={settings.interval === v} onSelect={() => set('interval', v)} />
             ))}
@@ -550,25 +565,25 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
 
         {/* Capture */}
         <SettingGroup header="알림 · 기록 방식">
-          <SettingRow label="알림 시점" value={notifyLabel(settings.notifyTiming)} open={openRow === 'notify'} onToggle={() => toggle('notify')}>
-            <Option label="1분 전" selected={settings.notifyTiming === 'before'} onSelect={() => set('notifyTiming', 'before')} />
-            <Option label="기록 시각" selected={settings.notifyTiming === 'exact'} onSelect={() => set('notifyTiming', 'exact')} />
-            <Option label="둘 다" selected={settings.notifyTiming === 'both'} onSelect={() => set('notifyTiming', 'both')} />
+          <SettingRow label={L('알림 시점', 'Remind me')} value={notifyLabel(settings.notifyTiming)} open={openRow === 'notify'} onToggle={() => toggle('notify')}>
+            <Option label={L('1분 전', '1 min before')} selected={settings.notifyTiming === 'before'} onSelect={() => set('notifyTiming', 'before')} />
+            <Option label={L('기록 시각', 'On time')} selected={settings.notifyTiming === 'exact'} onSelect={() => set('notifyTiming', 'exact')} />
+            <Option label={L('둘 다', 'Both')} selected={settings.notifyTiming === 'both'} onSelect={() => set('notifyTiming', 'both')} />
           </SettingRow>
 
           <SettingRow
-            label="기록 방식"
+            label={L('기록 방식', 'Capture mode')}
             value={captureModeLabel(settings.captureMode)}
             last={settings.captureMode === 'choose'}
             open={openRow === 'captureMode'}
             onToggle={() => toggle('captureMode')}
           >
-            <Option label="매번 선택" selected={settings.captureMode === 'choose'} onSelect={() => set('captureMode', 'choose')} />
-            <Option label="하나로 고정" selected={settings.captureMode === 'fixed'} onSelect={() => updateSettings({ captureMode: 'fixed' })} />
+            <Option label={L('매번 선택', 'Choose each time')} selected={settings.captureMode === 'choose'} onSelect={() => set('captureMode', 'choose')} />
+            <Option label={L('하나로 고정', 'Always the same')} selected={settings.captureMode === 'fixed'} onSelect={() => updateSettings({ captureMode: 'fixed' })} />
           </SettingRow>
 
           {settings.captureMode === 'fixed' && (
-            <SettingRow label="기본 기록 방식" value={defaultTypeLabel} last open={openRow === 'defaultType'} onToggle={() => toggle('defaultType')}>
+            <SettingRow label={L('기본 기록 방식', 'Default type')} value={defaultTypeLabel} last open={openRow === 'defaultType'} onToggle={() => toggle('defaultType')}>
               {(['photo', 'video', 'audio', 'text'] as const).map(t => (
                 <Option key={t} label={TYPE_LABELS[t]} selected={settings.defaultType === t} onSelect={() => set('defaultType', t)} />
               ))}
@@ -579,12 +594,12 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         {/* Output */}
         <SettingGroup header="결과물">
           <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center', borderBottom: `1.5px dashed ${COLOR.dash}` }}>
-            <div style={{ flex: 1, fontSize: 15 }}>영상 크기</div>
+            <div style={{ flex: 1, fontSize: 15 }}>{L('영상 크기', 'Film size')}</div>
             <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 17 }}>720×1280 · 9:16</div>
           </div>
           <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
-            <div style={{ flex: 1, fontSize: 15 }}>저장 방식</div>
-            <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 17 }}>아카이브 저장 후 열기</div>
+            <div style={{ flex: 1, fontSize: 15 }}>{L('저장 방식', 'Saving')}</div>
+            <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 17 }}>{L('아카이브 저장 후 열기', 'Save to archive, then open')}</div>
           </div>
           <div style={{ minHeight: 60, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: `1.5px dashed ${COLOR.dash}` }}>
             <div style={{ flex: 1 }}>
@@ -596,10 +611,10 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
           {native && (
             <div style={{ minHeight: 60, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: `1.5px dashed ${COLOR.dash}` }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15 }}>사진첩에 자동 저장</div>
-                <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>카메라로 찍은 사진·영상 기록을 사진 앱에도 넣어요</div>
+                <div style={{ fontSize: 15 }}>{L('사진첩에 자동 저장', 'Save to Photos')}</div>
+                <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>{L('카메라로 찍은 사진·영상 기록을 사진 앱에도 넣어요', 'Also keep camera photos and videos in Photos')}</div>
               </div>
-              <ToggleSwitch label="사진첩에 자동 저장" checked={autoSave} onChange={toggleAutoSave} />
+              <ToggleSwitch label={L('사진첩에 자동 저장', 'Save to Photos')} checked={autoSave} onChange={toggleAutoSave} />
             </div>
           )}
         </SettingGroup>
@@ -627,15 +642,15 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <SectionHeader label="테스트 도구" />
-              <button type="button" onClick={closeDevTools} style={{ ...PILL_BUTTON, minHeight: 32, fontSize: 13 }}>닫기</button>
+              <button type="button" onClick={closeDevTools} style={{ ...PILL_BUTTON, minHeight: 32, fontSize: 13 }}>{L('닫기', 'Close')}</button>
             </div>
             <div style={{ ...CARD, overflow: 'hidden', marginBottom: 12 }}>
               <button
                 type="button"
                 onClick={async () => {
-                  if (!confirm('오늘 마감을 되돌릴까요?\n\n오늘 기록이 홈 화면으로 돌아오고, 오늘 만든 영상과 아카이브 항목은 지워져요.\n사진·글 같은 기록은 그대로 남아요.')) return;
+                  if (!confirm(L('오늘 마감을 되돌릴까요?\n\n오늘 기록이 홈 화면으로 돌아오고, 오늘 만든 영상과 아카이브 항목은 지워져요.\n사진·글 같은 기록은 그대로 남아요.', 'Undo today\'s wrap-up?\n\nToday\'s records return to Home, and today\'s film and archive entry are deleted.\nYour photos and notes stay.'))) return;
                   const restored = await undoTodayWrap();
-                  alert(restored > 0 ? `기록 ${restored}개를 오늘로 되돌렸어요. 하루 마감을 다시 할 수 있어요.` : '되돌릴 아카이브 항목이 없어서 잠금만 풀었어요.');
+                  alert(restored > 0 ? L(`기록 ${restored}개를 오늘로 되돌렸어요. 하루 마감을 다시 할 수 있어요.`, `Moved ${restored} records back to today. You can wrap up again.`) : L('되돌릴 아카이브 항목이 없어서 잠금만 풀었어요.', 'No archive entry to undo, so the day was just unlocked.'));
                 }}
                 disabled={!isWrapped}
                 style={{
@@ -645,9 +660,9 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15 }}>오늘 마감 되돌리기</div>
+                  <div style={{ fontSize: 15 }}>{L('오늘 마감 되돌리기', 'Undo today\'s wrap-up')}</div>
                   <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
-                    {isWrapped ? '오늘 기록을 되돌리고 영상을 새로 만들 수 있어요' : '오늘은 아직 마감하지 않았어요'}
+                    {isWrapped ? L('오늘 기록을 되돌리고 영상을 새로 만들 수 있어요', 'Bring back today\'s records and make a new film') : L('오늘은 아직 마감하지 않았어요', 'Today isn\'t wrapped yet')}
                   </div>
                 </div>
               </button>
@@ -657,7 +672,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
               onClick={() => setPaywallPreview(true)}
               style={{ ...CARD, width: '100%', minHeight: 50, padding: '0 16px', marginBottom: 12, textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink, fontSize: 15, cursor: 'pointer' }}
             >
-              결제 화면 미리보기
+              {L('결제 화면 미리보기', 'Preview paywall')}
             </button>
             {paywallPreview && <PaywallScreen onClose={() => setPaywallPreview(false)} onSubscribed={() => setPaywallPreview(false)} />}
             <button
@@ -665,11 +680,11 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
               onClick={() => setTrialPreview(true)}
               style={{ ...CARD, width: '100%', minHeight: 50, padding: '0 16px', marginBottom: 12, textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink, fontSize: 15, cursor: 'pointer' }}
             >
-              무료 체험 안내 미리보기
+              {L('무료 체험 안내 미리보기', 'Preview free trial sheet')}
             </button>
             {trialPreview && <TrialSheet preview onClose={() => setTrialPreview(false)} />}
             <div style={{ fontSize: 11, color: COLOR.inkMuted, padding: '0 16px 12px', lineHeight: 1.5 }}>
-              테스트용입니다. 실제 사용에서는 하루에 영상 하나가 정책이에요.
+              {L('테스트용입니다. 실제 사용에서는 하루에 영상 하나가 정책이에요.', 'For testing only. Normally it\'s one film per day.')}
             </div>
           </>
         )}
@@ -677,10 +692,10 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         <button
           type="button"
           onClick={tapVersion}
-          aria-label="빌드 버전"
+          aria-label={L('빌드 버전', 'Build version')}
           style={{ display: 'block', width: '100%', textAlign: 'center', fontSize: 11, color: COLOR.inkMuted, fontFamily: "'JetBrains Mono', monospace", padding: '8px 0', background: 'none', border: 'none' }}
         >
-          하꾸 · HAKKU {__BUILD_VERSION__}{devToolsOpen ? ' · DEV' : ''}
+          {L('하꾸 · HAKKU', 'MyHour')} {__BUILD_VERSION__}{devToolsOpen ? ' · DEV' : ''}
         </button>
 
         <div style={{ height: 20 }} />

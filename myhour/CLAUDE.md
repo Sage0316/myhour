@@ -24,7 +24,10 @@
   폰 언어 첫 번째가 한국어면 한국어, 그 외 전부 영어. 설정 "언어 · Language"에서 직접 고를 수 있고(`hakku_lang_v1`), 바꾸면 앱을 다시 불러온다
 - **테스트는 한국어로 고정**된다(`import.meta.env.MODE === 'test'`). e2e도 `playwright.config.ts`의 `locale: 'ko-KR'` — 빼면 한국어 이름으로 찾는 테스트가 전부 깨진다. 영어 확인은 `e2e/app.spec.ts`의 '영어 폰'
 - 영어판 이름은 **MyHour** (스토어 "MyHour: AI Video Diary", 서율이랑 정함). 한국어판은 하꾸
-- 번역 진행: 탭 메뉴·홈·store 표시 문구(시간·요일·기록 종류·간격)·설명서·무료 체험 시트·**영상 장면 글자(표지 myhour diary·N moments today, 엔딩 MyHour · 날짜, 그림일기 moment·today's mood, 앨범 snap·today's shot — 2026-10-29 서율 지적)** 완료. 남은 곳: 설정·기록·오늘·마감·아카이브·결제 화면, AI 연출 영어 응답(제목·마무리·자막이 아직 한국어로 옴), 무드/이모지 키워드 영어 사전, iOS 홈 화면 이름(InfoPlist.strings)
+- 번역 (2026-10-29 전부 완료): 모든 화면·알림·오류 문구·영상 장면·AI 연출이 영어 폰에서 영어로 나온다. **무드 값('잔잔함' 등)은 키라서 그대로 두고 화면에 보일 때만 `moodLabel()`**(store.ts). 기록 모드 버튼(MODES)도 한국어 값이 키라 `MODE_EN`으로 표시만 바꾼다. 영어 용어: 직접 찍은 건 Video, 하루를 묶은 결과물은 **film**으로 통일
+- AI 영어 응답: 앱이 `/v1/direct`에 `lang: 'en'`을 보내면 워커 buildPrompt가 영어 출력 지시를 붙이고, 빈 closing도 영어 중립 문장으로 채운다(normalizeResult의 lang). moodChip·bgmTrack은 키라 그대로. 영어 결과는 캐시 키(recordsHash)에 l:'en'을 섞어 한국어 결과와 섞이지 않는다(PROMPT_VERSION 4). **워커 배포(Deploy Workers · ai) 전에는 영어 폰도 한국어로 받는다**
+- AI 없을 때의 영어: 무드 키워드·내용 이모지 사전에 영어 단어 추가(store MOOD_KEYWORDS, scenes KEYWORD_EMOJI_EN), 영어 마무리 문구(CLOSING_BY_MOOD_EN)·제목
+- iOS: `ios/App/App/{en,ko}.lproj/InfoPlist.strings` — 영어 폰 홈 화면 이름 MyHour + 카메라·마이크·사진 권한 안내 영어. knownRegions에 ko 추가
 
 ## 기술 스택
 - Vite 8 + React + TypeScript

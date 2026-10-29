@@ -4,6 +4,7 @@ import type { CustomerInfo, PurchasesStoreProduct } from '@revenuecat/purchases-
 import { getInstallationId } from '../llmDirector';
 import { consumedTimes } from '../videoEntitlement';
 import { decideVideoAccess } from './access';
+import { L } from '../i18n';
 import type { Plan, Subscription, VideoAccess } from './access';
 
 // 결제 연결 (RevenueCat). 애플 영수증 검증, 갱신일, 무료 체험 자격은 RevenueCat이 관리한다.
@@ -99,20 +100,20 @@ function isCancelled(error: unknown): boolean {
 
 /** 구매가 끝나 구독이 열렸으면 그 구독, 사용자가 취소했으면 null */
 export async function purchase(offer: PlanOffer): Promise<Subscription | null> {
-  if (!isBillingActive() || !offer.product) throw new Error('지금은 구독할 수 없어요. 잠시 후 다시 시도해 주세요.');
+  if (!isBillingActive() || !offer.product) throw new Error(L('지금은 구독할 수 없어요. 잠시 후 다시 시도해 주세요.', 'Subscriptions aren\'t available right now. Please try again later.'));
   await ensureConfigured();
   try {
     const { customerInfo } = await Purchases.purchaseStoreProduct({ product: offer.product });
     return subscriptionFrom(customerInfo);
   } catch (error) {
     if (isCancelled(error)) return null;
-    throw new Error('결제를 마치지 못했어요. 잠시 후 다시 시도해 주세요.');
+    throw new Error(L('결제를 마치지 못했어요. 잠시 후 다시 시도해 주세요.', 'Couldn\'t complete the payment. Please try again later.'));
   }
 }
 
 /** 앱을 지웠다 깔았거나 기기를 바꿨을 때 이전 구독을 되찾는다 */
 export async function restorePurchases(): Promise<Subscription | null> {
-  if (!isBillingActive()) throw new Error('지금은 구매를 복원할 수 없어요.');
+  if (!isBillingActive()) throw new Error(L('지금은 구매를 복원할 수 없어요.', 'Purchases can\'t be restored right now.'));
   await ensureConfigured();
   const { customerInfo } = await Purchases.restorePurchases();
   return subscriptionFrom(customerInfo);
@@ -124,7 +125,7 @@ export async function restorePurchases(): Promise<Subscription | null> {
  * 결과는 바로 오지 않고, 적용되면 watchSubscription으로 알려 준다.
  */
 export async function redeemOfferCode(): Promise<void> {
-  if (!isBillingActive()) throw new Error('쿠폰은 앱에서 입력할 수 있어요.');
+  if (!isBillingActive()) throw new Error(L('쿠폰은 앱에서 입력할 수 있어요.', 'Offer codes can be redeemed in the app.'));
   await ensureConfigured();
   await Purchases.presentCodeRedemptionSheet();
 }

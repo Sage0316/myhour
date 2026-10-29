@@ -153,8 +153,35 @@ const KEYWORD_EMOJI: [RegExp, string][] = [
   [/밥|점심|저녁|아침|식사|먹었/, '🍚'],
 ];
 
+// 영어판(MyHour)용 같은 사전. 단어 경계로 찾고 대소문자는 가리지 않는다. 순서 규칙은 한국어와 같다
+const KEYWORD_EMOJI_EN: [RegExp, string][] = [
+  [/\b(tteokbokki)\b/i, '🍢'], [/\b(ramen|ramyeon|noodles?)\b/i, '🍜'], [/\b(fried chicken|chicken|wings)\b/i, '🍗'], [/\bpizza\b/i, '🍕'],
+  [/\b(sushi|sashimi)\b/i, '🍣'], [/\b(pasta|spaghetti)\b/i, '🍝'], [/\b(burgers?|hamburgers?)\b/i, '🍔'],
+  [/\b(steak|bbq|barbecue|grill(ed)?)\b/i, '🥩'], [/\b(soup|stew)\b/i, '🍲'], [/\b(salad)\b/i, '🥗'], [/\b(fruit|apples?|strawberr(y|ies)|watermelon)\b/i, '🍓'],
+  [/\b(coffee|cafe|café|latte|americano|espresso)\b/i, '☕'], [/\b(beer|wine|drinks?|cocktails?|soju)\b/i, '🍺'],
+  [/\b(bread|bakery|croissants?|bagels?)\b/i, '🥐'], [/\b(dessert|cake|ice cream|cookies?|donuts?)\b/i, '🍰'], [/\b(tea|matcha)\b/i, '🍵'],
+  [/\b(walk(ed|ing)?|stroll)\b/i, '🚶'], [/\b(gym|workout|work(ed)? out|run(ning)?|ran|yoga|pilates|swim(ming)?)\b/i, '💪'],
+  [/\b(nap|slept|sleep(ing|y)?)\b/i, '😴'], [/\b(clean(ed|ing)?|laundry|chores|dishes)\b/i, '🧹'],
+  [/\b(stud(y|ied|ying)|exams?|homework|class)\b/i, '📚'], [/\b(meetings?|work(ed)?|office|overtime)\b/i, '💼'], [/\b(clock(ed)? out|off work)\b/i, '🚪'],
+  [/\b(movies?|netflix|shows?|cinema|film)\b/i, '🎬'], [/\b(music|songs?|concert|playlist)\b/i, '🎵'],
+  [/\b(books?|read(ing)?|bookstore)\b/i, '📖'], [/\b(games?|gaming)\b/i, '🎮'], [/\b(draw(ing)?|sketch(ed|ing)?|paint(ed|ing)?)\b/i, '🎨'],
+  [/\b(photos?|pictures?|camera)\b/i, '📷'], [/\b(trip|travel(ing)?|flight|airport|hotel|train)\b/i, '✈️'],
+  [/\b(shopping|groceries|mall|package)\b/i, '🛍️'], [/\b(hospital|dentist|doctor|pharmacy)\b/i, '🏥'],
+  [/\b(haircut|salon|hair)\b/i, '💇'], [/\b(bank|payday|bills?)\b/i, '💳'], [/\b(rings?|necklace|earrings?|jewel(ry|lery))\b/i, '💍'],
+  [/\b(flowers?|plants?)\b/i, '🌷'], [/\b(driv(e|ing)|drove|car|parking)\b/i, '🚗'], [/\b(subway|bus|commute)\b/i, '🚇'],
+  [/\b(call(ed)?|texted|phone)\b/i, '📞'], [/\b(birthday|party|celebrat(e|ed|ion))\b/i, '🎉'],
+  [/\b(friends?|hang(ing)? out|hung out)\b/i, '👯'], [/\b(family|mom|dad|parents)\b/i, '👨‍👩‍👧'],
+  [/\b(dogs?|puppy)\b/i, '🐶'], [/\b(cats?|kitten)\b/i, '🐱'],
+  [/\b(rain(ing|y)?|umbrella)\b/i, '🌧️'], [/\b(snow(ing|y)?)\b/i, '❄️'], [/\b(hot|heat|summer)\b/i, '☀️'], [/\b(cold|freezing|winter)\b/i, '🥶'], [/\b(wind(y)?|storm)\b/i, '🌬️'],
+  [/\b(happy|great day|fun|excited)\b/i, '😊'], [/\b(tired|exhausted|drained)\b/i, '😮‍💨'],
+  [/\b(angry|annoyed|mad|ugh)\b/i, '😤'], [/\b(sad|cried|crying|tears)\b/i, '😢'],
+  [/\b(butterflies|can't wait|cant wait|looking forward)\b/i, '🥰'], [/\b(anxious|worried|nervous)\b/i, '😰'], [/\b(proud|did it|nailed it)\b/i, '🙌'],
+  [/\b(lunch|dinner|breakfast|ate|meal)\b/i, '🍚'],
+];
+
 export function pickContentEmoji(content: string): string | null {
   for (const [re, emoji] of KEYWORD_EMOJI) if (re.test(content)) return emoji;
+  for (const [re, emoji] of KEYWORD_EMOJI_EN) if (re.test(content)) return emoji;
   return null;
 }
 

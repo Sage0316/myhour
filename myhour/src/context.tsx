@@ -9,6 +9,7 @@ import { createStableId } from './domain/model';
 import { AppContext, type RecordMedia } from './appContext';
 import { cleanupOrphanMedia } from './media/cleanup';
 import { hasVideoForDate, releaseVideoForDate } from './videoEntitlement';
+import { L } from './i18n';
 
 // 하루가 마감됐는지는 두 곳에서 온다:
 // ① 이 하루의 isWrapped 플래그, ② 그 날짜로 이미 영상을 만들었다는 이용권 기록.
@@ -85,7 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // 마감한 하루엔 더 담지 않는다. UI에서도 막지만, 마감 직전에 열어둔 화면으로
       // 저장이 들어올 수 있어 여기가 최종 방어선이다.
       if (isDayWrapped(prev)) {
-        setTimeout(() => alert('오늘은 이미 마감했어요. 다음 하루가 시작되면 다시 기록할 수 있어요.'), 0);
+        setTimeout(() => alert(L('오늘은 이미 마감했어요. 다음 하루가 시작되면 다시 기록할 수 있어요.', 'Today is already wrapped up. You can record again when the next day starts.')), 0);
         if (media) void deleteVideoFromIDB(media.key);
         return prev;
       }
@@ -95,7 +96,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch {
         if (media) void deleteVideoFromIDB(media.key);
         // localStorage 용량 초과 — 상태를 바꾸지 않고 알린다 (렌더링 크래시 방지)
-        setTimeout(() => alert('저장 공간이 부족해서 기록을 저장하지 못했어요.\n아카이브에서 오래된 기록을 정리해 주세요.'), 0);
+        setTimeout(() => alert(L('저장 공간이 부족해서 기록을 저장하지 못했어요.\n아카이브에서 오래된 기록을 정리해 주세요.', 'Not enough storage to save this record.\nPlease clear out old days in the Archive.')), 0);
         return prev;
       }
       return next;

@@ -21,6 +21,8 @@ interface RecordScreenProps {
 type Mode = '영상' | '사진' | '음성' | '글';
 const MODES: Mode[] = ['영상', '사진', '음성', '글'];
 const MODE_TYPE: Record<Mode, RecordType> = { 영상: 'video', 사진: 'photo', 음성: 'audio', 글: 'text' };
+// 탭에 보이는 이름만 번역한다 — Mode 값 자체는 내부 비교에 쓰이므로 한국어 그대로 둔다
+const MODE_EN: Record<Mode, string> = { 영상: 'Video', 사진: 'Photo', 음성: 'Voice', 글: 'Text' };
 const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
 /** 뷰파인더 네 모서리 표시 */
@@ -74,7 +76,7 @@ function prepareImage(file: File): Promise<PreparedImage> {
       canvas.toBlob(blob => {
         URL.revokeObjectURL(url);
         if (!blob) {
-          reject(new Error('사진을 처리하지 못했어요.'));
+          reject(new Error(L('사진을 처리하지 못했어요.', "Couldn't process this photo.")));
           return;
         }
         const previewCanvas = document.createElement('canvas');
@@ -87,7 +89,7 @@ function prepareImage(file: File): Promise<PreparedImage> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('지원하지 않는 사진 형식이에요.'));
+      reject(new Error(L('지원하지 않는 사진 형식이에요.', "This photo format isn't supported.")));
     };
     img.src = url;
   });
@@ -206,15 +208,15 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
   if (phase === 'error') return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 22 }}>
       <div style={{ ...CARD, padding: '20px 22px', fontSize: 15, fontWeight: 700, textAlign: 'center', lineHeight: 1.6 }}>
-        카메라 접근 권한이 필요해요<br />
-        <span style={{ fontSize: 13, fontWeight: 400, color: COLOR.inkMuted }}>설정에서 카메라를 허용해 주세요</span>
+        {L('카메라 접근 권한이 필요해요', 'Camera access is needed')}<br />
+        <span style={{ fontSize: 13, fontWeight: 400, color: COLOR.inkMuted }}>{L('설정에서 카메라를 허용해 주세요', 'Please allow the camera in Settings')}</span>
       </div>
     </div>
   );
 
   if (phase === 'processing') return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ fontSize: 14, color: COLOR.inkMuted }}>처리 중…</div>
+      <div style={{ fontSize: 14, color: COLOR.inkMuted }}>{L('처리 중…', 'Processing…')}</div>
     </div>
   );
 
@@ -236,7 +238,7 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
       {phase === 'preview' && <ViewfinderCorners color={COLOR.white} bottom={138} />}
       {phase === 'starting' && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>카메라 준비 중…</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>{L('카메라 준비 중…', 'Starting camera…')}</div>
         </div>
       )}
       {phase === 'recording' && (
@@ -247,7 +249,7 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
           </div>
           {seconds >= 5 && (
             <div style={{ background: 'rgba(0,0,0,0.55)', borderRadius: 50, padding: '5px 14px', fontSize: 12, color: 'rgba(255,255,255,0.9)' }}>
-              이 이후에 녹화되는 건 영상에 들어가지 않아요
+              {L('이 이후에 녹화되는 건 영상에 들어가지 않아요', "Anything after this won't be in your film")}
             </div>
           )}
         </div>
@@ -255,7 +257,7 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
       {phase === 'preview' && (
         <div style={{ position: 'absolute', bottom: 112, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
           <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: 14, padding: '4px 12px', fontSize: 12, fontWeight: 500, color: COLOR.ink }}>
-            하루 요약 영상에는 앞 5초만 담겨요
+            {L('하루 요약 영상에는 앞 5초만 담겨요', 'Only the first 5 seconds go in your film')}
           </div>
         </div>
       )}
@@ -263,7 +265,7 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
         <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
           <RecordButton
             onClick={phase === 'preview' ? startRecording : stopRecording}
-            label={phase === 'preview' ? '영상 녹화 시작' : '영상 녹화 중지'}
+            label={phase === 'preview' ? L('영상 녹화 시작', 'Start recording video') : L('영상 녹화 중지', 'Stop recording video')}
             recording={phase === 'recording'}
             light
           />
@@ -312,8 +314,8 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
           rows={4}
           maxLength={TEXT_MAX}
           onChange={e => setText(e.target.value.slice(0, TEXT_MAX))}
-          placeholder="지금 이 순간을 한 줄로"
-          aria-label="글 기록"
+          placeholder={L('지금 이 순간을 한 줄로', 'This moment, in one line')}
+          aria-label={L('글 기록', 'Text record')}
           autoFocus
           style={{
             flex: 1, width: '100%', border: 'none', outline: 'none', color: COLOR.ink, fontSize: 18, fontWeight: 500, lineHeight: '32px', fontFamily: FONT_BODY, resize: 'none', padding: 0,
@@ -321,7 +323,7 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
             background: 'linear-gradient(transparent 31px, rgba(142,167,201,0.45) 31px, rgba(142,167,201,0.45) 32px) 0 0 / 100% 32px local',
           }}
         />
-        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: text.length >= TEXT_MAX ? COLOR.red : COLOR.inkMuted }}>{text.length}/{TEXT_MAX}자</span>
+        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: text.length >= TEXT_MAX ? COLOR.red : COLOR.inkMuted }}>{L(`${text.length}/${TEXT_MAX}자`, `${text.length}/${TEXT_MAX}`)}</span>
       </label>
 
       {/* 쓸 거리 테이프 + 스티커 (미리보기 자리를 채운다). 입력칸과 저장 버튼 사이 한가운데에 두고,
@@ -358,7 +360,7 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
         disabled={!ready}
         style={{ ...BUTTON_PRIMARY, width: '100%', flexShrink: 0, ...(ready ? {} : BUTTON_DISABLED) }}
       >
-        저장하기
+        {L('저장하기', 'Save')}
       </button>
     </div>
   );
@@ -410,7 +412,7 @@ function AudioRecordMode({ onCapture }: { onCapture: (blob: Blob) => void }) {
         return next;
       }), 1000);
     } catch {
-      alert('마이크 접근 권한이 필요해요.\n브라우저 설정에서 허용해주세요.');
+      alert(L('마이크 접근 권한이 필요해요.\n브라우저 설정에서 허용해주세요.', 'Microphone access is needed.\nPlease allow it in your browser settings.'));
     }
   }
 
@@ -466,10 +468,10 @@ function AudioRecordMode({ onCapture }: { onCapture: (blob: Blob) => void }) {
           <div style={{ textAlign: 'center' }}>
             <div style={{ ...MONO, fontSize: 32, color: seconds >= 5 ? COLOR.inkMuted : COLOR.ink, letterSpacing: 3 }}>{mm}:{ss}</div>
             <div style={{ fontSize: 13, color: COLOR.inkMuted, marginTop: 8 }}>
-              {seconds >= 5 ? '이 이후에 녹음되는 건 영상에 들어가지 않아요' : '녹음 중'}
+              {seconds >= 5 ? L('이 이후에 녹음되는 건 영상에 들어가지 않아요', "Anything after this won't be in your film") : L('녹음 중', 'Recording')}
             </div>
           </div>
-          <RecordButton onClick={stop} label="음성 녹음 중지" recording />
+          <RecordButton onClick={stop} label={L('음성 녹음 중지', 'Stop voice recording')} recording />
         </>
       ) : (
         <>
@@ -479,10 +481,10 @@ function AudioRecordMode({ onCapture }: { onCapture: (blob: Blob) => void }) {
             ))}
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.5 }}>마이크로 이 순간을<br />짧게 남겨보세요</div>
-            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 8 }}>하루 요약 영상에는 앞 5초만 담겨요</div>
+            <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.5 }}>{L('마이크로 이 순간을', 'Capture this moment')}<br />{L('짧게 남겨보세요', 'in a quick voice note')}</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 8 }}>{L('하루 요약 영상에는 앞 5초만 담겨요', 'Only the first 5 seconds go in your film')}</div>
           </div>
-          <RecordButton onClick={start} label="음성 녹음 시작" recording={false} />
+          <RecordButton onClick={start} label={L('음성 녹음 시작', 'Start voice recording')} recording={false} />
         </>
       )}
     </div>
@@ -523,7 +525,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
               style={{ ...PILL_BUTTON, position: 'absolute', top: 10, right: 10, minHeight: 36 }}
             >
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
-              {type === 'meme' ? '다시 고르기' : '다시 찍기'}
+              {type === 'meme' ? L('다시 고르기', 'Pick again') : L('다시 찍기', 'Retake')}
             </button>
           )}
         </div>
@@ -536,25 +538,25 @@ function CaptionStep({ content, type, onSave, onRetake }: {
 
       {/* 문구 입력 */}
       <div style={{ ...(isMedia ? { height: 120 } : { flex: 1, minHeight: 100 }), ...CARD, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>한 줄 남기기 (선택)</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: COLOR.inkSub }}>{L('한 줄 남기기 (선택)', 'Add a line (optional)')}</span>
         <textarea
           // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
           {...noAutofill('caption')}
           value={text}
           maxLength={CAPTION_MAX}
           onChange={e => setText(e.target.value.slice(0, CAPTION_MAX))}
-          placeholder={type === 'meme' ? '딱 이 기분이었음 ㅋㅋ' : '점심 도시락, 오후 산책...'}
+          placeholder={type === 'meme' ? L('딱 이 기분이었음 ㅋㅋ', 'Exactly my mood lol') : L('점심 도시락, 오후 산책...', 'Packed lunch, afternoon walk...')}
           autoFocus
-          aria-label="한 줄 남기기"
+          aria-label={L('한 줄 남기기', 'Add a line')}
           style={{ flex: 1, width: '100%', minHeight: 60, background: 'none', border: 'none', outline: 'none', color: COLOR.ink, fontSize: 16, lineHeight: 1.6, fontFamily: FONT_BODY, resize: 'none', padding: 0 }}
         />
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, paddingLeft: 4 }}>
         <div style={{ fontSize: 12, color: COLOR.inkMuted }}>
-          {type === 'meme' ? '이 문구가 하루 요약 영상에 손글씨로 들어가요' : ''}
+          {type === 'meme' ? L('이 문구가 하루 요약 영상에 손글씨로 들어가요', 'This line goes in your film, handwritten') : ''}
         </div>
-        <div style={{ fontSize: 12, color: text.length >= CAPTION_MAX ? COLOR.red : COLOR.inkMuted }}>{text.length}/{CAPTION_MAX}자</div>
+        <div style={{ fontSize: 12, color: text.length >= CAPTION_MAX ? COLOR.red : COLOR.inkMuted }}>{L(`${text.length}/${CAPTION_MAX}자`, `${text.length}/${CAPTION_MAX}`)}</div>
       </div>
 
       {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
@@ -563,7 +565,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
           onClick={() => onSave(text.trim())}
           style={{ ...BUTTON_PRIMARY, width: '100%' }}
         >
-          저장하기
+          {L('저장하기', 'Save')}
         </button>
       </div>
     </div>
@@ -615,7 +617,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 25 * 1024 * 1024) {
-      alert('사진이 너무 커요. 25MB 이하 파일을 선택해주세요.');
+      alert(L('사진이 너무 커요. 25MB 이하 파일을 선택해주세요.', 'This photo is too large. Please pick one under 25MB.'));
       return;
     }
     setLoading(true);
@@ -626,7 +628,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
       cameraOriginalRef.current = photoSourceRef.current === 'camera' ? file : null;
       setCapturedContent(prepared.preview);
     } catch (error) {
-      alert(error instanceof Error ? error.message : '사진을 처리하지 못했어요.');
+      alert(error instanceof Error ? error.message : L('사진을 처리하지 못했어요.', "Couldn't process this photo."));
     } finally {
       setLoading(false);
     }
@@ -689,7 +691,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
     if (loading) {
       return (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 14, color: COLOR.inkMuted }}>처리 중…</div>
+          <div style={{ fontSize: 14, color: COLOR.inkMuted }}>{L('처리 중…', 'Processing…')}</div>
         </div>
       );
     }
@@ -714,33 +716,33 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
         <button
           type="button"
           onClick={() => { photoSourceRef.current = 'camera'; photoInputRef.current?.click(); }}
-          aria-label="지금 촬영하기"
+          aria-label={L('지금 촬영하기', 'Take a photo now')}
           style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, borderRadius: 6, padding: '12px 12px 0', cursor: 'pointer', boxSizing: 'border-box', fontFamily: FONT_BODY }}
         >
           <span aria-hidden="true" style={{ position: 'absolute', top: -10, left: '50%', width: 76, height: 20, marginLeft: -38, background: COLOR.green, transform: 'rotate(-3deg)' }} />
           <span style={{ position: 'relative', flex: 1, width: '100%', background: '#EFE9DC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <ViewfinderCorners color={COLOR.ink} bottom={18} />
-            <span style={{ fontSize: 13, color: COLOR.inkMuted }}>카메라로 이 순간을 담아요</span>
+            <span style={{ fontSize: 13, color: COLOR.inkMuted }}>{L('카메라로 이 순간을 담아요', 'Capture this moment with your camera')}</span>
           </span>
           <span style={{ height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
             <span style={{ width: 58, height: 58, borderRadius: 29, border: `2px solid ${COLOR.ink}`, background: COLOR.white, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
               <span style={{ width: 44, height: 44, borderRadius: 22, background: COLOR.red }} />
             </span>
-            <span style={{ fontSize: 17, fontWeight: 700, color: COLOR.ink }}>지금 촬영</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: COLOR.ink }}>{L('지금 촬영', 'Take photo')}</span>
           </span>
         </button>
         <button
           type="button"
           onClick={() => { photoSourceRef.current = 'album'; albumInputRef.current?.click(); }}
-          aria-label="앨범에서 선택하기"
+          aria-label={L('앨범에서 선택하기', 'Choose from album')}
           style={{ flexShrink: 0, minHeight: 72, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', ...CARD, textAlign: 'left', cursor: 'pointer', fontFamily: FONT_BODY }}
         >
           <span style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 12, background: '#EFE9DC', border: `1.5px solid ${COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
             <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="15" height="14" rx="2" /><path d="M7 2h12a2 2 0 0 1 2 2v12" /><circle cx="8" cy="10" r="1.5" /><path d="M18 16l-4-4-8 7" /></svg>
           </span>
           <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: COLOR.ink }}>앨범에서 선택</span>
-            <span style={{ fontSize: 12, color: COLOR.inkMuted }}>기분에 맞는 짤·사진도 좋아요</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: COLOR.ink }}>{L('앨범에서 선택', 'Choose from album')}</span>
+            <span style={{ fontSize: 12, color: COLOR.inkMuted }}>{L('기분에 맞는 짤·사진도 좋아요', 'A meme or photo that fits your mood works too')}</span>
           </span>
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={COLOR.inkSub} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
         </button>
@@ -749,21 +751,21 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
   }
 
   return (
-    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="새 기록" style={SCREEN}>
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={L('새 기록', 'New record')} style={SCREEN}>
       <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoFile} style={{ display: 'none' }} />
       {/* 앨범 선택은 capture 속성 없이 — iOS에서 사진 보관함이 열린다 */}
       <input ref={albumInputRef} type="file" accept="image/*" onChange={handlePhotoFile} style={{ display: 'none' }} />
 
       <div style={{ padding: `${topPad(52)} 18px 0`, display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) 44px', alignItems: 'center' }}>
-        <button onClick={onClose} aria-label="기록 화면 닫기" style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        <button onClick={onClose} aria-label={L('기록 화면 닫기', 'Close record screen')} style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
-        <span style={{ ...TAPE_SKY(-2, 21), justifySelf: 'center', alignSelf: 'center', padding: '2px 14px' }}>{slot} 기록</span>
+        <span style={{ ...TAPE_SKY(-2, 21), justifySelf: 'center', alignSelf: 'center', padding: '2px 14px' }}>{L(`${slot} 기록`, `${slot} record`)}</span>
         <span />
       </div>
 
       <div style={{ padding: '14px 22px 0' }}>
-        <div role="group" aria-label="기록 방식" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 4, background: COLOR.wash, borderRadius: 14, padding: 4 }}>
+        <div role="group" aria-label={L('기록 방식', 'Record type')} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 4, background: COLOR.wash, borderRadius: 14, padding: 4 }}>
           {MODES.map(m => (
             <button
               key={m}
@@ -777,7 +779,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
                 border: mode === m ? `1.5px solid ${COLOR.ink}` : '1.5px solid transparent',
                 cursor: 'pointer', fontFamily: FONT_BODY,
               }}
-            >{m}</button>
+            >{L(m, MODE_EN[m])}</button>
           ))}
         </div>
       </div>

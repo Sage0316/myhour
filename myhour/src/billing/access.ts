@@ -5,6 +5,8 @@
 // - Premium 월 5,500원: 매일 영상 1개
 // - 둘 다 3일 무료 체험. 구독이 없으면 기록·아카이브는 그대로, 영상 만들기만 잠긴다.
 // - 날짜당 영상 1개 규칙은 요금제와 상관없이 원장(videoEntitlement)이 따로 지킨다.
+import { L } from '../i18n';
+
 export type Plan = 'standard' | 'premium';
 
 export const STANDARD_VIDEOS_PER_PERIOD = 15;
@@ -58,5 +60,5 @@ export function canMakeVideo(access: VideoAccess): boolean {
 export function formatMonthDay(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);
-  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  return L(`${date.getMonth() + 1}월 ${date.getDate()}일`, date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
 }

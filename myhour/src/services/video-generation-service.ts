@@ -1,5 +1,6 @@
 import type { MyRecord } from '../store';
 import { generateVideo } from '../videoGenerator';
+import { L } from '../i18n';
 
 export interface VideoGenerationOptions {
   /** 하루 날짜 (YYYY-MM-DD) — 마지막 장면을 날짜마다 돌아가며 고른다 */
@@ -35,7 +36,7 @@ export interface VideoEnginePort {
 export class BrowserVideoGenerationService implements VideoEnginePort {
   capabilities(): VideoCapabilityReport {
     if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement === 'undefined') {
-      return { supported: false, warnings: ['이 브라우저는 영상 생성을 지원하지 않아요.'] };
+      return { supported: false, warnings: [L('이 브라우저는 영상 생성을 지원하지 않아요.', 'This browser can\'t make videos.')] };
     }
     // videoGenerator와 같은 우선순위 — mp4가 먼저다 (iOS 사진첩 저장 때문에, CLAUDE.md 참고)
     const mimeType = [
@@ -48,7 +49,7 @@ export class BrowserVideoGenerationService implements VideoEnginePort {
     ].find(type => MediaRecorder.isTypeSupported(type));
     return mimeType
       ? { supported: true, mimeType, warnings: [] }
-      : { supported: false, warnings: ['지원되는 영상 코덱을 찾지 못했어요.'] };
+      : { supported: false, warnings: [L('지원되는 영상 코덱을 찾지 못했어요.', 'No supported video codec found.')] };
   }
 
   generate(

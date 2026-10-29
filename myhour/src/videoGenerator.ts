@@ -11,6 +11,7 @@ import { drawClosingScene } from './scenesClosing';
 import { drawWatermark, isWatermarkEnabled, loadWatermark } from './videoWatermark';
 import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 import { loadMediaBlob } from './persistence/mediaRepository';
+import { L } from './i18n';
 
 const FPS = 24;
 
@@ -99,12 +100,15 @@ type DrawFn = (t: number, frame: number) => void;
 // 그리기는 계속 돌아서, 나간 시점까지만 담긴 잘린 영상이 100%로 '완성'됐다 (2026-10-28 펌킨 발견).
 // 그래서 화면이 가려지는 순간 생성을 멈추고 다시 만들어 달라고 알린다.
 const INTERRUPTED = 'app-hidden';
-export const INTERRUPTED_MESSAGE = '앱을 나가서 영상 만들기가 멈췄어요. 다 만들 때까지 하꾸를 켜 둔 채로 다시 만들어 주세요.';
+export const INTERRUPTED_MESSAGE = L(
+  '앱을 나가서 영상 만들기가 멈췄어요. 다 만들 때까지 하꾸를 켜 둔 채로 다시 만들어 주세요.',
+  'Making the video stopped because you left the app. Please try again and keep MyHour open until it\'s done.',
+);
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
   if (signal.reason === INTERRUPTED) throw new Error(INTERRUPTED_MESSAGE);
-  throw new DOMException('영상 생성을 취소했어요.', 'AbortError');
+  throw new DOMException(L('영상 생성을 취소했어요.', 'Making the film was canceled.'), 'AbortError');
 }
 
 /** 만드는 동안 화면이 자동으로 꺼지지 않게 한다 (지원하지 않으면 그냥 넘어간다) */
@@ -322,7 +326,7 @@ async function renderVideo(
       // fallback thumbnail
       if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
     } else if (r.type === 'audio') {
-      if (!audioCtx) { onWarn?.(`음성(${r.slotTime}): 오디오 컨텍스트 없음`); return; }
+      if (!audioCtx) { onWarn?.(L(`음성(${r.slotTime}): 오디오 컨텍스트 없음`, `Audio (${r.slotTime}): no audio context`)); return; }
       try {
         const mediaKey = r.mediaId ?? r.videoKey;
         const raw = mediaKey
@@ -331,13 +335,13 @@ async function renderVideo(
             ? dataUrlToArrayBuffer(r.content)
             : null;
         if (!raw) {
-          onWarn?.(`음성(${r.slotTime}): 저장된 미디어를 찾을 수 없음`);
+          onWarn?.(L(`음성(${r.slotTime}): 저장된 미디어를 찾을 수 없음`, `Audio (${r.slotTime}): saved media not found`));
           return;
         }
         voiceBufMap.set(r.id, await decodeWithTimeout(raw));
       } catch (e) {
         const mime = r.mediaType ?? (r.content.startsWith('data:') ? r.content.slice(5, r.content.indexOf(';')) : 'unknown');
-        onWarn?.(`음성(${r.slotTime}) 디코딩 실패 [${mime}]: ${e instanceof Error ? (e.name + ' ' + e.message) : String(e)}`);
+        onWarn?.(L(`음성(${r.slotTime}) 디코딩 실패`, `Audio (${r.slotTime}) couldn't be decoded`) + ` [${mime}]: ${e instanceof Error ? (e.name + ' ' + e.message) : String(e)}`);
       }
     }
   }));
@@ -352,7 +356,7 @@ async function renderVideo(
     ? splitEmojis(overrides.emojis)
     : fallbackEmojisFor(moodName))[0] ?? null;
 
-  if (typeof MediaRecorder === 'undefined') throw new Error('이 브라우저는 영상 생성을 지원하지 않아요');
+  if (typeof MediaRecorder === 'undefined') throw new Error(L('이 브라우저는 영상 생성을 지원하지 않아요', 'This browser can\'t make videos'));
 
   // mp4(h264)를 webm보다 반드시 먼저 — iOS Safari는 webm '녹화'는 되지만 사진 앱이
   // webm을 영상으로 인식하지 못해서 공유해도 파일 앱에만 들어가고 사진첩엔 저장이 안 된다.
@@ -368,7 +372,7 @@ async function renderVideo(
     'video/webm',
   ].find(t => MediaRecorder.isTypeSupported(t));
 
-  if (!mimeType) throw new Error('이 브라우저는 영상 생성을 지원하지 않아요\n(Chrome 또는 Android에서 시도해 보세요)');
+  if (!mimeType) throw new Error(L('이 브라우저는 영상 생성을 지원하지 않아요\n(Chrome 또는 Android에서 시도해 보세요)', 'This browser can\'t make videos\n(try Chrome or Android)'));
 
   const stream = canvas.captureStream(FPS);
 
@@ -611,7 +615,7 @@ async function renderVideo(
     new Promise<void>(res => { recorder.onstop = () => res(); }),
     new Promise<void>(res => setTimeout(res, 4000)),
   ]);
-  if (chunks.length === 0) throw new Error('영상 데이터를 만들지 못했어요. 다시 시도해 주세요.');
+  if (chunks.length === 0) throw new Error(L('영상 데이터를 만들지 못했어요. 다시 시도해 주세요.', 'Couldn\'t create the video data. Please try again.'));
 
     return new Blob(chunks, { type: mimeType });
   } finally {

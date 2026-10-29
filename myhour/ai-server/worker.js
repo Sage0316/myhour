@@ -78,6 +78,8 @@ function validRequest(body) {
   if (body.intensity !== undefined && !INTENSITY_LABELS.includes(body.intensity)) return false;
   // mood는 선택값. 강도만 바꿔 다시 부를 때 무드가 튀지 않도록 화면에 보이는 값을 고정한다
   if (body.mood !== undefined && !MOOD_CHIPS.includes(body.mood)) return false;
+  // lang은 선택값. 영어판(MyHour)은 'en'을 보내 제목·마무리·자막을 영어로 받는다. 구버전 앱은 안 보낸다(=한국어)
+  if (body.lang !== undefined && body.lang !== 'ko' && body.lang !== 'en') return false;
   if (!Array.isArray(body.records) || body.records.length < 1 || body.records.length > 96) return false;
   return body.records.every(record =>
     record && typeof record === 'object'
@@ -115,8 +117,17 @@ const CLICHE_CLOSING_PATTERNS = [
 
 // 사용자가 쓴 문장을 그대로 되돌려주지 않는다 — 마지막 기록을 복붙한 마무리는
 // "하루 요약"이 아니라 메아리라서, 타입별 중립 문장만 쓴다
-function fallbackClosing(records) {
+function fallbackClosing(records, lang) {
   const last = records.at(-1);
+  if (lang === 'en') {
+    return {
+      text: 'Wrote one last line and closed the day.',
+      photo: 'Left one last photo for the day.',
+      video: 'Left one last clip for the day.',
+      audio: 'Left one last voice note for the day.',
+      meme: 'Saved one last picture for the day.',
+    }[last?.type] ?? 'Closed the day with one last moment.';
+  }
   return {
     text: '마지막 문장을 쓰고 하루를 닫았다.',
     photo: '마지막으로 사진 한 장을 남겼다.',
@@ -132,7 +143,7 @@ function isGenericClosing(closing) {
   return CLICHE_CLOSING_PATTERNS.some(pattern => pattern.test(closing));
 }
 
-export function normalizeResult(value, records, lockedMood) {
+export function normalizeResult(value, records, lockedMood, lang) {
   const recordCount = records.length;
   if (!value || typeof value !== 'object') return value;
   const trimAll = (list, max) => (Array.isArray(list) ? list : [])
@@ -141,7 +152,7 @@ export function normalizeResult(value, records, lockedMood) {
   const rawClosing = String(value.closing ?? '').trim().slice(0, 80);
   const closing = rawClosing && !isGenericClosing(rawClosing)
     ? rawClosing
-    : fallbackClosing(records);
+    : fallbackClosing(records, lang);
   return {
     ...value,
     title: String(value.title ?? '').trim().slice(0, 30),
@@ -189,7 +200,7 @@ async function rateAllowed(env, key) {
   return (await env.AI_RATE_LIMITER.limit({ key })).success;
 }
 
-function buildPrompt(body) {
+export function buildPrompt(body) {
   const lines = body.records.map((record, index) => {
     const parts = [`[${index + 1}] ${record.slotTime} · ${record.type}`];
     if (record.content) parts.push(`내용: ${record.content}`);
@@ -200,6 +211,16 @@ function buildPrompt(body) {
   // 사용자가 화면에서 보고 있는 무드. 강도만 바꿔 다시 부를 때 무드가 튀지 않도록 고정한다.
   const moodLock = body.mood
     ? `\n- **이번 요청은 moodChip을 반드시 "${body.mood}"로 유지하세요.** 사용자가 이미 그 무드로 보고 있습니다`
+    : '';
+
+  // 영어판: 규칙은 그대로 두고 사람에게 보이는 글만 영어로 쓰게 한다. moodChip·bgmTrack은 키라서 그대로다.
+  const english = body.lang === 'en'
+    ? `\n\n출력 언어 (가장 중요):
+- 이 사용자는 영어 사용자입니다. title, closing, mood, bgMusic, captions는 **모두 자연스러운 영어**로 쓰세요. 기록이 한국어여도 영어로 씁니다
+- 영어 길이: title 24자 이내, closing 70자 이내, mood 36자 이내, 각 caption 26자 이내
+- 영어 문체도 담백하고 건조하게, 일기처럼. 자막은 짧고 캐주얼하게 (예: "first coffee of the day", "this is why I clock out")
+- 클리셰 금지: "little moments make me who I am", "small joys", "a day well lived", "another day, another blessing" 같은 말 쓰지 말 것
+- moodChip과 bgmTrack은 아래에 적힌 한국어/영문 값 그대로 (번역하지 말 것)`
     : '';
 
   return `당신은 일상 브이로그 영상의 편집자입니다. 오늘(${body.date})의 기록으로 짧은 회고 영상을 편집합니다.
@@ -228,7 +249,7 @@ ${lines}
 - closing에는 반드시 실제 기록에 나온 구체적인 단어나 사물 이름을 하나 이상 그대로 넣을 것. "그 시간", "그 한 줄", "이 순간"처럼 기록 내용 없이도 쓸 수 있는 문장 금지.
 - 기록에 실제로 나온 단어와 장면을 재료로 쓸 것. 일반론 금지.
 - 제목은 명사구로 짧게 끊어도 좋음 (예: "커피 두 잔의 날", "결국 또 떡볶이").
-- 자막은 툭 던지는 반말 (예: "오늘의 첫 커피", "이 맛에 퇴근하지").
+- 자막은 툭 던지는 반말 (예: "오늘의 첫 커피", "이 맛에 퇴근하지").${english}
 
 아래 JSON만 응답하세요 (설명 없이):
 {
@@ -337,7 +358,7 @@ async function callProvider(body, env) {
     console.error('provider_output_not_json');
     throw new Error('invalid_provider_output');
   }
-  const result = normalizeResult(parsed, body.records, body.mood);
+  const result = normalizeResult(parsed, body.records, body.mood, body.lang);
   if (!validResult(result, body.records.length)) {
     console.error('provider_output_invalid');
     throw new Error('invalid_provider_output');

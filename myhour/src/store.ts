@@ -535,10 +535,10 @@ export function intervalLabel(v: number) {
 }
 
 export function notifyLabel(v: AppSettings['notifyTiming']) {
-  return v === 'before' ? '1분 전' : v === 'exact' ? '기록 시각' : '둘 다';
+  return v === 'before' ? L('1분 전', '1 min before') : v === 'exact' ? L('기록 시각', 'On time') : L('둘 다', 'Both');
 }
 
 export function captureModeLabel(v: AppSettings['captureMode']) {
-  return v === 'choose' ? '매번 선택' : '하나로 고정';
+  return v === 'choose' ? L('매번 선택', 'Ask each time') : L('하나로 고정', 'Always the same');
 }
 

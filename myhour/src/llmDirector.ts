@@ -4,6 +4,7 @@ import {
   dedupe, directorCacheKey, readDirectorCache, stableHash, writeDirectorCache,
 } from './directorCache';
 import { MOOD_LIST } from './store';
+import { getLang, L } from './i18n';
 
 const MOOD_NAMES = MOOD_LIST.map(item => item.mood) as unknown as [string, ...string[]];
 
@@ -14,7 +15,8 @@ export const AI_WORKER_URL = (import.meta.env.VITE_AI_WORKER_URL as string | und
 
 // 프롬프트나 응답 규격을 바꾸면 이 숫자를 올린다. 캐시 키에 들어가므로
 // 옛 프롬프트로 만든 결과가 새 프롬프트 결과와 섞이지 않는다.
-export const PROMPT_VERSION = 3;
+// 4: 영어판이 lang을 보내 영어로 받는다 (캐시 키에 들어가서, 언어를 바꾸면 다시 부른다)
+export const PROMPT_VERSION = 4;
 
 // 감정 강도 라벨 — 캐시 키의 단계(0·1·2)와 워커 프롬프트가 같은 말을 쓰게 한다
 export const INTENSITY_LABELS = ['약하게', '보통', '강하게'] as const;
@@ -29,13 +31,13 @@ export function toIntensityLevel(intensity: number): IntensityLevel {
 export type BgmTrack = 'calm' | 'bright' | 'emotional' | 'piano' | 'ukulele' | 'nostalgic' | 'sad';
 
 export const BGM_TRACKS: Record<BgmTrack, string> = {
-  calm: '여유로운 재즈',
-  bright: '경쾌한 팝·펑크',
-  emotional: '벅찬 시네마틱',
-  piano: '잔잔한 피아노',
-  ukulele: '장난스럽고 귀여운',
-  nostalgic: '따뜻한 노스탤지어',
-  sad: '차분한 슬픔·위로',
+  calm: L('여유로운 재즈', 'Easy jazz'),
+  bright: L('경쾌한 팝·펑크', 'Upbeat pop & funk'),
+  emotional: L('벅찬 시네마틱', 'Big cinematic'),
+  piano: L('잔잔한 피아노', 'Soft piano'),
+  ukulele: L('장난스럽고 귀여운', 'Playful & cute'),
+  nostalgic: L('따뜻한 노스탤지어', 'Warm nostalgia'),
+  sad: L('차분한 슬픔·위로', 'Quiet comfort'),
 };
 
 // 무드별 곡 풀 — AI는 무드만 고르고, 그 안에서 매번 랜덤으로 한 곡이 뽑힌다 (전곡 CC0, FreePD).
@@ -106,7 +108,7 @@ const MEDIA_BASE_URL = (
 ).replace(/\/$/, '');
 
 export function bgmAssetUrl(file: string): string {
-  if (!BGM_CATALOG.some(item => item.file === file)) throw new Error('지원하지 않는 BGM 파일이에요.');
+  if (!BGM_CATALOG.some(item => item.file === file)) throw new Error(L('지원하지 않는 BGM 파일이에요.', 'That music file isn’t supported.'));
   const name = encodeURIComponent(file);
   return `${MEDIA_BASE_URL}/bgm/${name}`;
 }
@@ -154,7 +156,7 @@ export function getInstallationId(): string {
 async function getInstallationToken(signal?: AbortSignal): Promise<string> {
   const cached = localStorage.getItem(AI_TOKEN_STORAGE);
   if (cached) return cached;
-  if (!AI_WORKER_URL) throw new Error('AI 서버가 아직 연결되지 않았어요.');
+  if (!AI_WORKER_URL) throw new Error(L('AI 서버가 아직 연결되지 않았어요.', 'The AI server isn’t connected yet.'));
   const response = await fetch(`${AI_WORKER_URL}/v1/install`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -162,7 +164,7 @@ async function getInstallationToken(signal?: AbortSignal): Promise<string> {
     signal,
   });
   const body = await response.json().catch(() => ({})) as { token?: string; error?: string };
-  if (!response.ok || !body.token) throw new Error(body.error ?? 'AI 연결을 만들지 못했어요.');
+  if (!response.ok || !body.token) throw new Error(body.error ?? L('AI 연결을 만들지 못했어요.', 'Couldn’t connect to the AI.'));
   localStorage.setItem(AI_TOKEN_STORAGE, body.token);
   return body.token;
 }
@@ -170,27 +172,27 @@ async function getInstallationToken(signal?: AbortSignal): Promise<string> {
 // 워커가 돌려주는 오류 코드를 사람이 읽을 문장으로 옮긴다.
 // 코드는 괄호에 남겨서, 문제가 생겼을 때 어느 단계에서 막혔는지 바로 알 수 있게 한다.
 const ERROR_MESSAGES: Record<string, string> = {
-  unauthorized: 'AI 연결이 만료됐어요. 다시 시도해 주세요.',
-  daily_quota_exceeded: '오늘 쓸 수 있는 AI 분석을 다 썼어요. 내일 다시 시도해 주세요.',
-  redo_limit_exceeded: '이 날은 AI 연출을 다시 하기 3번을 다 썼어요.',
-  subscription_required: 'AI 연출은 구독하면 쓸 수 있어요.',
-  standard_limit_reached: '이번 달 Standard 영상 15개를 다 썼어요.',
-  subscription_check_unavailable: '구독을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.',
-  rate_limit_exceeded: '요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
-  invalid_request: '기록 형식이 올바르지 않아 분석하지 못했어요.',
-  origin_not_allowed: '허용되지 않은 주소에서 온 요청이에요.',
-  provider_not_configured: 'AI 서버에 API 키가 설정되지 않았어요.',
-  provider_auth_failed: 'AI 서버의 API 키가 거절됐어요. 키를 다시 등록해 주세요.',
-  provider_forbidden: 'AI 서비스가 요청을 허용하지 않았어요. 모델·프로젝트 권한을 확인해 주세요.',
-  provider_rate_limited: 'AI 사용량 한도에 걸렸어요. 잠시 후 다시 시도해 주세요.',
-  provider_unavailable: 'AI 서버가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해 주세요.',
-  invalid_provider_output: 'AI 응답을 이해하지 못했어요. 다시 시도해 주세요.',
-  analysis_unavailable: 'AI 분석에 실패했어요. 잠시 후 다시 시도해 주세요.',
+  unauthorized: L('AI 연결이 만료됐어요. 다시 시도해 주세요.', 'The AI connection expired. Please try again.'),
+  daily_quota_exceeded: L('오늘 쓸 수 있는 AI 분석을 다 썼어요. 내일 다시 시도해 주세요.', 'You’ve used today’s AI edits. Try again tomorrow.'),
+  redo_limit_exceeded: L('이 날은 AI 연출을 다시 하기 3번을 다 썼어요.', 'You’ve used all 3 AI redos for this day.'),
+  subscription_required: L('AI 연출은 구독하면 쓸 수 있어요.', 'AI editing comes with a subscription.'),
+  standard_limit_reached: L('이번 달 Standard 영상 15개를 다 썼어요.', 'You’ve used all 15 Standard films this period.'),
+  subscription_check_unavailable: L('구독을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.', 'Couldn’t check your subscription. Please try again soon.'),
+  rate_limit_exceeded: L('요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.', 'Too many requests. Please try again soon.'),
+  invalid_request: L('기록 형식이 올바르지 않아 분석하지 못했어요.', 'Couldn’t read these records.'),
+  origin_not_allowed: L('허용되지 않은 주소에서 온 요청이에요.', 'This request came from an address that isn’t allowed.'),
+  provider_not_configured: L('AI 서버에 API 키가 설정되지 않았어요.', 'The AI server has no API key set.'),
+  provider_auth_failed: L('AI 서버의 API 키가 거절됐어요. 키를 다시 등록해 주세요.', 'The AI server’s API key was rejected.'),
+  provider_forbidden: L('AI 서비스가 요청을 허용하지 않았어요. 모델·프로젝트 권한을 확인해 주세요.', 'The AI service refused the request.'),
+  provider_rate_limited: L('AI 사용량 한도에 걸렸어요. 잠시 후 다시 시도해 주세요.', 'The AI is busy right now. Please try again soon.'),
+  provider_unavailable: L('AI 서버가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해 주세요.', 'The AI server isn’t responding. Please try again soon.'),
+  invalid_provider_output: L('AI 응답을 이해하지 못했어요. 다시 시도해 주세요.', 'Couldn’t understand the AI’s answer. Please try again.'),
+  analysis_unavailable: L('AI 분석에 실패했어요. 잠시 후 다시 시도해 주세요.', 'AI editing failed. Please try again soon.'),
 };
 
 function directorError(code: string | undefined, status: number): Error {
-  if (!code) return new Error(`AI 분석 오류 (${status})`);
-  return new Error(`${ERROR_MESSAGES[code] ?? 'AI 분석에 실패했어요.'} (${code})`);
+  if (!code) return new Error(L(`AI 분석 오류 (${status})`, `AI error (${status})`));
+  return new Error(`${ERROR_MESSAGES[code] ?? L('AI 분석에 실패했어요.', 'AI editing failed.')} (${code})`);
 }
 
 // AI에 실제로 보내는 기록 페이로드. 캐시 해시도 **이 함수 결과**로 만든다 —
@@ -214,7 +216,8 @@ export function directorKeyFor(
     installationId: getInstallationId(),
     date,
     // 무드도 키에 넣는다. 무드를 고정해서 부른 결과와 고정 없이 부른 결과는 다른 응답이다.
-    recordsHash: stableHash(JSON.stringify({ r: directorRecordsPayload(records), m: mood ?? '' })),
+    // 언어도 섞는다 — 한국어로 받은 연출을 영어 화면에 그대로 쓰면 안 된다 (한국어는 예전 키와 같게 둔다)
+    recordsHash: stableHash(JSON.stringify({ r: directorRecordsPayload(records), m: mood ?? '', ...(getLang() === 'en' ? { l: 'en' } : {}) })),
     intensityLevel,
     promptVersion: PROMPT_VERSION,
   });
@@ -227,7 +230,7 @@ async function requestDirector(
   mood?: string,
   signal?: AbortSignal,
 ): Promise<DirectorOutput> {
-  if (!hasAIConsent()) throw new Error('AI 분석 동의가 필요해요.');
+  if (!hasAIConsent()) throw new Error(L('AI 분석 동의가 필요해요.', 'Please allow AI editing first.'));
   const payload = JSON.stringify({
     date: dateStr.slice(0, 40),
     records: directorRecordsPayload(records),
@@ -237,6 +240,7 @@ async function requestDirector(
     // 화면에 보이는 무드를 같이 보내 고정한다. 강도만 올렸는데 잔잔함이 분노로
     // 바뀌던 문제 때문이다 — 강도는 감정의 세기지 감정의 종류가 아니다.
     ...(mood ? { mood } : {}),
+    lang: getLang(),
     promptVersion: PROMPT_VERSION,
   });
   const post = async (token: string) => fetch(`${AI_WORKER_URL}/v1/direct`, {

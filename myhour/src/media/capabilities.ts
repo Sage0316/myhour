@@ -1,4 +1,5 @@
 import type { RecordType } from '../store';
+import { L } from '../i18n';
 
 export const CAPTURE_LIMITS: Record<Exclude<RecordType, 'text'>, number> = {
   photo: 25 * 1024 * 1024,
@@ -26,7 +27,10 @@ export async function checkCaptureCapacity(
       allowed: false,
       availableBytes: null,
       limitBytes,
-      reason: `${type === 'photo' || type === 'meme' ? '사진' : type === 'video' ? '영상' : '음성'} 크기 제한을 초과했어요.`,
+      reason: L(
+        `${type === 'photo' || type === 'meme' ? '사진' : type === 'video' ? '영상' : '음성'} 크기 제한을 초과했어요.`,
+        `This ${type === 'photo' || type === 'meme' ? 'photo' : type === 'video' ? 'video' : 'recording'} is too large.`,
+      ),
     };
   }
 
@@ -39,7 +43,7 @@ export async function checkCaptureCapacity(
       allowed: false,
       availableBytes,
       limitBytes,
-      reason: '기기 저장공간이 부족해요. 기존 기록을 백업한 뒤 공간을 확보해주세요.',
+      reason: L('기기 저장공간이 부족해요. 기존 기록을 백업한 뒤 공간을 확보해주세요.', 'Your device is low on storage. Back up your records, then free up some space.'),
     };
   }
   return { allowed: true, availableBytes, limitBytes };
@@ -50,7 +54,7 @@ export async function assertCaptureCapacity(
   blob: Blob,
 ): Promise<void> {
   const report = await checkCaptureCapacity(type, blob.size);
-  if (!report.allowed) throw new Error(report.reason ?? '미디어를 저장할 수 없어요.');
+  if (!report.allowed) throw new Error(report.reason ?? L('미디어를 저장할 수 없어요.', 'Couldn\'t save this media.'));
 }
 
 export async function hashBlob(blob: Blob): Promise<string> {

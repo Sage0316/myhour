@@ -15,6 +15,7 @@ import { AppProvider } from './context';
 import { useApp } from './appContext';
 import { getSessionDate } from './store';
 import { isNativeApp, syncReminders } from './notifications/localReminders';
+import { L } from './i18n';
 import './App.css';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -153,12 +154,12 @@ function AppContent() {
     );
   }
 
-  const mainLabel = showOnboarding ? '하꾸 · 설명서'
-    : modal === 'record' ? '하꾸 · 기록하기'
-    : modal === 'wrapup' ? '하꾸 · 하루 마감'
-    : activeTab === 'home' ? '하꾸 · 홈'
-    : activeTab === 'today' ? '하꾸 · 오늘'
-    : activeTab === 'archive' ? '하꾸 · 아카이브' : '하꾸 · 설정';
+  const mainLabel = showOnboarding ? L('하꾸 · 설명서', 'MyHour · Intro')
+    : modal === 'record' ? L('하꾸 · 기록하기', 'MyHour · Record')
+    : modal === 'wrapup' ? L('하꾸 · 하루 마감', 'MyHour · Wrap-up')
+    : activeTab === 'home' ? L('하꾸 · 홈', 'MyHour · Home')
+    : activeTab === 'today' ? L('하꾸 · 오늘', 'MyHour · Today')
+    : activeTab === 'archive' ? L('하꾸 · 아카이브', 'MyHour · Archive') : L('하꾸 · 설정', 'MyHour · Settings');
 
   return (
     <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '8px 0 48px' }}>

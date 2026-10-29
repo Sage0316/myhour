@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import worker, { normalizeResult, parseSubscriber } from './worker.js';
+import worker, { buildPrompt, normalizeResult, parseSubscriber } from './worker.js';
 
 class MemoryKV {
   values = new Map();
@@ -77,6 +77,14 @@ assert.equal(
   '마지막 문장을 쓰고 하루를 닫았다.',
   '빈 closing은 타입별 중립 문장으로 채운다',
 );
+// 영어판(MyHour): lang 'en'이면 프롬프트가 영어 출력을 요구하고, 빈 closing도 영어 문장으로 채운다
+assert.equal(
+  normalizeResult({ ...directorBase, closing: '' }, records, undefined, 'en').closing,
+  'Wrote one last line and closed the day.',
+  '영어판의 빈 closing은 영어 중립 문장으로 채운다',
+);
+assert.ok(buildPrompt({ date: 'Oct 29', records, lang: 'en' }).includes('자연스러운 영어'), '영어판 프롬프트는 영어 출력을 요구한다');
+assert.ok(!buildPrompt({ date: '10월 29일', records }).includes('자연스러운 영어'), '한국어 프롬프트에는 영어 지시가 없다');
 console.log('✅ AI AUTH/VALIDATION OK');
 
 // ── 프로바이더 오류 코드 구분 ────────────────────────────────────────────────

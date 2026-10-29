@@ -1,5 +1,6 @@
 import { generateSlots } from '../store';
 import type { AppSettings } from '../store';
+import { L } from '../i18n';
 
 /**
  * iOS 앱의 기록 시간 알림 계획. 폰 자체 예약 알림으로 걸기 때문에 서버가 필요 없다.
@@ -20,9 +21,9 @@ export interface Reminder {
   body: string;
 }
 
-const TITLE = '하꾸';
-const BODY_EXACT = '지금 이 순간을 기록해볼까요? 📸';
-const BODY_BEFORE = '1분 뒤 기록 시간이에요 ✏️';
+const TITLE = L('하꾸', 'MyHour');
+const BODY_EXACT = L('지금 이 순간을 기록해볼까요? 📸', 'Capture this moment? 📸');
+const BODY_BEFORE = L('1분 뒤 기록 시간이에요 ✏️', 'Time to record in 1 minute ✏️');
 
 function minutesOf(time: string): number {
   const [h, m] = time.split(':').map(Number);

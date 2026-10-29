@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { L } from '../i18n';
 import { useApp } from '../appContext';
-import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate } from '../store';
+import { TYPE_COLORS, MOOD_LIST, guessMood, generateTitle, generateClosing, getDateStrings, getSessionDate, moodLabel } from '../store';
 import type { MoodItem } from '../store';
 import { ensureDiaryFont, fallbackEmojisFor, splitEmojis } from '../scenes';
 import {
@@ -206,7 +206,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
       applyDirector(out, aiKey);
     } catch (e) {
       if (!controller.signal.aborted) {
-        setAnalyzeError(e instanceof Error ? e.message : 'AI 분석 실패');
+        setAnalyzeError(e instanceof Error ? e.message : L('AI 분석 실패', 'AI analysis failed'));
       }
     } finally {
       if (!controller.signal.aborted) setAnalyzing(false);
@@ -222,7 +222,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
   async function handleGenerate() {
     if (records.length === 0 || generating) return;
     if (alreadyGenerated) {
-      setGenError('이 날짜는 이미 영상을 만들었어요. 아카이브에서 확인할 수 있어요.');
+      setGenError(L('이 날짜는 이미 영상을 만들었어요. 아카이브에서 확인할 수 있어요.', 'You already made a film for this day. Find it in your archive.'));
       return;
     }
     if (access === null) return;
@@ -251,7 +251,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
         captions: director?.captions,
         recordEmojis: director?.recordEmojis,
       }, msg => warnings.push(msg), abortController.signal);
-      if (warnings.length > 0) alert('영상은 생성됐지만 문제가 있었어요:\n\n' + warnings.join('\n'));
+      if (warnings.length > 0) alert(L('영상은 생성됐지만 문제가 있었어요:\n\n', 'Your film is ready, but something went wrong:\n\n') + warnings.join('\n'));
       if (entry) {
         // 아카이브 모드: 새 항목을 만들지 않고 기존 항목에 영상을 붙인다
         await saveVideoToIDB(archiveVideoKey(entry), blob);
@@ -264,8 +264,8 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
       }
     } catch (e) {
       const msg = e instanceof DOMException && e.name === 'AbortError'
-        ? '영상 생성을 취소했어요. 원본 기록은 그대로 보존됐어요.'
-        : e instanceof Error ? e.message : '영상 생성에 실패했어요';
+        ? L('영상 생성을 취소했어요. 원본 기록은 그대로 보존됐어요.', 'Film canceled. Your records are safe.')
+        : e instanceof Error ? e.message : L('영상 생성에 실패했어요', "Couldn't make the film");
       setGenError(msg);
       setGenerating(false);
     } finally {
@@ -278,28 +278,28 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
       const result = wrapUpService.skip(sessionDate, records, selectedMood.mood);
       onSave(result.archiveId);
     } catch {
-      setGenError('저장에 실패했어요. 저장 공간이 부족할 수 있어요.');
+      setGenError(L('저장에 실패했어요. 저장 공간이 부족할 수 있어요.', "Couldn't save. Your phone may be low on storage."));
     }
   }
 
   return (
-    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={entry ? '지난 날짜 영상 만들기' : '하루 마감'} style={SCREEN}>
+    <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={entry ? L('지난 날짜 영상 만들기', 'Make a film for a past day') : L('하루 마감', 'Wrap up the day')} style={SCREEN}>
       <div className="scroll-column" style={{ flex: 1, padding: `${topPad(52)} 22px 0`, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', overflowX: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ ...TAPE_GREEN(), alignSelf: 'center' }}>{entry ? '영상 만들기' : '하루 마감'} · {dateShort}</span>
-          <button onClick={onClose} aria-label={entry ? '영상 만들기 닫기' : '하루 마감 닫기'} style={{ width: 44, height: 44, marginRight: -10, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', padding: 0 }}>
+          <span style={{ ...TAPE_GREEN(), alignSelf: 'center' }}>{entry ? L('영상 만들기', 'Make film') : L('하루 마감', 'Wrap up')} · {dateShort}</span>
+          <button onClick={onClose} aria-label={entry ? L('영상 만들기 닫기', 'Close film maker') : L('하루 마감 닫기', 'Close wrap-up')} style={{ width: 44, height: 44, marginRight: -10, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', padding: 0 }}>
             <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
         </div>
 
         <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: '-0.6px', lineHeight: 1.2 }}>
-          {entry ? '이 날을 영상으로' : '오늘을 영상으로'}<br />
-          <span style={{ color: COLOR.red }}>{entry ? '만들어요' : '마무리해요'}</span>
+          {entry ? L('이 날을 영상으로', 'Turn this day') : L('오늘을 영상으로', 'Wrap up today')}<br />
+          <span style={{ color: COLOR.red }}>{entry ? L('만들어요', 'into a film') : L('마무리해요', 'as a film')}</span>
         </h1>
 
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: COLOR.inkSub, marginBottom: 9 }}>
-            {entry ? '이 날 남긴 기록' : '오늘 남긴 기록'} · {records.length}
+            {entry ? L('이 날 남긴 기록', 'Records from this day') : L('오늘 남긴 기록', "Today's records")} · {records.length}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {clipColors.map((bg, i) => (
@@ -317,13 +317,13 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
         <div style={{ ...CARD, position: 'relative', borderRadius: 18, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div aria-hidden="true" style={{ position: 'absolute', top: -10, right: 34, width: 58, height: 18, background: 'rgba(240,170,170,0.8)', transform: 'rotate(5deg)' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={highlight('rgba(255,214,90,0.85)')}>{entry ? '이 날의 기록' : '오늘의 기록'}</div>
+            <div style={highlight('rgba(255,214,90,0.85)')}>{entry ? L('이 날의 기록', 'This day') : L('오늘의 기록', 'Today')}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 50, border: `1px solid ${COLOR.ink}`, background: selectedMood.color, fontSize: 12, fontWeight: 600 }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: selectedMood.dot, display: 'inline-block' }} />
-                {selectedMood.mood}
+                {moodLabel(selectedMood.mood)}
               </span>
-              <button type="button" onClick={() => setShowMoodPicker(v => !v)} aria-expanded={showMoodPicker} style={PILL_BUTTON}>바꾸기</button>
+              <button type="button" onClick={() => setShowMoodPicker(v => !v)} aria-expanded={showMoodPicker} style={PILL_BUTTON}>{L('바꾸기', 'Change')}</button>
             </div>
           </div>
 
@@ -338,7 +338,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                   cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, minHeight: 36,
                 }}>
                   <span style={{ width: 5, height: 5, borderRadius: '50%', background: m.dot, display: 'inline-block' }} />
-                  {m.mood}
+                  {moodLabel(m.mood)}
                 </button>
               ))}
             </div>
@@ -347,7 +347,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
           <div>
             {analyzing ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.5 }}>
-                <div style={{ fontSize: 13, color: COLOR.inkSub }}>AI가 연출 중이에요…</div>
+                <div style={{ fontSize: 13, color: COLOR.inkSub }}>{L('AI가 연출 중이에요…', 'The AI is directing…')}</div>
               </div>
             ) : (
               <>
@@ -361,15 +361,15 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                       onKeyDown={e => { if (e.key === 'Enter') commitTitle(); }}
                       autoFocus
                       maxLength={TITLE_MAX}
-                      aria-label="영상 제목"
+                      aria-label={L('영상 제목', 'Film title')}
                       style={{ flex: 1, minWidth: 0, height: 40, borderRadius: 10, border: `1.5px solid ${COLOR.ink}`, padding: '0 10px', fontSize: 16, fontWeight: 600, fontFamily: FONT_BODY, color: COLOR.ink, background: COLOR.white }}
                     />
-                    <button type="button" onClick={commitTitle} style={{ ...PILL_BUTTON, minHeight: 40, background: COLOR.ink, color: COLOR.white }}>확인</button>
+                    <button type="button" onClick={commitTitle} style={{ ...PILL_BUTTON, minHeight: 40, background: COLOR.ink, color: COLOR.white }}>{L('확인', 'Done')}</button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
                     <div style={{ flex: 1, fontSize: 19, fontWeight: 700, letterSpacing: '-0.3px', lineHeight: 1.35 }}>{title}</div>
-                    <button type="button" onClick={startEditingTitle} style={{ ...PILL_BUTTON, flexShrink: 0, background: '#FFF6C9' }}>제목 수정</button>
+                    <button type="button" onClick={startEditingTitle} style={{ ...PILL_BUTTON, flexShrink: 0, background: '#FFF6C9' }}>{L('제목 수정', 'Edit title')}</button>
                   </div>
                 )}
                 <div style={{ fontSize: 14, color: COLOR.inkSub, marginTop: 7, lineHeight: 1.5 }}>“{closing}”</div>
@@ -384,7 +384,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                 <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8z" /><path d="M4 11 3.2 7.6a1 1 0 0 1 .7-1.2L17 3l.9 3.4z" /><path d="M8 5.6l2.4 3.3M12.5 4.4l2.4 3.3" /></svg>
-                    <span style={{ fontSize: 15, fontWeight: 700 }}>AI 촬영감독의 연출 노트</span>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>{L('AI 촬영감독의 연출 노트', "AI director's notes")}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <span style={{ fontSize: 22, flexShrink: 0 }}>{director.emojis}</span>
@@ -431,12 +431,12 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               }}
             >
               {analyzing
-                ? 'AI가 연출 중...'
+                ? L('AI가 연출 중...', 'AI directing...')
                 : directorIsCurrent
-                  ? '이 강도로 연출 적용됨'
+                  ? L('이 강도로 연출 적용됨', 'Applied at this intensity')
                   : director
-                    ? '바뀐 강도로 다시 연출하기'
-                    : 'AI에게 연출 맡기기'}
+                    ? L('바뀐 강도로 다시 연출하기', 'Redirect at new intensity')
+                    : L('AI에게 연출 맡기기', 'Let AI direct')}
             </button>
           )}
 
@@ -444,10 +444,13 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
             <div style={{ border: `1.5px solid ${COLOR.ink}`, borderRadius: 12, background: '#FFFDF6', padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ flex: 1, fontSize: 13, color: COLOR.inkSub, lineHeight: 1.5 }}>
                 {access?.kind === 'standard_used_up'
-                  ? `이번 달 영상 15개를 다 만들었어요.${access.resetsAt ? ` ${formatMonthDay(access.resetsAt)}에 다시 채워져요.` : ''}`
-                  : 'AI 연출과 하루 영상은 구독으로 만들어요. 3일은 무료예요.'}
+                  ? L(
+                    `이번 달 영상 15개를 다 만들었어요.${access.resetsAt ? ` ${formatMonthDay(access.resetsAt)}에 다시 채워져요.` : ''}`,
+                    `You've made all 15 films this month.${access.resetsAt ? ` More on ${formatMonthDay(access.resetsAt)}.` : ''}`,
+                  )
+                  : L('AI 연출과 하루 영상은 구독으로 만들어요. 3일은 무료예요.', 'AI directing and daily films come with a subscription. First 3 days free.')}
               </span>
-              <button type="button" onClick={() => setPaywallOpen(true)} style={{ ...PILL_BUTTON, flexShrink: 0, background: COLOR.yellow }}>요금제 보기</button>
+              <button type="button" onClick={() => setPaywallOpen(true)} style={{ ...PILL_BUTTON, flexShrink: 0, background: COLOR.yellow }}>{L('요금제 보기', 'See plans')}</button>
             </div>
           )}
 
@@ -468,10 +471,10 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                 background: 'transparent', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink,
               }}
             >
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>AI가 정한 거 바꾸기</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>{L('AI가 정한 거 바꾸기', 'Change what AI picked')}</span>
               {/* 접힌 채로도 지금 값이 보이게 — 펼쳐야만 알 수 있으면 접은 의미가 없다 */}
               <span style={{ fontSize: 12, color: COLOR.inkMuted, whiteSpace: 'nowrap' }}>
-                {activeEmoji} · {selectedMood.mood} {intensity}
+                {activeEmoji} · {moodLabel(selectedMood.mood)} {intensity}
               </span>
               <span aria-hidden="true" style={{
                 fontSize: 11, color: COLOR.inkSub,
@@ -485,7 +488,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               style={{ display: tuningOpen ? 'flex' : 'none', flexDirection: 'column', gap: 9 }}
             >
             <div style={{ fontSize: 12, color: COLOR.inkMuted, lineHeight: 1.5 }}>
-              그냥 두면 AI가 정한 대로 만들어져요. 바꾸고 싶을 때만 고르세요.
+              {L('그냥 두면 AI가 정한 대로 만들어져요. 바꾸고 싶을 때만 고르세요.', "Leave it and the AI's picks are used. Change only what you want.")}
             </div>
             <div style={{ display: 'flex', gap: 7 }}>
               {emojiChoices.map(emoji => (
@@ -493,7 +496,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                   key={emoji}
                   onClick={() => setEmojiPick(emoji)}
                   aria-pressed={emoji === activeEmoji}
-                  aria-label={`무드 이모지 ${emoji}`}
+                  aria-label={L(`무드 이모지 ${emoji}`, `Mood emoji ${emoji}`)}
                   style={{
                     flex: 1, height: 38, borderRadius: 11,
                     background: emoji === activeEmoji ? COLOR.yellow : COLOR.white,
@@ -507,9 +510,9 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: COLOR.inkSub }}>
-                <span>{selectedMood.mood}</span><span style={MONO}>{intensity}</span>
+                <span>{moodLabel(selectedMood.mood)}</span><span style={MONO}>{intensity}</span>
               </div>
-              <input type="range" min={0} max={100} value={intensity} onChange={e => setIntensityPick(Number(e.target.value))} aria-label={`${selectedMood.mood} 정도`} style={{ width: '100%', marginTop: 8, accentColor: COLOR.red }} />
+              <input type="range" min={0} max={100} value={intensity} onChange={e => setIntensityPick(Number(e.target.value))} aria-label={L(`${selectedMood.mood} 정도`, `${moodLabel(selectedMood.mood)} intensity`)} style={{ width: '100%', marginTop: 8, accentColor: COLOR.red }} />
             </div>
             </div>
           </div>
@@ -518,18 +521,18 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
         {generating ? (
           <div style={{ ...NIGHT, height: NIGHT_BOX_HEIGHT, boxSizing: 'border-box', borderRadius: 20, border: `1.5px solid ${COLOR.ink}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 28px' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>
-              영상 만드는 중 · {Math.round(progress * 100)}%
+              {L('영상 만드는 중', 'Making film')} · {Math.round(progress * 100)}%
             </div>
             <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.2)', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 3, background: COLOR.yellow, width: `${progress * 100}%`, transition: 'width 0.3s ease' }} />
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,246,201,0.75)', marginTop: -4 }}>영상이 생성되는 동안 화면을 유지해 주세요</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,246,201,0.75)', marginTop: -4 }}>{L('영상이 생성되는 동안 화면을 유지해 주세요', 'Keep this screen open while your film is made')}</div>
             <button
               type="button"
               onClick={() => generationAbortRef.current?.abort()}
               style={{ ...PILL_BUTTON, minHeight: 40 }}
             >
-              생성 취소
+              {L('생성 취소', 'Cancel')}
             </button>
           </div>
         ) : (
@@ -538,17 +541,17 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               type="button"
               onClick={handleGenerate}
               disabled={records.length === 0 || alreadyGenerated}
-              aria-label="오늘 기록으로 영상 생성하기"
+              aria-label={L('오늘 기록으로 영상 생성하기', "Make a film from today's records")}
               style={{ ...NIGHT, width: '100%', height: NIGHT_BOX_HEIGHT, boxSizing: 'border-box', position: 'relative', borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: records.length === 0 || alreadyGenerated ? 'default' : 'pointer', opacity: records.length === 0 || alreadyGenerated ? 0.5 : 1, border: `1.5px solid ${COLOR.ink}`, fontFamily: FONT_BODY }}
             >
               <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" style={{ position: 'absolute', left: 18, top: 14, transform: 'rotate(-12deg)' }}><path d="M12 2.5l2.6 6 6.4.6-4.9 4.2 1.5 6.3L12 16.3 6.4 19.6l1.5-6.3L3 9.1l6.4-.6z" fill="#FFD25A" stroke={COLOR.ink} strokeWidth="1.4" strokeLinejoin="round" /></svg>
               <div style={{ width: 52, height: 52, borderRadius: 26, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill={COLOR.navy}><path d="M7 4.5v15l12.5-7.5z" /></svg>
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>{entry ? '탭하면 이 날이 영상이 돼요' : '탭하면 오늘이 영상이 돼요'}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>{entry ? L('탭하면 이 날이 영상이 돼요', 'Tap to turn this day into a film') : L('탭하면 오늘이 영상이 돼요', 'Tap to turn today into a film')}</div>
             </button>
             {access?.kind === 'allowed' && access.remaining !== null && !alreadyGenerated && (
-              <div style={{ fontSize: 12, color: COLOR.inkMuted, textAlign: 'center' }}>이번 달 남은 영상 {access.remaining}개</div>
+              <div style={{ fontSize: 12, color: COLOR.inkMuted, textAlign: 'center' }}>{L(`이번 달 남은 영상 ${access.remaining}개`, `${access.remaining} films left this month`)}</div>
             )}
             {genError && (
               <div style={{ fontSize: 13, color: COLOR.red, lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>
@@ -566,7 +569,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
             ...(generating || records.length === 0 || alreadyGenerated ? BUTTON_DISABLED : {}),
           }}
         >
-          {generating ? '생성 중...' : alreadyGenerated ? '이미 만든 하루' : '영상 만들기'}
+          {generating ? L('생성 중...', 'Making...') : alreadyGenerated ? L('이미 만든 하루', 'Already made') : L('영상 만들기', 'Make film')}
         </button>
         {/* 아카이브 항목은 이미 저장돼 있으므로 "영상 없이 마감"이 할 일이 없다 */}
         {!entry && (
@@ -578,7 +581,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               ...(generating ? BUTTON_DISABLED : {}),
             }}
           >
-            영상 없이 마감
+            {L('영상 없이 마감', 'Skip film')}
           </button>
         )}
       </div>

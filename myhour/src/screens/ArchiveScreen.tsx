@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadArchive, guessMood, MOOD_LIST, generateTitle, TYPE_COLORS, TYPE_LABELS, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, needsTrimNotice, daysUntilTrim, getSessionDate, loadSettings } from '../store';
+import { loadArchive, guessMood, MOOD_LIST, generateTitle, TYPE_COLORS, TYPE_LABELS, moodLabel, hasMedia, loadVideoFromIDB, loadVideoBlobFromIDB, archiveVideoKey, removeFromArchive, deleteVideoFromIDB, sweepArchive, needsTrimNotice, daysUntilTrim, getSessionDate, loadSettings } from '../store';
 import type { MyRecord, ArchiveEntry } from '../store';
 import { useMediaSrc } from '../useMediaSrc';
+import { L } from '../i18n';
 import TabBar from '../components/TabBar';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 import { shareFileNative } from '../native/shareFile';
@@ -103,7 +104,7 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
   function handleReels(e: React.MouseEvent) {
     e.stopPropagation();
     if (!blob) return;
-    shareToReels(blob).catch(error => alert(error instanceof Error ? error.message : '인스타그램을 열지 못했어요.'));
+    shareToReels(blob).catch(error => alert(error instanceof Error ? error.message : L('인스타그램을 열지 못했어요.', 'Couldn\'t open Instagram.')));
   }
 
   function handleSave(e: React.MouseEvent) {
@@ -112,7 +113,7 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
     const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
     if (isNativeApp()) {
       // iOS 앱: 공유 시트의 "동영상 저장"으로 사진 앱에 넣는다
-      shareFileNative(blob, `${filename}.${ext}`).catch(() => alert('영상을 저장하지 못했어요. 다시 시도해 주세요.'));
+      shareFileNative(blob, `${filename}.${ext}`).catch(() => alert(L('영상을 저장하지 못했어요. 다시 시도해 주세요.', 'Couldn\'t save the video. Please try again.')));
       return;
     }
     const file = new File([blob], `${filename}.${ext}`, { type: blob.type || 'video/mp4' });
@@ -132,7 +133,7 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label="생성된 하루 영상"
+      aria-label={L('생성된 하루 영상', 'Your day film')}
       tabIndex={-1}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={onClose}
@@ -150,20 +151,20 @@ function VideoFullscreen({ url, blob, filename, onClose }: { url: string; blob: 
           <button
             onClick={handleReels}
             disabled={!blob}
-            aria-label="인스타 릴스로 공유"
+            aria-label={L('인스타 릴스로 공유', 'Share to Instagram Reels')}
             style={{ ...actionStyle, background: COLOR.yellow }}
-          >인스타 릴스</button>
+          >{L('인스타 릴스', 'Reels')}</button>
         )}
         <button
           onClick={handleSave}
           disabled={!blob}
-          aria-label={native ? '저장하거나 다른 앱으로 공유' : '영상 다운로드'}
+          aria-label={native ? L('저장하거나 다른 앱으로 공유', 'Save or share to another app') : L('영상 다운로드', 'Download film')}
           style={actionStyle}
-        >{native ? '저장·공유' : '다운로드'}</button>
+        >{native ? L('저장·공유', 'Save · Share') : L('다운로드', 'Download')}</button>
       </div>
       <button
         onClick={onClose}
-        aria-label="영상 닫기"
+        aria-label={L('영상 닫기', 'Close film')}
         style={{
           position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 20,
           width: 44, height: 44, borderRadius: '50%',
@@ -215,20 +216,20 @@ function DetailRow({ record }: { record: MyRecord }) {
       )}
       {(record.type === 'photo' || record.type === 'meme') && (
         mediaSrc
-          ? <img src={mediaSrc} alt={record.caption ?? `${record.slotTime} 사진 기록`} style={{ width: '100%', borderRadius: 10, display: 'block' }} />
-          : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>미디어를 불러오지 못했어요</div>
+          ? <img src={mediaSrc} alt={record.caption ?? L(`${record.slotTime} 사진 기록`, `Photo at ${record.slotTime}`)} style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+          : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>{L('미디어를 불러오지 못했어요', 'Couldn\'t load this media')}</div>
       )}
       {record.type === 'audio' && (
         mediaSrc
           ? <audio src={mediaSrc} controls style={{ width: '100%', height: 36 }} />
-          : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>미디어를 불러오지 못했어요</div>
+          : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>{L('미디어를 불러오지 못했어요', 'Couldn\'t load this media')}</div>
       )}
       {record.type === 'video' && (
         clipUrl
           ? <video src={clipUrl} controls playsInline style={{ width: '100%', borderRadius: 10, display: 'block' }} />
           : record.content.startsWith('data:')
             ? <img src={record.content} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', opacity: 0.7 }} />
-            : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>미디어를 불러오지 못했어요</div>
+            : <div style={{ fontSize: 12, color: COLOR.inkMuted }}>{L('미디어를 불러오지 못했어요', 'Couldn\'t load this media')}</div>
       )}
       {record.caption && (
         <div style={{ fontSize: 13, color: COLOR.inkSub }}>{record.caption}</div>
@@ -245,7 +246,7 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={`${dateLabel(entry.date)}의 기록`}
+      aria-label={L(`${dateLabel(entry.date)}의 기록`, `Records from ${dateLabel(entry.date)}`)}
       tabIndex={-1}
       style={{ position: 'fixed', inset: 0, background: 'rgba(43,38,34,0.38)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
       onClick={onClose}
@@ -257,10 +258,10 @@ function DayDetailSheet({ entry, onClose }: { entry: ArchiveEntry; onClose: () =
         <div style={{ padding: '14px 20px 12px', borderBottom: `1.5px dashed ${COLOR.dash}`, flexShrink: 0 }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: COLOR.dash, margin: '0 auto 14px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>{dateLabel(entry.date)}의 기록</div>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>{L(`${dateLabel(entry.date)}의 기록`, `Records from ${dateLabel(entry.date)}`)}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontSize: 13, color: COLOR.inkMuted }}>{entry.records.length}개</div>
-              <button type="button" onClick={onClose} aria-label="기록 상세 닫기" style={{ width: 44, height: 44, marginRight: -10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              <div style={{ fontSize: 13, color: COLOR.inkMuted }}>{L(`${entry.records.length}개`, `${entry.records.length} items`)}</div>
+              <button type="button" onClick={onClose} aria-label={L('기록 상세 닫기', 'Close details')} style={{ width: 44, height: 44, marginRight: -10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
               </button>
             </div>
@@ -307,9 +308,9 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
   const trimNotice = (() => {
     if (!needsTrimNotice(entry)) return null;
     const left = daysUntilTrim(entry, getSessionDate(loadSettings().startTime));
-    if (left <= 0) return { text: '사진과 음성이 곧 정리돼요. 남기려면 오늘 영상으로 만들어 주세요.', urgent: true };
-    if (left === 1) return { text: '내일이면 사진과 음성이 정리돼요.', urgent: true };
-    return { text: `${left}일 뒤 사진과 음성이 정리돼요. 글은 남아요.`, urgent: false };
+    if (left <= 0) return { text: L('사진과 음성이 곧 정리돼요. 남기려면 오늘 영상으로 만들어 주세요.', 'Photos and audio will be cleared soon. Make a film today to keep them.'), urgent: true };
+    if (left === 1) return { text: L('내일이면 사진과 음성이 정리돼요.', 'Photos and audio will be cleared tomorrow.'), urgent: true };
+    return { text: L(`${left}일 뒤 사진과 음성이 정리돼요. 글은 남아요.`, `Photos and audio will be cleared in ${left} days. Text stays.`), urgent: false };
   })();
 
   const lead = entry.records.find(r => (r.type === 'photo' || r.type === 'meme') && hasMedia(r))
@@ -323,7 +324,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
   return (
     <>
       {fullscreen && videoUrl && (
-        <VideoFullscreen url={videoUrl} blob={videoBlob} filename={`하꾸-${entry.date}`} onClose={() => setFullscreen(false)} />
+        <VideoFullscreen url={videoUrl} blob={videoBlob} filename={L(`하꾸-${entry.date}`, `MyHour-${entry.date}`)} onClose={() => setFullscreen(false)} />
       )}
       {showDetail && (
         <DayDetailSheet entry={entry} onClose={() => setShowDetail(false)} />
@@ -350,7 +351,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
 
           <button
             onClick={e => { e.stopPropagation(); onDelete(); }}
-            aria-label={`${dateLabel(entry.date)} 기록 삭제`}
+            aria-label={L(`${dateLabel(entry.date)} 기록 삭제`, `Delete ${dateLabel(entry.date)}`)}
             style={{
               position: 'absolute', top: 0, right: 0, width: 44, height: 44,
               background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0,
@@ -373,7 +374,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
           {genState === 'done' && videoUrl && (
             <button
               type="button"
-              aria-label="생성된 영상 전체 화면으로 보기"
+              aria-label={L('생성된 영상 전체 화면으로 보기', 'Watch film full screen')}
               onClick={() => setFullscreen(true)}
               style={{ position: 'absolute', inset: 0, width: '100%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(31,58,107,0.22)', cursor: 'pointer' }}
             >
@@ -390,7 +391,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
           <button
             type="button"
             onClick={() => setShowDetail(true)}
-            aria-label={`${dateLabel(entry.date)} 기록 보기`}
+            aria-label={L(`${dateLabel(entry.date)} 기록 보기`, `View ${dateLabel(entry.date)}`)}
             style={{ width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT_BODY, color: COLOR.ink }}
           >
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -400,7 +401,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
               background: mood.color, fontSize: 11, fontWeight: 600,
             }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: mood.dot, display: 'inline-block' }} />
-              {mood.mood}
+              {moodLabel(mood.mood)}
             </span>
           </div>
           <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
@@ -408,7 +409,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
             {[...new Set(entry.records.map(r => TYPE_LABELS[r.type]))].join(' · ')}
           </div>
 
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#3B557A', marginTop: 3 }}>기록 보기 ›</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#3B557A', marginTop: 3 }}>{L('기록 보기 ›', 'View records ›')}</div>
           </button>
 
           {/* 정리 예고. 푸시는 쓰지 않으므로 이 배지가 유일한 알림 수단이다 —
@@ -429,7 +430,7 @@ function ArchiveCard({ entry, onDelete, onMakeVideo, initialOpen = false }: { en
           {genState === 'idle' && !entry.trimmed && (
             <button onClick={() => onMakeVideo(entry)} style={{
               ...BUTTON_PRIMARY, marginTop: 8, width: '100%', minHeight: 44, borderRadius: 12, fontSize: 13,
-            }}>영상 만들기</button>
+            }}>{L('영상 만들기', 'Make film')}</button>
           )}
 
         </div>
@@ -442,7 +443,7 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
   const [entries, setEntries] = useState<ArchiveEntry[]>(() => { sweepArchive(); return loadArchive(); });
 
   function handleDelete(entry: ArchiveEntry) {
-    if (!confirm('이 항목의 기록과 영상을 삭제할까요?\n삭제하면 되돌릴 수 없어요.')) return;
+    if (!confirm(L('이 항목의 기록과 영상을 삭제할까요?\n삭제하면 되돌릴 수 없어요.', 'Delete this day\'s records and video?\nThis can\'t be undone.'))) return;
     removeFromArchive(entry);
     deleteVideoFromIDB(archiveVideoKey(entry));
     setEntries(loadArchive());
@@ -469,13 +470,13 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
     return (
       <div style={SCREEN}>
         <div style={{ padding: `${topPad(58)} 22px 12px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={TAPE_GREEN()}>모아둔 하루</span>
-          <h1 style={TITLE}>아카이브</h1>
+          <span style={TAPE_GREEN()}>{L('모아둔 하루', 'Saved days')}</span>
+          <h1 style={TITLE}>{L('아카이브', 'Archive')}</h1>
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center', lineHeight: 1.7 }}>
-            아직 저장된 하루가 없어요<br />
-            <span style={{ fontSize: 13, fontWeight: 400, color: COLOR.inkMuted }}>하루를 마무리하면 여기에 쌓여요</span>
+            {L('아직 저장된 하루가 없어요', 'No saved days yet')}<br />
+            <span style={{ fontSize: 13, fontWeight: 400, color: COLOR.inkMuted }}>{L('하루를 마무리하면 여기에 쌓여요', 'Wrap up a day and it\'ll show up here')}</span>
           </div>
         </div>
         <TabBar active="archive" onTabChange={onTabChange} />
@@ -486,8 +487,8 @@ export default function ArchiveScreen({ onTabChange, initialArchiveId, onMakeVid
   return (
     <div style={SCREEN}>
       <div style={{ padding: `${topPad(58)} 22px 12px`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={TAPE_GREEN()}>모아둔 하루</span>
-        <h1 style={TITLE}>아카이브</h1>
+        <span style={TAPE_GREEN()}>{L('모아둔 하루', 'Saved days')}</span>
+        <h1 style={TITLE}>{L('아카이브', 'Archive')}</h1>
         {months.length > 1 && (
           <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             {months.map(m => (

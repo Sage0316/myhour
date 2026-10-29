@@ -1,4 +1,5 @@
 import type { AppSettings } from './store';
+import { L } from './i18n';
 
 export const PUSH_SERVER_URL = (import.meta.env.VITE_PUSH_SERVER_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 const VAPID_PUBLIC_KEY = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? '';
@@ -28,7 +29,7 @@ async function bearerToken(): Promise<string> {
     body: JSON.stringify({ installationId: installationId() }),
   });
   const body = await response.json().catch(() => ({})) as { token?: string; error?: string };
-  if (!response.ok || !body.token) throw new Error(body.error ?? '알림 서버 연결에 실패했어요.');
+  if (!response.ok || !body.token) throw new Error(body.error ?? L('알림 서버 연결에 실패했어요.', 'Couldn\'t connect to the notification server.'));
   localStorage.setItem(TOKEN_KEY, body.token);
   return body.token;
 }
@@ -41,7 +42,7 @@ async function authenticatedPost(path: string, body: unknown): Promise<void> {
     body: JSON.stringify(body),
   });
   const result = await response.json().catch(() => ({})) as { error?: string };
-  if (!response.ok) throw new Error(result.error ?? '알림 서버 요청에 실패했어요.');
+  if (!response.ok) throw new Error(result.error ?? L('알림 서버 요청에 실패했어요.', 'The notification server request failed.'));
 }
 
 export function isPushSupported(): boolean {
@@ -73,10 +74,10 @@ export async function syncPushSchedule(settings: AppSettings): Promise<void> {
 
 export async function enablePush(settings: AppSettings): Promise<void> {
   if (!isPushSupported()) {
-    throw new Error('이 기기에서는 알림을 사용할 수 없어요. iOS는 16.4 이상에서 홈 화면에 설치해야 해요.');
+    throw new Error(L('이 기기에서는 알림을 사용할 수 없어요. iOS는 16.4 이상에서 홈 화면에 설치해야 해요.', 'Notifications aren\'t available on this device. On iOS, use 16.4 or later and add the app to your Home Screen.'));
   }
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') throw new Error('알림 권한이 허용되지 않았어요.');
+  if (permission !== 'granted') throw new Error(L('알림 권한이 허용되지 않았어요.', 'Notification permission wasn\'t granted.'));
   const registration = await navigator.serviceWorker.ready;
   if (!await registration.pushManager.getSubscription()) {
     await registration.pushManager.subscribe({

@@ -9,6 +9,7 @@ import {
   PRIVACY_URL, TERMS_URL, getPlanOffers, isBillingActive, purchase, redeemOfferCode, restorePurchases, watchSubscription,
 } from '../billing/purchases';
 import type { PlanOffer } from '../billing/purchases';
+import { L } from '../i18n';
 
 interface PaywallScreenProps {
   onClose: () => void;
@@ -18,14 +19,14 @@ interface PaywallScreenProps {
 }
 
 const PLAN_INFO: Record<Plan, { name: string; summary: string; detail: string }> = {
-  standard: { name: 'Standard', summary: `한 달에 영상 ${STANDARD_VIDEOS_PER_PERIOD}개`, detail: '결제일마다 다시 채워져요' },
-  premium: { name: 'Premium', summary: '매일 영상 1개', detail: '하루도 빠짐없이 남겨요' },
+  standard: { name: 'Standard', summary: L(`한 달에 영상 ${STANDARD_VIDEOS_PER_PERIOD}개`, `${STANDARD_VIDEOS_PER_PERIOD} films a month`), detail: L('결제일마다 다시 채워져요', 'Refills every billing date') },
+  premium: { name: 'Premium', summary: L('매일 영상 1개', '1 film every day'), detail: L('하루도 빠짐없이 남겨요', 'Keep every single day') },
 };
 
 const BENEFITS = [
-  'AI 감독이 고른 BGM·자막으로 하루 영상',
-  '마음에 안 들면 연출 다시 하기 3번',
-  '기록과 아카이브는 구독 없이도 언제나 무료',
+  L('AI 감독이 고른 BGM·자막으로 하루 영상', 'Day films with music and captions picked by an AI director'),
+  L('마음에 안 들면 연출 다시 하기 3번', 'Not quite right? Redo the edit up to 3 times'),
+  L('기록과 아카이브는 구독 없이도 언제나 무료', 'Records and archive are always free, no subscription needed'),
 ];
 
 export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt }: PaywallScreenProps) {
@@ -43,7 +44,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
   useEffect(() => watchSubscription(subscription => { if (subscription) onSubscribedRef.current(subscription); }), []);
 
   useEffect(() => {
-    getPlanOffers().then(setOffers).catch(() => setMessage('요금제를 불러오지 못했어요. 잠시 후 다시 열어 주세요.'));
+    getPlanOffers().then(setOffers).catch(() => setMessage(L('요금제를 불러오지 못했어요. 잠시 후 다시 열어 주세요.', 'Couldn\'t load plans. Please reopen this in a moment.')));
   }, []);
 
   const offer = offers?.find(o => o.plan === selected) ?? null;
@@ -58,7 +59,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
       const subscription = await purchase(offer);
       if (subscription) onSubscribed(subscription);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '결제를 마치지 못했어요.');
+      setMessage(error instanceof Error ? error.message : L('결제를 마치지 못했어요.', 'Couldn\'t complete the payment.'));
     } finally {
       setBusy(false);
     }
@@ -71,9 +72,9 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
     try {
       const subscription = await restorePurchases();
       if (subscription) onSubscribed(subscription);
-      else setMessage('복원할 구독이 없어요.');
+      else setMessage(L('복원할 구독이 없어요.', 'No subscription to restore.'));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '구매를 복원하지 못했어요.');
+      setMessage(error instanceof Error ? error.message : L('구매를 복원하지 못했어요.', 'Couldn\'t restore purchases.'));
     } finally {
       setBusy(false);
     }
@@ -84,11 +85,15 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
     try {
       await redeemOfferCode();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '쿠폰 입력 창을 열지 못했어요.');
+      setMessage(error instanceof Error ? error.message : L('쿠폰 입력 창을 열지 못했어요.', 'Couldn\'t open offer code redemption.'));
     }
   }
 
-  const ctaLabel = busy ? '처리 중…' : trial ? '3일 무료로 시작하기' : `${offer?.priceString ?? ''} 구독하기`;
+  const ctaLabel = busy
+    ? L('처리 중…', 'Processing…')
+    : trial
+      ? L('3일 무료로 시작하기', 'Start 3-day free trial')
+      : L(`${offer?.priceString ?? ''} 구독하기`, `Subscribe for ${offer?.priceString ?? ''}/month`);
 
   return (
     <div
@@ -96,23 +101,26 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
-      aria-label="하꾸 구독"
+      aria-label={L('하꾸 구독', 'MyHour subscription')}
       style={{ ...SCREEN, position: 'fixed', inset: 0, zIndex: 100 }}
     >
       <div style={{ padding: `${topPad(52)} 22px 0`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={TAPE_GREEN()}>하꾸 구독</span>
-        <button onClick={onClose} aria-label="구독 화면 닫기" style={{ width: 44, height: 44, marginRight: -10, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', padding: 0 }}>
+        <span style={TAPE_GREEN()}>{L('하꾸 구독', 'MyHour subscription')}</span>
+        <button onClick={onClose} aria-label={L('구독 화면 닫기', 'Close subscription screen')} style={{ width: 44, height: 44, marginRight: -10, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
 
       <div className="scroll-column" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <h1 style={{ ...TITLE, whiteSpace: 'pre-line' }}>{usedUp ? '이번 달 영상을\n다 만들었어요' : '오늘 하루를\n영상으로 남겨요'}</h1>
+          <h1 style={{ ...TITLE, whiteSpace: 'pre-line' }}>{usedUp ? L('이번 달 영상을\n다 만들었어요', 'You\'ve used up\nthis month\'s videos') : L('오늘 하루를\n영상으로 남겨요', 'Turn your day\ninto a film')}</h1>
           <p style={{ margin: 0, fontSize: 14, color: COLOR.inkMuted, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
             {usedUp
-              ? `Standard ${STANDARD_VIDEOS_PER_PERIOD}개를 모두 썼어요.${standardResetsAt ? ` ${formatMonthDay(standardResetsAt)}에 다시 채워져요.` : ''}\nPremium으로 바꾸면 매일 만들 수 있어요.`
-              : '기록은 지금처럼 자유롭게 남기고,\n하루 마감 영상은 구독으로 만들어요.'}
+              ? L(
+                `Standard ${STANDARD_VIDEOS_PER_PERIOD}개를 모두 썼어요.${standardResetsAt ? ` ${formatMonthDay(standardResetsAt)}에 다시 채워져요.` : ''}\nPremium으로 바꾸면 매일 만들 수 있어요.`,
+                `You've used all ${STANDARD_VIDEOS_PER_PERIOD} Standard videos.${standardResetsAt ? ` They refill on ${formatMonthDay(standardResetsAt)}.` : ''}\nSwitch to Premium to make one every day.`,
+              )
+              : L('기록은 지금처럼 자유롭게 남기고,\n하루 마감 영상은 구독으로 만들어요.', 'Keep recording freely as always.\nDay-end films come with a subscription.')}
           </p>
         </div>
 
@@ -127,7 +135,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
           </ul>
         )}
 
-        <div role="radiogroup" aria-label="요금제" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div role="radiogroup" aria-label={L('요금제', 'Plans')} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {(['premium', 'standard'] as const).map(plan => {
             const info = PLAN_INFO[plan];
             const active = selected === plan;
@@ -149,7 +157,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
                 }}
               >
                 {plan === 'premium' && (
-                  <span aria-hidden="true" style={{ ...tape(COLOR.red, COLOR.white, 4, 14), position: 'absolute', top: -11, right: 14 }}>추천</span>
+                  <span aria-hidden="true" style={{ ...tape(COLOR.red, COLOR.white, 4, 14), position: 'absolute', top: -11, right: 14 }}>{L('추천', 'Best')}</span>
                 )}
                 <span aria-hidden="true" style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 11, border: `2px solid ${COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
                   {active && <span style={{ width: 10, height: 10, borderRadius: 5, background: COLOR.ink }} />}
@@ -161,7 +169,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
                 </span>
                 <span style={{ flexShrink: 0, textAlign: 'right' }}>
                   <span style={{ display: 'block', fontSize: 16, fontWeight: 700 }}>{price}</span>
-                  <span style={{ display: 'block', fontSize: 11, color: COLOR.inkMuted }}>한 달</span>
+                  <span style={{ display: 'block', fontSize: 11, color: COLOR.inkMuted }}>{L('한 달', 'per month')}</span>
                 </span>
               </button>
             );
@@ -173,19 +181,25 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
 
       <div style={{ padding: '12px 22px calc(var(--bottom-inset, 14px) + 4px)', display: 'flex', flexDirection: 'column', gap: 10, borderTop: `1.5px dashed ${COLOR.dash}`, background: COLOR.paper }}>
         <button type="button" onClick={handlePurchase} disabled={!canBuy} style={canBuy ? BUTTON_PRIMARY : { ...BUTTON_PRIMARY, ...BUTTON_DISABLED }}>
-          {billing ? ctaLabel : '앱에서 구독할 수 있어요'}
+          {billing ? ctaLabel : L('앱에서 구독할 수 있어요', 'Subscribe in the app')}
         </button>
         <p style={{ margin: 0, fontSize: 11, color: COLOR.inkMuted, lineHeight: 1.55, textAlign: 'center' }}>
           {trial
-            ? `3일 무료 체험이 끝나면 ${PLAN_INFO[selected].name} ${offer?.priceString ?? ''}가 매달 자동 결제돼요. 체험이 끝나기 24시간 전까지 해지하면 결제되지 않아요.`
-            : `${PLAN_INFO[selected].name} ${offer?.priceString ?? ''}가 매달 자동 결제돼요. 다음 결제일 24시간 전까지 해지하지 않으면 자동으로 갱신돼요.`}
-          {' '}해지는 아이폰 설정 &gt; Apple 계정 &gt; 구독에서 할 수 있어요.
+            ? L(
+              `3일 무료 체험이 끝나면 ${PLAN_INFO[selected].name} ${offer?.priceString ?? ''}가 매달 자동 결제돼요. 체험이 끝나기 24시간 전까지 해지하면 결제되지 않아요.`,
+              `After the 3-day free trial, ${PLAN_INFO[selected].name} renews automatically at ${offer?.priceString ?? ''}/month. Cancel at least 24 hours before the trial ends and you won't be charged.`,
+            )
+            : L(
+              `${PLAN_INFO[selected].name} ${offer?.priceString ?? ''}가 매달 자동 결제돼요. 다음 결제일 24시간 전까지 해지하지 않으면 자동으로 갱신돼요.`,
+              `${PLAN_INFO[selected].name} renews automatically at ${offer?.priceString ?? ''}/month unless canceled at least 24 hours before the next billing date.`,
+            )}
+          {' '}{L('해지는 아이폰 설정 > Apple 계정 > 구독에서 할 수 있어요.', 'Cancel anytime in iPhone Settings > Apple Account > Subscriptions.')}
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 12 }}>
-          <button type="button" onClick={handleRestore} disabled={!billing || busy} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.inkSub, fontSize: 12, minHeight: 32 }}>구매 복원</button>
-          <button type="button" onClick={handleRedeem} disabled={!billing} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.inkSub, fontSize: 12, minHeight: 32 }}>쿠폰 입력</button>
-          <a href={TERMS_URL} target="_blank" rel="noreferrer" style={{ color: COLOR.inkSub, minHeight: 32, display: 'flex', alignItems: 'center' }}>이용약관</a>
-          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" style={{ color: COLOR.inkSub, minHeight: 32, display: 'flex', alignItems: 'center' }}>개인정보처리방침</a>
+          <button type="button" onClick={handleRestore} disabled={!billing || busy} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.inkSub, fontSize: 12, minHeight: 32 }}>{L('구매 복원', 'Restore')}</button>
+          <button type="button" onClick={handleRedeem} disabled={!billing} style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.inkSub, fontSize: 12, minHeight: 32 }}>{L('쿠폰 입력', 'Offer code')}</button>
+          <a href={TERMS_URL} target="_blank" rel="noreferrer" style={{ color: COLOR.inkSub, minHeight: 32, display: 'flex', alignItems: 'center' }}>{L('이용약관', 'Terms')}</a>
+          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" style={{ color: COLOR.inkSub, minHeight: 32, display: 'flex', alignItems: 'center' }}>{L('개인정보처리방침', 'Privacy')}</a>
         </div>
       </div>
     </div>

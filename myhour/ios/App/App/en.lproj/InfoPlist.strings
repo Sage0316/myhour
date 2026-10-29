@@ -1,0 +1,6 @@
+/* 영어 폰에서 보이는 앱 이름과 권한 안내 (한국어는 ko.lproj와 Info.plist 기본값) */
+"CFBundleDisplayName" = "MyHour";
+"NSCameraUsageDescription" = "MyHour uses the camera to capture photos and videos of your day.";
+"NSMicrophoneUsageDescription" = "MyHour uses the microphone for video sound and voice notes.";
+"NSPhotoLibraryUsageDescription" = "MyHour opens your photo library so you can add a picture to a record.";
+"NSPhotoLibraryAddUsageDescription" = "MyHour saves your photos, clips and daily films to the Photos app.";
