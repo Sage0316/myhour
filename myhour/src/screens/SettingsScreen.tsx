@@ -14,6 +14,7 @@ import { formatMonthDay } from '../billing/access';
 import type { Subscription, VideoAccess } from '../billing/access';
 import PaywallScreen from './PaywallScreen';
 import TrialSheet from './TrialSheet';
+import { isWatermarkEnabled, setWatermarkEnabled } from '../videoWatermark';
 import { exportCompleteBackup, restoreCompleteBackup, type BackupProgress } from '../backup/backupService';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
@@ -515,6 +516,12 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   // 사진첩 자동 저장은 앱에서만 된다 (웹은 사진첩에 직접 쓸 수 없다)
   const native = isNativeApp();
   const [autoSave, setAutoSave] = useState(isAutoSaveEnabled);
+  const [watermark, setWatermark] = useState(isWatermarkEnabled);
+
+  function toggleWatermark() {
+    setWatermarkEnabled(!watermark);
+    setWatermark(!watermark);
+  }
 
   function toggleAutoSave() {
     setAutoSaveEnabled(!autoSave);
@@ -616,6 +623,13 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
           <div style={{ minHeight: 50, padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
             <div style={{ flex: 1, fontSize: 15 }}>저장 방식</div>
             <div style={{ fontSize: 13, color: COLOR.inkMuted, marginRight: 17 }}>아카이브 저장 후 열기</div>
+          </div>
+          <div style={{ minHeight: 60, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: `1.5px dashed ${COLOR.dash}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15 }}>{L('영상에 하꾸 로고 넣기', 'Add logo to films')}</div>
+              <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>{L('오른쪽 아래에 작게 들어가요', 'A small mark in the bottom-right corner')}</div>
+            </div>
+            <ToggleSwitch label={L('영상에 하꾸 로고 넣기', 'Add logo to films')} checked={watermark} onChange={toggleWatermark} />
           </div>
           {native && (
             <div style={{ minHeight: 60, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: `1.5px dashed ${COLOR.dash}` }}>

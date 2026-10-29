@@ -8,6 +8,7 @@ import {
 } from './scenes';
 import { drawTitleScene } from './scenesCover';
 import { drawClosingScene } from './scenesClosing';
+import { drawWatermark, isWatermarkEnabled, loadWatermark } from './videoWatermark';
 import { drawDiaryScene, drawMemeScene } from './scenesDakku';
 import { loadMediaBlob } from './persistence/mediaRepository';
 
@@ -266,6 +267,11 @@ async function renderVideo(
     new Promise<void>(r => setTimeout(r, 4000)),
   ]);
 
+  // 오른쪽 아래 하꾸 로고 (설정에서 끌 수 있다). 못 불러오면 로고 없이 만든다
+  const watermark = isWatermarkEnabled()
+    ? await Promise.race([loadWatermark(SCALE), new Promise<null>(r => setTimeout(() => r(null), 3000))])
+    : null;
+
   // Preload images for photos; blob URLs for videos; decoded buffers for voice memos
   const imgMap = new Map<string, HTMLImageElement | null>();
   const blobUrlMap = new Map<string, string>(); // recordId → media URL
@@ -434,7 +440,12 @@ async function renderVideo(
   });
   const totalFrames = Math.round((TITLE_DUR + segDurations.reduce((a, b) => a + b, 0) + CLOSE_DUR) * FPS);
   let framesDone = 0;
-  const tick = () => { framesDone++; onProgress?.(Math.min(framesDone / totalFrames, 0.99)); };
+  // 모든 장면이 프레임을 그린 직후 tick을 부르므로, 로고는 여기서 한 번에 얹는다
+  const tick = () => {
+    if (watermark) drawWatermark(ctx, watermark, W, H, SCALE);
+    framesDone++;
+    onProgress?.(Math.min(framesDone / totalFrames, 0.99));
+  };
 
   await renderSegment(TITLE_DUR, (t) => {
     drawTitleScene(ctx, { title, dateStr, count: records.length, date: overrides?.date }, t);

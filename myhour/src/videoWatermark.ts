@@ -1,0 +1,66 @@
+// 영상 오른쪽 아래의 작은 HAKKU 로고 (2026-10-29, 펌킨이 시안 W1로 고름).
+// SNS에 공유된 영상을 몇 초만 보고 넘겨도 앱 이름이 보이게 하려는 것 — 엔딩 카드의 "하꾸"는 끝까지 봐야 보인다.
+// 영상은 구독자만 만들 수 있어서 "돈 내면 없어지는" 워터마크가 아니다. 그래서 설정에서 끌 수 있다(기본 켜짐).
+// 진한 로고에 흰 테두리를 둘러 크림색 종이·체크무늬·사진 어디서든 읽힌다. 흰 로고는 밝은 장면에서 안 보였다.
+
+const ENABLED_KEY = 'hakku_video_watermark_v1';
+
+export function isWatermarkEnabled(): boolean {
+  try { return localStorage.getItem(ENABLED_KEY) !== '0'; } catch { return true; }
+}
+
+export function setWatermarkEnabled(on: boolean): void {
+  try { localStorage.setItem(ENABLED_KEY, on ? '1' : '0'); } catch { /* 저장 실패 시 기본값(켜짐) 유지 */ }
+}
+
+// 540×960 논리 좌표 기준 (720px 영상에서 104px 폭, 오른쪽 30px·아래 36px 여백으로 본 시안과 같은 비율)
+const MARK_W = 78;
+const RIGHT = 22;
+const BOTTOM = 27;
+const INK_ALPHA = 0.75;
+const HALO = 2.5;
+
+/** 로고에 흰 테두리를 미리 입혀 둔 캔버스. 프레임마다 이걸 한 번 그리기만 한다 */
+export async function loadWatermark(scale: number): Promise<HTMLCanvasElement | null> {
+  const img = new Image();
+  img.src = `${import.meta.env.BASE_URL}brand/hakku-wordmark-transparent.svg`;
+  try { await img.decode(); } catch { return null; }
+  if (!img.naturalWidth) return null;
+
+  const w = Math.round((MARK_W + HALO * 2) * scale);
+  const markH = MARK_W * img.naturalHeight / img.naturalWidth;
+  const h = Math.round((markH + HALO * 2) * scale);
+  const pad = HALO * scale;
+
+  // 흰 테두리: 로고 모양을 흰색으로 칠해 8방향으로 살짝씩 밀어 찍는다
+  const silhouette = document.createElement('canvas');
+  silhouette.width = w; silhouette.height = h;
+  const s = silhouette.getContext('2d')!;
+  s.drawImage(img, pad, pad, MARK_W * scale, markH * scale);
+  s.globalCompositeOperation = 'source-in';
+  s.fillStyle = '#FFFFFF';
+  s.fillRect(0, 0, w, h);
+
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const o = out.getContext('2d')!;
+  o.globalAlpha = 0.8;
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    o.drawImage(silhouette, Math.cos(a) * pad, Math.sin(a) * pad);
+  }
+  o.globalAlpha = INK_ALPHA;
+  o.drawImage(img, pad, pad, MARK_W * scale, markH * scale);
+  return out;
+}
+
+/** 장면을 다 그린 뒤 맨 위에 얹는다. ctx는 논리 좌표(W×H)로 scale된 상태다 */
+export function drawWatermark(ctx: CanvasRenderingContext2D, mark: HTMLCanvasElement, W: number, H: number, scale: number): void {
+  const w = mark.width / scale;
+  const h = mark.height / scale;
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(mark, W - RIGHT - w + HALO, H - BOTTOM - h + HALO, w, h);
+  ctx.restore();
+}
