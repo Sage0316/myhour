@@ -417,7 +417,8 @@ async function renderVideo(
 
   const TITLE_DUR = 2;
   const RECORD_DUR = 3;
-  const CLOSE_DUR = 2;
+  // 마지막 장면은 여운이 남게 3.5초 (2초였다가 펌킨 요청으로 1.5초 늘림, 2026-10-29)
+  const CLOSE_DUR = 3.5;
   const MEDIA_MAX = 5; // 영상·음성 장면 상한 — 몽타주 리듬 유지
   const segDurations = records.map(r => {
     if (r.type === 'audio') {
@@ -574,8 +575,9 @@ async function renderVideo(
     }
   }
 
+  // 등장 애니메이션은 예전 2초 장면과 같은 속도로 끝나고, 늘어난 시간만큼 완성된 화면이 머문다
   await renderSegment(CLOSE_DUR, (t) => {
-    drawClosingScene(ctx, { closing, dateStr, date: overrides?.date }, t);
+    drawClosingScene(ctx, { closing, dateStr, date: overrides?.date }, t * (CLOSE_DUR / 2));
   }, tick, signal);
 
   // Fade the BGM out over the last moments, then stop recording
