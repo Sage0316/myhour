@@ -1,4 +1,5 @@
 import { COLOR, FONT_BODY } from '../design';
+import { L } from '../i18n';
 
 type Tab = 'home' | 'today' | 'archive' | 'settings';
 
@@ -15,15 +16,15 @@ const ICON_PATHS: Record<Tab, React.ReactNode> = {
 };
 
 const tabs: { id: Tab; label: string }[] = [
-  { id: 'home', label: '홈' },
-  { id: 'today', label: '오늘' },
-  { id: 'archive', label: '아카이브' },
-  { id: 'settings', label: '설정' },
+  { id: 'home', label: L('홈', 'Home') },
+  { id: 'today', label: L('오늘', 'Today') },
+  { id: 'archive', label: L('아카이브', 'Archive') },
+  { id: 'settings', label: L('설정', 'Settings') },
 ];
 
 export default function TabBar({ active, onTabChange }: TabBarProps) {
   return (
-    <nav aria-label="주요 메뉴" style={{
+    <nav aria-label={L('주요 메뉴', 'Main menu')} style={{
       // 좌우 여백은 화면 내용(버튼·카드)과 같은 22px — 메뉴만 더 넓으면 삐져나와 보인다
       margin: '0 22px var(--bottom-inset, 14px)',
       display: 'grid',

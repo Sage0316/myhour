@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { L, loadLangPref, saveLangPref } from '../i18n';
 import { disableReminders, enableReminders, getRemindersEnabled, isNativeApp } from '../notifications/localReminders';
 import { topPad, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
 import { useApp } from '../appContext';
@@ -479,6 +480,12 @@ function writeDevTools(on: boolean): void {
   } catch { /* 기억 못 해도 이번 화면에서는 열린다 */ }
 }
 
+const LANG_LABELS = {
+  auto: L('폰 언어 따르기', 'Same as phone'),
+  ko: '한국어',
+  en: 'English',
+} as const;
+
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
   const { settings, updateSettings, isWrapped, undoTodayWrap } = useApp();
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -521,6 +528,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
     setOpenRow(null);
   }
 
+  const langPref = loadLangPref();
   const endModeLabel = settings.endMode === 'open' ? '종료 시간 미정' : settings.endTime;
   const defaultTypeLabel = TYPE_LABELS[settings.defaultType];
 
@@ -616,6 +624,19 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
               <ToggleSwitch label="사진첩에 자동 저장" checked={autoSave} onChange={toggleAutoSave} />
             </div>
           )}
+        </SettingGroup>
+
+        {/* 언어 — 영어로 바뀐 사람도 찾을 수 있게 제목에 두 언어를 같이 쓴다. 바꾸면 앱을 다시 불러온다 */}
+        <SettingGroup header="언어 · Language">
+          <SettingRow label={L('앱 언어', 'App language')} value={LANG_LABELS[langPref]} last open={openRow === 'lang'} onToggle={() => toggle('lang')}>
+            {(['auto', 'ko', 'en'] as const).map(v => (
+              <Option key={v} label={LANG_LABELS[v]} selected={langPref === v} onSelect={() => {
+                if (v === langPref) { setOpenRow(null); return; }
+                saveLangPref(v);
+                window.location.reload();
+              }} />
+            ))}
+          </SettingRow>
         </SettingGroup>
 
         {isBillingActive() && <SubscriptionSection />}

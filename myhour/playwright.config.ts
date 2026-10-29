@@ -16,6 +16,8 @@ export default defineConfig({
       use: {
         ...devices['iPhone 13'],
         browserName: 'chromium',
+        // 앱이 폰 언어를 따라가므로 기존 테스트는 한국어 폰으로 돈다 (영어는 app.spec.ts에서 따로 확인)
+        locale: 'ko-KR',
         // 브라우저를 내려받을 수 없는 개발 컨테이너에서 미리 설치된 크로미움을 쓰기 위한 탈출구.
         // CI에서는 비어 있어서 playwright가 관리하는 브라우저를 그대로 쓴다.
         ...(process.env.PLAYWRIGHT_CHROMIUM_PATH

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { L } from '../i18n';
 import { useApp } from '../appContext';
 import {
   formatTime, getDateStrings, getNextSlot, getSessionDate, minutesUntilSlot, TYPE_LABELS,
@@ -54,7 +55,7 @@ function Doodle({ kind, size, style }: { kind: 'star' | 'pinkStar' | 'heart' | '
 
 function recordTitle(record: MyRecord): string {
   if (record.caption) return record.caption;
-  return `${TYPE_LABELS[record.type]} 기록`;
+  return L(`${TYPE_LABELS[record.type]} 기록`, TYPE_LABELS[record.type]);
 }
 
 /** 사진·영상·음성 — 테이프로 붙인 폴라로이드 */
@@ -118,14 +119,14 @@ function EmptyState({ onRecord, nextSlot }: { onRecord: () => void; nextSlot: st
       {!later && (
         <div style={{ width: 290, maxWidth: '100%', background: COLOR.white, border: `2px solid ${COLOR.ink}`, transform: 'rotate(-2deg)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#8EC5F0', borderBottom: `2px solid ${COLOR.ink}`, padding: '5px 10px' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: COLOR.skyInk }}>hakku.exe</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: COLOR.skyInk }}>{L('hakku.exe', 'myhour.exe')}</span>
             <span aria-hidden="true" style={{ width: 16, height: 16, boxSizing: 'border-box', border: `2px solid ${COLOR.ink}`, background: COLOR.white, fontSize: 11, lineHeight: '12px', textAlign: 'center', fontWeight: 700 }}>×</span>
           </div>
           <div style={{ padding: '18px 18px 16px', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: 17, lineHeight: 1.45, textAlign: 'center' }}>오늘의 첫 기록을<br />남겨볼까요?</span>
+            <span style={{ fontWeight: 700, fontSize: 17, lineHeight: 1.45, textAlign: 'center' }}>{L('오늘의 첫 기록을', 'Ready for today\'s')}<br />{L('남겨볼까요?', 'first record?')}</span>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button type="button" data-modal-trigger="record" onClick={onRecord} aria-label="첫 기록 남기기" style={{ minWidth: 88, minHeight: 44, border: `2px solid ${COLOR.ink}`, background: COLOR.yellow, fontWeight: 700, fontSize: 15, color: COLOR.ink, cursor: 'pointer', fontFamily: 'inherit' }}>YES!</button>
-              <button type="button" onClick={() => setLater(true)} style={{ minWidth: 88, minHeight: 44, border: `2px solid ${COLOR.ink}`, background: COLOR.white, fontSize: 15, color: COLOR.ink, cursor: 'pointer', fontFamily: 'inherit' }}>이따가</button>
+              <button type="button" data-modal-trigger="record" onClick={onRecord} aria-label={L('첫 기록 남기기', 'Add first record')} style={{ minWidth: 88, minHeight: 44, border: `2px solid ${COLOR.ink}`, background: COLOR.yellow, fontWeight: 700, fontSize: 15, color: COLOR.ink, cursor: 'pointer', fontFamily: 'inherit' }}>YES!</button>
+              <button type="button" onClick={() => setLater(true)} style={{ minWidth: 88, minHeight: 44, border: `2px solid ${COLOR.ink}`, background: COLOR.white, fontSize: 15, color: COLOR.ink, cursor: 'pointer', fontFamily: 'inherit' }}>{L('이따가', 'Later')}</button>
             </div>
           </div>
         </div>
@@ -133,15 +134,15 @@ function EmptyState({ onRecord, nextSlot }: { onRecord: () => void; nextSlot: st
 
       {nextSlot && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, transform: 'rotate(1.5deg)' }}>
-          <span style={{ ...TAPE_SKY(0, 18), alignSelf: 'center', padding: '3px 12px' }}>다음 기록 시간 · {nextSlot}</span>
-          <span style={{ fontSize: 14, color: COLOR.inkSub }}>알림이 오면 사진 한 장, 한 줄이면 충분해</span>
+          <span style={{ ...TAPE_SKY(0, 18), alignSelf: 'center', padding: '3px 12px' }}>{L('다음 기록 시간', 'Next record')} · {nextSlot}</span>
+          <span style={{ fontSize: 14, color: COLOR.inkSub }}>{L('알림이 오면 사진 한 장, 한 줄이면 충분해', 'When it pings, one photo or one line is enough')}</span>
         </div>
       )}
 
       {later && (
         <button type="button" data-modal-trigger="record" onClick={onRecord} style={{ ...BUTTON_SECONDARY, padding: '0 24px' }}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-          지금 기록하기
+          {L('지금 기록하기', 'Record now')}
         </button>
       )}
 
@@ -174,7 +175,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
     <div style={{ flex: 1, padding: `${topPad(52)} 22px 0`, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: 4 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={TAPE_GREEN()}>오늘의 하꾸</span>
+          <span style={TAPE_GREEN()}>{L('오늘의 하꾸', 'today, hour by hour')}</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <span style={{ fontFamily: FONT_HAND, fontWeight: 400, fontSize: 72, lineHeight: 1, color: COLOR.red, letterSpacing: '-1px' }}>
               {month}·{day}
@@ -184,7 +185,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
         </div>
         {!isEmpty && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'rotate(6deg)', background: COLOR.white, border: `2px solid ${COLOR.ink}`, borderRadius: 14, padding: '6px 12px' }}>
-            <span style={{ fontSize: 13, color: COLOR.inkSub }}>기록</span>
+            <span style={{ fontSize: 13, color: COLOR.inkSub }}>{L('기록', 'Records')}</span>
             <span style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, color: COLOR.red }}>{records.length}</span>
           </div>
         )}
@@ -201,7 +202,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
             {untilNext && (
               <div style={{ marginLeft: 88, alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '8px 16px', boxSizing: 'border-box', border: '2px dashed #8EA7C9', borderRadius: 12, background: 'rgba(255,255,255,0.7)', fontSize: 15, color: '#3B557A' }}>
                 <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></svg>
-                다음 기록까지 {untilNext}
+                {L(`다음 기록까지 ${untilNext}`, `Next record in ${untilNext}`)}
               </div>
             )}
           </div>
@@ -218,17 +219,17 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
       {isWrapped ? (
         <div style={{ padding: '8px 0 12px' }}>
           <div style={{ minHeight: 52, borderRadius: 16, border: `1.5px dashed ${COLOR.dash}`, color: COLOR.inkSub, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.6)' }}>
-            오늘은 마감했어요 · 내일 다시 만나요
+            {L('오늘은 마감했어요 · 내일 다시 만나요', 'Day wrapped · See you tomorrow')}
           </div>
         </div>
       ) : !isEmpty && (
         <div style={{ padding: '8px 0 12px', display: 'flex', gap: 10 }}>
           <button data-modal-trigger="record" onClick={onRecord} style={{ ...BUTTON_SECONDARY, flex: 1 }}>
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-            기록하기
+            {L('기록하기', 'Record')}
           </button>
           <button data-modal-trigger="wrapup" onClick={onWrapUp} style={{ ...BUTTON_PRIMARY, flex: 1.4 }}>
-            하루 마감하기
+            {L('하루 마감하기', 'Wrap up the day')}
           </button>
         </div>
       )}

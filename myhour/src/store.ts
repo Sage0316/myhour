@@ -14,6 +14,7 @@ import {
   saveMediaBlob,
 } from './persistence/mediaRepository';
 import { journalRepository } from './repositories/journalRepository';
+import { L } from './i18n';
 
 export type RecordType = DomainRecordType;
 export type MyRecord = JournalRecord;
@@ -210,13 +211,13 @@ export function minutesUntilSlot(slot: string, startTime?: string): number {
 }
 
 export function formatTime(minutes: number): string {
-  if (minutes <= 0) return '지금';
+  if (minutes <= 0) return L('지금', 'now');
   if (minutes >= 60) {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
+    return m > 0 ? L(`${h}시간 ${m}분`, `${h}h ${m}m`) : L(`${h}시간`, `${h}h`);
   }
-  return `${minutes}분`;
+  return L(`${minutes}분`, `${minutes}m`);
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -238,10 +239,12 @@ export function getDateStrings(sessionDate?: string) {
   const day = d.getDate();
   const KO = ['일', '월', '화', '수', '목', '금', '토'];
   const EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const EN_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const EN_MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const wd = d.getDay();
   return {
-    dateDay: `${month}월 ${day}일`,
-    dateWeekday: `${KO[wd]}요일`,
+    dateDay: L(`${month}월 ${day}일`, `${EN_MONTH[month - 1]} ${day}`),
+    dateWeekday: L(`${KO[wd]}요일`, EN_LONG[wd]),
     dateShort: `${month}.${day}`,
     weekdayEn: EN[wd],
   };
@@ -258,11 +261,11 @@ export const TYPE_COLORS: Record<RecordType, string> = {
 };
 
 export const TYPE_LABELS: Record<RecordType, string> = {
-  text: '글',
-  video: '영상',
-  photo: '사진',
-  audio: '음성',
-  meme: '앨범',
+  text: L('글', 'Text'),
+  video: L('영상', 'Video'),
+  photo: L('사진', 'Photo'),
+  audio: L('음성', 'Voice'),
+  meme: L('앨범', 'Album'),
 };
 
 // ─── Mood / title ─────────────────────────────────────────────────────────────
@@ -505,7 +508,7 @@ export function removeFromArchive(entry: ArchiveEntry) {
 // ─── Settings display labels ──────────────────────────────────────────────────
 
 export function intervalLabel(v: number) {
-  return v === 30 ? '30분' : v === 60 ? '1시간' : '2시간';
+  return v === 30 ? L('30분', '30 min') : v === 60 ? L('1시간', '1 hour') : L('2시간', '2 hours');
 }
 
 export function notifyLabel(v: AppSettings['notifyTiming']) {

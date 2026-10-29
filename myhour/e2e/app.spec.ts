@@ -14,3 +14,14 @@ test('has no critical automated accessibility violations', async ({ page }) => {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter(violation => violation.impact === 'critical')).toEqual([]);
 });
+
+test.describe('영어 폰', () => {
+  test.use({ locale: 'en-US' });
+
+  test('shows the app in English when the phone is in English', async ({ page }) => {
+    await page.goto('/myhour/');
+    await expect(page.getByRole('navigation', { name: 'Main menu' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Today' })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  });
+});
