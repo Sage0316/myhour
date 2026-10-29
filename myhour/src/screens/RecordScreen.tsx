@@ -300,8 +300,8 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0 }}>
       <label style={{
-        // 50자가 세 줄로 다 보이는 높이 — 글이 늘어도 칸이 커지지 않고, 안에서 스크롤되지도 않게
-        flexShrink: 0, height: 144, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
+        // 줄노트 네 줄 — 띄어쓰기·영어가 섞여 50자가 네 줄로 넘어가도 다 보인다. 높이를 고정해서 글이 늘어도 칸이 커지지 않는다
+        flexShrink: 0, height: 176, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
         ...CARD, borderRadius: 18, padding: '14px 18px 10px',
       }}>
         <textarea
@@ -309,7 +309,7 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
           {...noAutofill('text')}
           ref={textareaRef}
           value={text}
-          rows={3}
+          rows={4}
           maxLength={TEXT_MAX}
           onChange={e => setText(e.target.value.slice(0, TEXT_MAX))}
           placeholder="지금 이 순간을 한 줄로"
@@ -327,7 +327,7 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
       {/* 쓸 거리 테이프 + 스티커 (미리보기 자리를 채운다). 입력칸과 저장 버튼 사이 한가운데에 두고,
           스티커는 묶음에 붙여 같이 움직인다. 화면이 작아도 스크롤이 생기지 않게 넘치는 장식은 자른다 */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '24px 0' }}>
+        <div className="prompt-bundle" style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <span style={{ fontFamily: FONT_HAND, fontSize: 20, color: COLOR.inkSub, transform: 'rotate(-1.5deg)' }}>
             {L('뭘 쓸지 모르겠으면', 'Not sure what to write?')} ✎
           </span>
@@ -343,13 +343,13 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
               </button>
             ))}
           </div>
-          <span style={{ marginTop: 14, fontFamily: FONT_HAND, fontSize: 26, color: COLOR.ink, transform: 'rotate(1deg)', textAlign: 'center' }}>
+          <span className="prompt-bundle-cta" style={{ fontFamily: FONT_HAND, fontSize: 26, color: COLOR.ink, transform: 'rotate(1deg)', textAlign: 'center' }}>
             {L('원하는 모든 순간을 적어봐', 'Write down any moment you want')}
           </span>
           <Doodle kind="star" size={40} style={{ left: 4, top: 10, transform: 'rotate(-12deg)' }} />
           <Doodle kind="pinkStar" size={24} style={{ right: 18, top: 4, transform: 'rotate(16deg)' }} />
           <Doodle kind="heart" size={30} style={{ right: 12, bottom: 0, transform: 'rotate(10deg)' }} />
-          <Doodle kind="wave" size={66} style={{ left: 10, bottom: 4 }} />
+          <span className="hide-when-short"><Doodle kind="wave" size={66} style={{ left: 10, bottom: 4 }} /></span>
         </div>
       </div>
 

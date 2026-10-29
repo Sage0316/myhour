@@ -89,3 +89,12 @@ button {
 /* 세로로 쌓이는 스크롤 목록 안의 카드는 줄어들지 않게 한다. flex 칸은 내용이 넘치면 줄어드는데,
    overflow: hidden 카드는 최소 높이가 0이라 납작하게 사라졌다 (설정 > 테스트 도구 카드가 그랬다) */
 .scroll-column > * { flex-shrink: 0; }
+
+/* 글 기록 화면의 쓸 거리 묶음. 키가 작은 폰(SE 등)에선 간격을 줄여서 스티커가 잘리지 않게 한다 */
+.prompt-bundle { gap: 16px; padding: 24px 0; }
+.prompt-bundle-cta { margin-top: 14px; }
+@media (max-height: 720px) {
+  .prompt-bundle { gap: 12px; padding: 8px 0; }
+  .prompt-bundle-cta { margin-top: 4px; }
+  .hide-when-short { display: none; }
+}
