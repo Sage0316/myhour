@@ -20,7 +20,7 @@ export function setWatermarkEnabled(on: boolean): void {
 const MARK_H = 78 * 409 / 1340.2;
 const RIGHT = 22;
 const BOTTOM = 27;
-const INK_ALPHA = 0.75;
+const INK_ALPHA = 1;
 const HALO = 2.5;
 
 /** 로고에 흰 테두리를 미리 입혀 둔 캔버스. 프레임마다 이걸 한 번 그리기만 한다 */
@@ -50,7 +50,7 @@ export async function loadWatermark(scale: number): Promise<HTMLCanvasElement | 
   const out = document.createElement('canvas');
   out.width = w; out.height = h;
   const o = out.getContext('2d')!;
-  o.globalAlpha = 0.8;
+  o.globalAlpha = 0.95;
   for (let i = 0; i < 8; i++) {
     const a = i * Math.PI / 4;
     o.drawImage(silhouette, Math.cos(a) * pad, Math.sin(a) * pad);
