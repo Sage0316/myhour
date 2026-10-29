@@ -593,3 +593,11 @@ git pull --ff-only"
 **Context**: 사용자 선택 반영, 업로드는 사용자 버튼 대기
 
 ---
+
+## BGM 교체 2단계: 앱 곡 목록
+**Timestamp**: 2026-10-29T16:41:00Z
+**User Input**: "버튼 눌렀어. 업로드 중💙💙"
+**AI Response**: "Upload BGM to R2 실행 성공 확인(24곡 sha256 검증 후 'Upload complete'). 업로드가 끝난 뒤에 BGM_FILES를 교체: calm=재즈 5, bright=팝·펑크 11, emotional=시네마틱 4, ukulele=장난 6, piano·nostalgic·sad=위로곡 9(로파이 3곡 Study and Relax·Slice of Life·Lagoon과 Cornfield Chase 등 10곡 제외). 묶음 이름은 AI 워커 enum이라 유지 — 워커 재배포 불필요. bgm.html 시청 페이지도 갱신. 테스트 98개 통과."
+**Context**: 사용자 선택 반영 완료
+
+---
