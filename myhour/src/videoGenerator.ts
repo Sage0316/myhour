@@ -149,8 +149,8 @@ async function yieldToBrowser(signal?: AbortSignal): Promise<void> {
   throwIfAborted(signal);
 }
 
-/** 사진은 짧게 두고, 이보다 긴 글만 두 배(6초)로 보여줘서 끝까지 읽히게 한다 (펌킨 요청). 글 기록 화면의 미리보기 안내도 이 값을 쓴다 */
-export const LONG_TEXT_CHARS = 25;
+/** 사진은 짧게 두고, 이보다 긴 글만 두 배(6초)로 보여줘서 끝까지 읽히게 한다 (펌킨 요청) */
+const LONG_TEXT_CHARS = 25;
 
 async function renderSegment(duration: number, draw: DrawFn, onFrame?: () => void, signal?: AbortSignal) {
   const frames = Math.round(duration * FPS);
