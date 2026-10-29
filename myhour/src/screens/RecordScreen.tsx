@@ -324,30 +324,33 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
         <span style={{ alignSelf: 'flex-end', fontSize: 12, color: text.length >= TEXT_MAX ? COLOR.red : COLOR.inkMuted }}>{text.length}/{TEXT_MAX}자</span>
       </label>
 
-      {/* 쓸 거리 테이프 + 스티커 (미리보기 자리를 채운다). 화면이 작아도 스크롤이 생기지 않게 넘치는 장식은 자른다 */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 20, gap: 16 }}>
-        <span style={{ fontFamily: FONT_HAND, fontSize: 20, color: COLOR.inkSub, transform: 'rotate(-1.5deg)' }}>
-          {L('뭘 쓸지 모르겠으면', 'Not sure what to write?')} ✎
-        </span>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px 12px', maxWidth: 300 }}>
-          {PROMPTS.map(p => (
-            <button
-              key={p.text}
-              type="button"
-              onClick={() => applyPrompt(p.text)}
-              style={{ ...tape(p.bg, p.ink, p.tilt), alignSelf: 'auto', minHeight: 36, padding: '4px 12px', border: 'none', cursor: 'pointer' }}
-            >
-              {p.text}
-            </button>
-          ))}
+      {/* 쓸 거리 테이프 + 스티커 (미리보기 자리를 채운다). 입력칸과 저장 버튼 사이 한가운데에 두고,
+          스티커는 묶음에 붙여 같이 움직인다. 화면이 작아도 스크롤이 생기지 않게 넘치는 장식은 자른다 */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '24px 0' }}>
+          <span style={{ fontFamily: FONT_HAND, fontSize: 20, color: COLOR.inkSub, transform: 'rotate(-1.5deg)' }}>
+            {L('뭘 쓸지 모르겠으면', 'Not sure what to write?')} ✎
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px 12px', maxWidth: 300 }}>
+            {PROMPTS.map(p => (
+              <button
+                key={p.text}
+                type="button"
+                onClick={() => applyPrompt(p.text)}
+                style={{ ...tape(p.bg, p.ink, p.tilt), alignSelf: 'auto', minHeight: 36, padding: '4px 12px', border: 'none', cursor: 'pointer' }}
+              >
+                {p.text}
+              </button>
+            ))}
+          </div>
+          <span style={{ marginTop: 14, fontFamily: FONT_HAND, fontSize: 26, color: COLOR.ink, transform: 'rotate(1deg)', textAlign: 'center' }}>
+            {L('원하는 모든 순간을 적어봐', 'Write down any moment you want')}
+          </span>
+          <Doodle kind="star" size={40} style={{ left: 4, top: 10, transform: 'rotate(-12deg)' }} />
+          <Doodle kind="pinkStar" size={24} style={{ right: 18, top: 4, transform: 'rotate(16deg)' }} />
+          <Doodle kind="heart" size={30} style={{ right: 12, bottom: 0, transform: 'rotate(10deg)' }} />
+          <Doodle kind="wave" size={66} style={{ left: 10, bottom: 4 }} />
         </div>
-        <span style={{ marginTop: 14, fontFamily: FONT_HAND, fontSize: 26, color: COLOR.ink, transform: 'rotate(1deg)', textAlign: 'center' }}>
-          {L('원하는 모든 말을 적어봐', 'Write anything you want')}
-        </span>
-        <Doodle kind="star" size={40} style={{ left: 4, top: 6, transform: 'rotate(-12deg)' }} />
-        <Doodle kind="pinkStar" size={24} style={{ right: 18, top: 0, transform: 'rotate(16deg)' }} />
-        <Doodle kind="heart" size={30} style={{ right: 12, top: 230, transform: 'rotate(10deg)' }} />
-        <Doodle kind="wave" size={66} style={{ left: 10, top: 250 }} />
       </div>
 
       <button

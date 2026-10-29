@@ -108,7 +108,7 @@ pnpm test:e2e
   `touch-action: manipulation`으로 막는다. PWA는 주소창이 없어 확대된 배율을 되돌릴 방법이 마땅치 않다.
   핀치 확대는 살려둔다(접근성). 실제로 캡션 입력창(RecordScreen 15px)에서 음성 녹음 후 확대되는 증상이 있었다
 - 녹화/녹음 UI: 5초 넘으면 "이 이후에 녹화(녹음)되는 건 영상에 들어가지 않아요" 안내 + 영상 미리보기·녹음 파형 회색 전환
-- 글 기록 화면엔 영상 미리보기가 없다 (2026-10-29 펌킨 요청으로 뺌 — 예전 네이비 카드 미리보기는 실제 장면과 달랐다). 그 자리엔 쓸 거리 테이프 4개(`PROMPTS`, 누르면 입력칸에 이어 붙고 커서가 끝으로)와 "원하는 모든 말을 적어봐", 스티커(`components/Doodle`) — 시안 B1. 입력칸은 50자가 세 줄로 다 보이는 고정 높이(144)
+- 글 기록 화면엔 영상 미리보기가 없다 (2026-10-29 펌킨 요청으로 뺌 — 예전 네이비 카드 미리보기는 실제 장면과 달랐다). 그 자리엔 쓸 거리 테이프 4개(`PROMPTS`, 누르면 입력칸에 이어 붙고 커서가 끝으로)와 "원하는 모든 순간을 적어봐", 스티커(`components/Doodle`) — 시안 B1. 묶음은 입력칸과 저장 버튼 사이 한가운데, 스티커는 묶음에 붙어 같이 움직인다. 입력칸은 50자가 세 줄로 다 보이는 고정 높이(144)
 - 미리보기 루프: `npm run dev -- --port 5199` 후 /myhour/preview.html (장면 스크린샷), /myhour/gentest.html (생성 통합테스트, window.__blob으로 오디오 검증). Playwright는 playwright-core + executablePath '/opt/pw-browsers/chromium'
 - 개발 컨테이너에 설치된 크로미움 버전이 playwright가 원하는 빌드와 다를 때(`Executable doesn't exist`) `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`을 주면 playwright.config.ts와 scripts/browser-verify.mjs가 그 바이너리를 쓴다. CI에서는 비어 있어 기본 동작 그대로. `playwright install`은 돌리지 말 것
 - 설정 맨 아래 빌드 버전 표시 (vite define __BUILD_VERSION__) — "고쳤는데 안 돼요"는 먼저 버전 확인
