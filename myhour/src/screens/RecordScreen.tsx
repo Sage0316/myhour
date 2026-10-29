@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_SKY, topPad,
+  BUTTON_DISABLED, BUTTON_PRIMARY, CARD, COLOR, FONT_BODY, FONT_HAND, PILL_BUTTON, SCREEN, TAPE_SKY, tape, topPad,
 } from '../design';
 import type { RecordType } from '../store';
 import { deleteVideoFromIDB, loadVideoBlobFromIDB, saveVideoToIDB } from '../store';
@@ -10,6 +10,8 @@ import { assertCaptureCapacity } from '../media/capabilities';
 import { useDialogFocus } from '../accessibility/useDialogFocus';
 import { noAutofill } from '../noAutofill';
 import { saveCaptureToPhotos } from '../native/saveToPhotos';
+import Doodle from '../components/Doodle';
+import { L } from '../i18n';
 
 interface RecordScreenProps {
   onClose: () => void;
@@ -274,9 +276,27 @@ function CameraVideoMode({ onCapture }: { onCapture: (thumb: string, media: Reco
 // 영상에서 글 기록 하나는 3초 보인다. 25자였다가 펌킨 요청으로 50자 (그림일기 두 레이아웃 모두 4~5줄로 들어간다)
 const TEXT_MAX = 50;
 
+// 뭘 쓸지 막막할 때 누르면 입력칸에 들어가는 쓸 거리 (펌킨이 시안 B1으로 고름)
+const PROMPTS = [
+  { text: L('방금 먹은 거', 'What I just ate'), bg: COLOR.yellow, ink: '#5A4710', tilt: -3 },
+  { text: L('지금 기분 한 마디', 'My mood in a word'), bg: '#F9D3D3', ink: '#7A2E2E', tilt: 2 },
+  { text: L('오늘 들은 말', 'Something I heard'), bg: COLOR.green, ink: COLOR.greenInk, tilt: 2.5 },
+  { text: L('지금 보이는 것', 'What I see now'), bg: COLOR.sky, ink: COLOR.skyInk, tilt: -2 },
+];
+
 function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
   const [text, setText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const ready = text.trim().length > 0;
+
+  function applyPrompt(prompt: string) {
+    const next = (text.trim() ? `${text.trimEnd()} ${prompt} ` : `${prompt} `).slice(0, TEXT_MAX);
+    setText(next);
+    // 키보드를 다시 올리고 커서를 끝에 둬서 바로 이어 쓰게 한다
+    const el = textareaRef.current;
+    if (el) { el.focus(); requestAnimationFrame(() => el.setSelectionRange(next.length, next.length)); }
+  }
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 22px 34px', gap: 14, minHeight: 0 }}>
       <label style={{
@@ -287,6 +307,7 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
         <textarea
           // 아이폰이 주소·연락처 입력칸으로 착각해 키보드 위에 자동완성을 띄우지 않게 한다
           {...noAutofill('text')}
+          ref={textareaRef}
           value={text}
           rows={3}
           maxLength={TEXT_MAX}
@@ -303,8 +324,31 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
         <span style={{ alignSelf: 'flex-end', fontSize: 12, color: text.length >= TEXT_MAX ? COLOR.red : COLOR.inkMuted }}>{text.length}/{TEXT_MAX}자</span>
       </label>
 
-      {/* 저장 버튼을 아래에 붙이는 빈 공간 (미리보기는 펌킨 요청으로 뺐다) */}
-      <div style={{ flex: 1 }} />
+      {/* 쓸 거리 테이프 + 스티커 (미리보기 자리를 채운다). 화면이 작아도 스크롤이 생기지 않게 넘치는 장식은 자른다 */}
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 20, gap: 16 }}>
+        <span style={{ fontFamily: FONT_HAND, fontSize: 20, color: COLOR.inkSub, transform: 'rotate(-1.5deg)' }}>
+          {L('뭘 쓸지 모르겠으면', 'Not sure what to write?')} ✎
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px 12px', maxWidth: 300 }}>
+          {PROMPTS.map(p => (
+            <button
+              key={p.text}
+              type="button"
+              onClick={() => applyPrompt(p.text)}
+              style={{ ...tape(p.bg, p.ink, p.tilt), alignSelf: 'auto', minHeight: 36, padding: '4px 12px', border: 'none', cursor: 'pointer' }}
+            >
+              {p.text}
+            </button>
+          ))}
+        </div>
+        <span style={{ marginTop: 14, fontFamily: FONT_HAND, fontSize: 26, color: COLOR.ink, transform: 'rotate(1deg)', textAlign: 'center' }}>
+          {L('원하는 모든 말을 적어봐', 'Write anything you want')}
+        </span>
+        <Doodle kind="star" size={40} style={{ left: 4, top: 6, transform: 'rotate(-12deg)' }} />
+        <Doodle kind="pinkStar" size={24} style={{ right: 18, top: 0, transform: 'rotate(16deg)' }} />
+        <Doodle kind="heart" size={30} style={{ right: 12, top: 230, transform: 'rotate(10deg)' }} />
+        <Doodle kind="wave" size={66} style={{ left: 10, top: 250 }} />
+      </div>
 
       <button
         onClick={() => ready && onSave(text.trim())}
