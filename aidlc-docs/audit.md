@@ -689,3 +689,11 @@ git pull --ff-only"
 **Context**: 출시 준비
 
 ---
+
+## 개인정보처리방침·소개 페이지 (출시 준비 2·3/3)
+**Timestamp**: 2026-11-01T16:33:35Z
+**User Input**: 문의 메일 "일단 자리만 비워두기", 책임자 "'하꾸 운영자'로만"
+**AI Response**: "앱의 PRIVACY_URL(privacy.html)이 실제로 없는 페이지였음을 발견 → public/privacy.html 한/영 작성(기기 저장 원칙, 전송 정보 표, 처리 위탁·국외 이전: Cloudflare·OpenAI·RevenueCat·Apple, 권리, 아동, 안전성, 책임자 '하꾸 운영자', 시행일 2026-11-01). public/about.html 소개 페이지(지원 URL, 아이콘·스크린샷·기능·문의·링크, 방문자 언어 한/영). 두 페이지는 iOS 앱 묶음에서 제외. PRIVACY.md는 요약+링크로 정리. 남은 것: 문의 메일 4곳."
+**Context**: 출시 준비
+
+---

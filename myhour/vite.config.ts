@@ -4,7 +4,8 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // 웹에서만 쓰는 파일은 앱 번들에서 뺀다 (BGM 시청 페이지, GitHub Pages 헤더 설정)
-const WEB_ONLY_FILES = ['bgm.html', '_headers']
+// 웹에서만 쓰는 페이지·파일 — iOS 앱 묶음에서는 뺀다 (소개·개인정보 페이지는 앱이 웹 주소로 연다)
+const WEB_ONLY_FILES = ['bgm.html', '_headers', 'about.html', 'about', 'privacy.html']
 
 function dropWebOnlyFiles(): Plugin {
   let outDir = 'dist'
@@ -13,7 +14,7 @@ function dropWebOnlyFiles(): Plugin {
     apply: 'build',
     configResolved(config) { outDir = config.build.outDir },
     closeBundle() {
-      for (const file of WEB_ONLY_FILES) rmSync(resolve(outDir, file), { force: true })
+      for (const file of WEB_ONLY_FILES) rmSync(resolve(outDir, file), { force: true, recursive: true })
     },
   }
 }

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>하꾸 · MyHour — AI 하루 영상 일기</title>
+<meta name="description" content="한 시간에 한 순간, 하루는 영상 하나로. One moment every hour, one film every day.">
+<link rel="icon" href="favicon.svg">
+<style>
+  /* 앱스토어 '지원 URL'이자 소개 페이지. 문의 메일은 [문의 메일] / [contact email] 두 곳만 바꾸면 된다 */
+  @font-face { font-family: 'Hand'; src: url('fonts/Gaegu-Regular.ttf'); }
+  :root { --bg: #FBF6EA; --grid: rgba(43,38,34,.06); --ink: #2B2622; --sub: #6B6258; --line: rgba(43,38,34,.14); --card: #FFFFFF; --red: #C9381F; --green: #C9DE95; --sky: #96C7EC; --pink: #F9D3D3; --yellow: #FFE27A; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1E1B18; --grid: rgba(255,248,236,.05); --ink: #F3ECE0; --sub: #B8AEA2; --line: rgba(255,248,236,.14); --card: #2A2622; --red: #F0735A; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg) linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 22px 22px; color: var(--ink);
+    font: 17px/1.7 -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif; padding: 28px max(16px, env(safe-area-inset-right)) 64px max(16px, env(safe-area-inset-left)); }
+  main { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+  .lang { display: flex; justify-content: flex-end; gap: 8px; }
+  .lang button { font: inherit; font-size: 14px; color: var(--ink); background: none; border: 1.5px solid var(--line); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+  .lang button[aria-pressed="true"] { border-color: var(--ink); font-weight: 700; }
+  .hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+  .hero img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 6px 18px rgba(43,38,34,.18); }
+  .tape { display: inline-block; padding: 2px 14px; transform: rotate(-2deg); font-size: 15px; color: #2B2622; }
+  h1 { margin: 0; font-size: clamp(32px, 7vw, 48px); line-height: 1.2; text-wrap: balance; }
+  .lead { margin: 0; color: var(--sub); font-size: 18px; max-width: 34em; }
+  .soon { display: inline-block; margin-top: 6px; padding: 10px 22px; border-radius: 14px; border: 2px solid var(--ink); background: var(--card); font-weight: 700; }
+  .shots { display: flex; gap: 16px; overflow-x: auto; padding: 4px 4px 12px; scroll-snap-type: x mandatory; }
+  .shots img { flex: 0 0 auto; width: min(260px, 70vw); border-radius: 22px; border: 2px solid var(--ink); scroll-snap-align: center; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .feature { background: var(--card); border: 1.5px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+  .feature h2 { margin: 6px 0 6px; font-size: 18px; }
+  .feature p { margin: 0; color: var(--sub); font-size: 15px; }
+  .contact { text-align: center; color: var(--sub); font-size: 15px; display: flex; flex-direction: column; gap: 6px; }
+  .contact a { color: var(--red); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="lang"><button type="button" id="btn-ko">한국어</button><button type="button" id="btn-en">English</button></div>
+
+  <div data-lang="ko">
+    <section class="hero">
+      <img src="icon-512.png" alt="하꾸 앱 아이콘">
+      <span class="tape" style="background:var(--green)">AI 하루 영상 일기</span>
+      <h1>한 시간에 한 순간,<br>하루는 영상 하나로</h1>
+      <p class="lead">알림이 오면 사진 한 장, 글 한 줄. 밤이 되면 AI 감독이 오늘을 다꾸 감성 영상 하나로 묶어줘요. 릴스·스레드·X에 바로 올려보세요.</p>
+      <span class="soon">App Store 출시 준비 중</span>
+    </section>
+    <div class="shots" aria-label="앱 화면">
+      <img src="about/ko-1.jpg" alt="한 시간에 한 순간 — 홈 화면 타임라인">
+      <img src="about/ko-3.jpg" alt="밤엔 하루가 영상 하나로 — 영상 표지와 그림일기">
+      <img src="about/ko-5.jpg" alt="내 하루를 바로 공유 — 엔딩 장면">
+    </div>
+    <section class="features">
+      <div class="feature"><span class="tape" style="background:var(--yellow)">기록</span><h2>편한 걸로 남겨요</h2><p>사진, 5초 영상, 음성, 글 중에 골라요. 쓸 거리가 막막할 땐 테이프를 눌러 시작해요.</p></div>
+      <div class="feature"><span class="tape" style="background:var(--pink)">영상</span><h2>AI 감독의 연출</h2><p>오늘 기록에 맞춰 제목, 자막, 음악을 골라요. 표지 7종과 엔딩 6종이 날마다 바뀌어요.</p></div>
+      <div class="feature"><span class="tape" style="background:var(--sky)">안심</span><h2>기록은 내 폰에만</h2><p>사진·영상·음성은 휴대폰 밖으로 나가지 않아요. AI에는 동의한 뒤 글과 캡션만 보내요.</p></div>
+    </section>
+    <section class="contact">
+      <div><b>문의</b> · [문의 메일]</div>
+      <div><a href="privacy.html#ko">개인정보처리방침</a> · <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">이용약관</a></div>
+      <div>© 2026 하꾸</div>
+    </section>
+  </div>
+
+  <div data-lang="en" hidden>
+    <section class="hero">
+      <img src="icon-512.png" alt="MyHour app icon">
+      <span class="tape" style="background:var(--green)">AI video diary</span>
+      <h1>One moment every hour,<br>one film every day</h1>
+      <p class="lead">A photo or one line when it pings. At night, an AI director turns your day into a short scrapbook-style film, ready for Reels, Threads or X.</p>
+      <span class="soon">Coming soon to the App Store</span>
+    </section>
+    <div class="shots" aria-label="App screens">
+      <img src="about/en-1.jpg" alt="One moment, every hour — home timeline">
+      <img src="about/en-3.jpg" alt="Your day, one film — cover and diary page">
+      <img src="about/en-5.jpg" alt="Share your day in a tap — ending scene">
+    </div>
+    <section class="features">
+      <div class="feature"><span class="tape" style="background:var(--yellow)">Capture</span><h2>Save it your way</h2><p>Photo, 5-second video, voice note or text. Stuck? Tap a prompt to get started.</p></div>
+      <div class="feature"><span class="tape" style="background:var(--pink)">Film</span><h2>Edited by an AI director</h2><p>A title, captions and music picked for your day. Seven covers and six endings rotate daily.</p></div>
+      <div class="feature"><span class="tape" style="background:var(--sky)">Private</span><h2>Your records stay on your phone</h2><p>Photos, videos and voice notes never leave your phone. Only text and captions go to the AI, after you agree.</p></div>
+    </section>
+    <section class="contact">
+      <div><b>Contact</b> · [contact email]</div>
+      <div><a href="privacy.html#en">Privacy Policy</a> · <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Terms of Use</a></div>
+      <div>© 2026 MyHour</div>
+    </section>
+  </div>
+</main>
+<script>
+  // 방문자 언어로 고르고, 버튼으로 바꿀 수 있다. #en / #ko 주소로 바로 열 수도 있다
+  const pick = lang => {
+    document.querySelectorAll('[data-lang]').forEach(el => { el.hidden = el.dataset.lang !== lang; });
+    document.documentElement.lang = lang;
+    document.getElementById('btn-ko').setAttribute('aria-pressed', String(lang === 'ko'));
+    document.getElementById('btn-en').setAttribute('aria-pressed', String(lang === 'en'));
+    document.title = lang === 'ko' ? '하꾸 — AI 하루 영상 일기' : 'MyHour — AI Video Diary';
+  };
+  const fromHash = location.hash === '#en' ? 'en' : location.hash === '#ko' ? 'ko' : null;
+  pick(fromHash ?? ((navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en'));
+  document.getElementById('btn-ko').onclick = () => pick('ko');
+  document.getElementById('btn-en').onclick = () => pick('en');
+</script>
+</body>
+</html>
