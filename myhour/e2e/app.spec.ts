@@ -60,3 +60,14 @@ test('무료 체험 안내: 아래에서 올라오고 체험 뒤 가격이 보�
   await sheet.getByRole('button', { name: '나중에 할게요' }).click();
   await expect(sheet).toHaveCount(0);
 });
+
+test.describe('일본어 폰', () => {
+  test.use({ locale: 'ja-JP' });
+
+  test('shows the app in Japanese when the phone is in Japanese', async ({ page }) => {
+    await page.goto('/myhour/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+    await expect(page.getByRole('button', { name: 'ホーム' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '設定' })).toBeVisible();
+  });
+});

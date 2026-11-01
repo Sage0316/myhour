@@ -326,7 +326,7 @@ async function renderVideo(
       // fallback thumbnail
       if (r.content.startsWith('data:')) imgMap.set(r.id, await loadImage(r.content));
     } else if (r.type === 'audio') {
-      if (!audioCtx) { onWarn?.(L(`음성(${r.slotTime}): 오디오 컨텍스트 없음`, `Audio (${r.slotTime}): no audio context`)); return; }
+      if (!audioCtx) { onWarn?.(L(`음성(${r.slotTime}): 오디오 컨텍스트 없음`, `Audio (${r.slotTime}): no audio context`, `ボイス(${r.slotTime}): オーディオコンテキストがありません`)); return; }
       try {
         const mediaKey = r.mediaId ?? r.videoKey;
         const raw = mediaKey
@@ -335,13 +335,13 @@ async function renderVideo(
             ? dataUrlToArrayBuffer(r.content)
             : null;
         if (!raw) {
-          onWarn?.(L(`음성(${r.slotTime}): 저장된 미디어를 찾을 수 없음`, `Audio (${r.slotTime}): saved media not found`));
+          onWarn?.(L(`음성(${r.slotTime}): 저장된 미디어를 찾을 수 없음`, `Audio (${r.slotTime}): saved media not found`, `ボイス(${r.slotTime}): 保存されたメディアが見つかりません`));
           return;
         }
         voiceBufMap.set(r.id, await decodeWithTimeout(raw));
       } catch (e) {
         const mime = r.mediaType ?? (r.content.startsWith('data:') ? r.content.slice(5, r.content.indexOf(';')) : 'unknown');
-        onWarn?.(L(`음성(${r.slotTime}) 디코딩 실패`, `Audio (${r.slotTime}) couldn't be decoded`) + ` [${mime}]: ${e instanceof Error ? (e.name + ' ' + e.message) : String(e)}`);
+        onWarn?.(L(`음성(${r.slotTime}) 디코딩 실패`, `Audio (${r.slotTime}) couldn't be decoded`, `ボイス(${r.slotTime})をデコードできませんでした`) + ` [${mime}]: ${e instanceof Error ? (e.name + ' ' + e.message) : String(e)}`);
       }
     }
   }));

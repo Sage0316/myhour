@@ -27,7 +27,8 @@ const HALO = 2.5;
 
 /** 로고에 흰 테두리를 미리 입혀 둔 캔버스. 프레임마다 이걸 한 번 그리기만 한다 */
 export async function loadWatermark(scale: number): Promise<HTMLCanvasElement | null> {
-  const en = getLang() === 'en';
+  // 영어·일본어판 이름은 둘 다 MyHour
+  const en = getLang() !== 'ko';
   const img = new Image();
   img.src = `${import.meta.env.BASE_URL}brand/${en ? 'myhour-wordmark-transparent.png' : 'hakku-wordmark-transparent.svg'}`;
   try { await img.decode(); } catch { return null; }

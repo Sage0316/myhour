@@ -25,7 +25,7 @@ export const COLOR = {
 
 export const FONT_BODY = "-apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif";
 // 손글씨는 그리운 코코초이툰(2026-10-28 펌킨 선택, index.css @font-face). 없는 드문 글자는 Gaegu로 채운다
-export const FONT_HAND = "'GriunCocochoitoon', 'Gaegu', -apple-system, 'Apple SD Gothic Neo', sans-serif";
+export const FONT_HAND = "'GriunCocochoitoon', 'HandJa', 'Gaegu', -apple-system, 'Apple SD Gothic Neo', sans-serif";
 
 /**
  * 화면 맨 위 여백. 폰에서는 App이 --top-inset에 실제 상태 표시줄 높이(safe-area-inset-top)를 넣고,

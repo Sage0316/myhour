@@ -1,0 +1,6 @@
+/* 日本語の端末で表示されるアプリ名と権限の説明 */
+"CFBundleDisplayName" = "MyHour";
+"NSCameraUsageDescription" = "一日の瞬間を写真や動画で記録するためにカメラを使います。";
+"NSMicrophoneUsageDescription" = "動画の音声やボイスメモを残すためにマイクを使います。";
+"NSPhotoLibraryUsageDescription" = "アルバムから写真を選んで記録に添えるために写真ライブラリにアクセスします。";
+"NSPhotoLibraryAddUsageDescription" = "撮った写真・動画や一日のムービーを写真アプリに保存します。";

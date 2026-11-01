@@ -68,7 +68,7 @@ function RecordTile({ record, onDelete }: { record: MyRecord; onDelete: () => vo
         <button
           type="button"
           onClick={onDelete}
-          aria-label={L(`${record.slotTime} ${TYPE_LABELS[record.type]} 기록 삭제`, `Delete ${record.slotTime} ${TYPE_LABELS[record.type]} record`)}
+          aria-label={L(`${record.slotTime} ${TYPE_LABELS[record.type]} 기록 삭제`, `Delete ${record.slotTime} ${TYPE_LABELS[record.type]} record`, `${record.slotTime} ${TYPE_LABELS[record.type]}の記録を削除`)}
           style={{ position: 'absolute', top: 0, right: 0, width: 44, height: 44, border: 0, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
         >
           <span style={{ width: 26, height: 26, borderRadius: 13, background: COLOR.white, border: `1.5px solid ${COLOR.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
@@ -115,7 +115,7 @@ export default function TodayScreen({ onTabChange, onWrapUp }: TodayScreenProps)
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <h1 style={TITLE}>{L('오늘', 'Today')}</h1>
           <span style={{ ...CARD, borderRadius: 12, padding: '2px 10px', fontSize: 13, fontWeight: 700 }}>
-            {L(`${records.length}개`, records.length === 1 ? '1 item' : `${records.length} items`)}
+            {L(`${records.length}개`, records.length === 1 ? '1 item' : `${records.length} items`, `${records.length}件`)}
           </span>
         </div>
       </div>

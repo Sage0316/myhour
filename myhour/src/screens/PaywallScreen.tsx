@@ -19,7 +19,7 @@ interface PaywallScreenProps {
 }
 
 const PLAN_INFO: Record<Plan, { name: string; summary: string; detail: string }> = {
-  standard: { name: 'Standard', summary: L(`한 달에 영상 ${STANDARD_VIDEOS_PER_PERIOD}개`, `${STANDARD_VIDEOS_PER_PERIOD} films a month`), detail: L('결제일마다 다시 채워져요', 'Refills every billing date') },
+  standard: { name: 'Standard', summary: L(`한 달에 영상 ${STANDARD_VIDEOS_PER_PERIOD}개`, `${STANDARD_VIDEOS_PER_PERIOD} films a month`, `1か月にムービー${STANDARD_VIDEOS_PER_PERIOD}本`), detail: L('결제일마다 다시 채워져요', 'Refills every billing date') },
   premium: { name: 'Premium', summary: L('매일 영상 1개', '1 film every day'), detail: L('하루도 빠짐없이 남겨요', 'Keep every single day') },
 };
 
@@ -93,7 +93,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
     ? L('처리 중…', 'Processing…')
     : trial
       ? L('3일 무료로 시작하기', 'Start 3-day free trial')
-      : L(`${offer?.priceString ?? ''} 구독하기`, `Subscribe for ${offer?.priceString ?? ''}/month`);
+      : L(`${offer?.priceString ?? ''} 구독하기`, `Subscribe for ${offer?.priceString ?? ''}/month`, `月額${offer?.priceString ?? ''}で定期購入する`);
 
   return (
     <div
@@ -119,6 +119,7 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
               ? L(
                 `Standard ${STANDARD_VIDEOS_PER_PERIOD}개를 모두 썼어요.${standardResetsAt ? ` ${formatMonthDay(standardResetsAt)}에 다시 채워져요.` : ''}\nPremium으로 바꾸면 매일 만들 수 있어요.`,
                 `You've used all ${STANDARD_VIDEOS_PER_PERIOD} Standard videos.${standardResetsAt ? ` They refill on ${formatMonthDay(standardResetsAt)}.` : ''}\nSwitch to Premium to make one every day.`,
+                `Standardのムービー${STANDARD_VIDEOS_PER_PERIOD}本をすべて使いました。${standardResetsAt ? `${formatMonthDay(standardResetsAt)}にまた補充されます。` : ''}\nPremiumに切り替えると毎日作れます。`,
               )
               : L('기록은 지금처럼 자유롭게 남기고,\n하루 마감 영상은 구독으로 만들어요.', 'Keep recording freely as always.\nDay-end films come with a subscription.')}
           </p>
@@ -188,10 +189,12 @@ export default function PaywallScreen({ onClose, onSubscribed, standardResetsAt 
             ? L(
               `3일 무료 체험이 끝나면 ${PLAN_INFO[selected].name} ${offer?.priceString ?? ''}가 매달 자동 결제돼요. 체험이 끝나기 24시간 전까지 해지하면 결제되지 않아요.`,
               `After the 3-day free trial, ${PLAN_INFO[selected].name} renews automatically at ${offer?.priceString ?? ''}/month. Cancel at least 24 hours before the trial ends and you won't be charged.`,
+              `3日間の無料体験が終わると、${PLAN_INFO[selected].name}の定期購入が月額${offer?.priceString ?? ''}で自動更新されます。体験終了の24時間前までに解約すれば、料金はかかりません。`,
             )
             : L(
               `${PLAN_INFO[selected].name} ${offer?.priceString ?? ''}가 매달 자동 결제돼요. 다음 결제일 24시간 전까지 해지하지 않으면 자동으로 갱신돼요.`,
               `${PLAN_INFO[selected].name} renews automatically at ${offer?.priceString ?? ''}/month unless canceled at least 24 hours before the next billing date.`,
+              `${PLAN_INFO[selected].name}の定期購入は月額${offer?.priceString ?? ''}で自動更新されます。次回請求日の24時間前までに解約しない限り、自動的に更新されます。`,
             )}
           {' '}{L('해지는 아이폰 설정 > Apple 계정 > 구독에서 할 수 있어요.', 'Cancel anytime in iPhone Settings > Apple Account > Subscriptions.')}
         </p>

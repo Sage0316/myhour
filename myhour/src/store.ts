@@ -215,9 +215,9 @@ export function formatTime(minutes: number): string {
   if (minutes >= 60) {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return m > 0 ? L(`${h}시간 ${m}분`, `${h}h ${m}m`) : L(`${h}시간`, `${h}h`);
+    return m > 0 ? L(`${h}시간 ${m}분`, `${h}h ${m}m`, `${h}時間${m}分`) : L(`${h}시간`, `${h}h`, `${h}時間`);
   }
-  return L(`${minutes}분`, `${minutes}m`);
+  return L(`${minutes}분`, `${minutes}m`, `${minutes}分`);
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -243,8 +243,8 @@ export function getDateStrings(sessionDate?: string) {
   const EN_MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const wd = d.getDay();
   return {
-    dateDay: L(`${month}월 ${day}일`, `${EN_MONTH[month - 1]} ${day}`),
-    dateWeekday: L(`${KO[wd]}요일`, EN_LONG[wd]),
+    dateDay: L(`${month}월 ${day}일`, `${EN_MONTH[month - 1]} ${day}`, `${month}月${day}日`),
+    dateWeekday: L(`${KO[wd]}요일`, EN_LONG[wd], `${'日月火水木金土'[wd]}曜日`),
     dateShort: `${month}.${day}`,
     weekdayEn: EN[wd],
   };
@@ -289,20 +289,25 @@ const MOOD_LABEL_EN: Record<MoodItem['mood'], string> = {
   정신없음: 'Hectic', 슬픔: 'Sad', 짜증: 'Annoyed', 지침: 'Tired',
 };
 
+const MOOD_LABEL_JA: Record<MoodItem['mood'], string> = {
+  잔잔함: '穏やか', 뿌듯함: '達成感', 감성: 'エモい', 웃김: 'おもしろ',
+  정신없음: 'バタバタ', 슬픔: 'かなしい', 짜증: 'イライラ', 지침: 'おつかれ',
+};
+
 export function moodLabel(mood: string): string {
-  return L(mood, MOOD_LABEL_EN[mood as MoodItem['mood']] ?? mood);
+  return L(mood, MOOD_LABEL_EN[mood as MoodItem['mood']] ?? mood, MOOD_LABEL_JA[mood as MoodItem['mood']]);
 }
 
 // AI 연출이 없을 때의 무드 추정. 부정적 감정을 앞에 둬서, 짜증과 웃음이 섞인 날이
 // 명랑한 칩으로 뭉개지지 않게 한다 (동점이면 앞선 무드가 이긴다).
 const MOOD_KEYWORDS: Array<{ mood: MoodItem['mood']; words: string[] }> = [
-  { mood: '짜증', words: ['짜증', '빡치', '빡쳤', '빡침', '열받', '화나', '화났', '최악', '싫', '시발', '씨발', 'ㅅㅂ', '개같', '미치겠', '어이없', '황당', 'annoyed', 'angry', 'mad', 'furious', 'hate', 'ugh', 'worst', 'pissed'] },
-  { mood: '슬픔', words: ['슬프', '슬펐', '눈물', '울었', '울컥', '우울', '외로', '외롭', '그리워', '그립', '보고싶', '속상', '서럽', '서운', 'sad', 'cried', 'crying', 'tears', 'lonely', 'miss you', 'missed', 'heartbroken', 'upset'] },
-  { mood: '지침', words: ['지쳤', '지친', '지침', '피곤', '힘들', '힘든', '녹초', '야근', '번아웃', '졸리', '졸려', 'tired', 'exhausted', 'drained', 'sleepy', 'burnt out', 'burned out', 'worn out'] },
-  { mood: '정신없음', words: ['정신없', '정신 없', '바빴', '바쁜', '바쁘', '뛰어다', '헐레벌떡', '급했', '몰아치', 'busy', 'hectic', 'rushed', 'chaos', 'chaotic', 'non-stop', 'nonstop'] },
-  { mood: '뿌듯함', words: ['뿌듯', '해냈', '해냄', '성공', '완성', '끝냈', '끝냄', '달성', '합격', '칭찬', 'proud', 'did it', 'finished', 'finally done', 'passed', 'nailed', 'achieved', 'won'] },
-  { mood: '웃김', words: ['ㅋㅋ', 'ㅎㅎ', '웃겨', '웃겼', '웃긴', '웃음', '빵터', '빵 터', '재밌', '재미있', '꿀잼', '드립', '개그', 'lol', 'lmao', 'haha', 'funny', 'hilarious', 'laughed', 'joke'] },
-  { mood: '감성', words: ['노을', '하늘', '바다', '달빛', '감성', '몽글', '설레', '설렘', '예뻤', '예쁘', '아름다', '벚꽃', '낭만', 'sunset', 'sky', 'ocean', 'moonlight', 'pretty', 'beautiful', 'cherry blossom', 'romantic', 'butterflies'] },
+  { mood: '짜증', words: ['짜증', '빡치', '빡쳤', '빡침', '열받', '화나', '화났', '최악', '싫', '시발', '씨발', 'ㅅㅂ', '개같', '미치겠', '어이없', '황당', 'annoyed', 'angry', 'mad', 'furious', 'hate', 'ugh', 'worst', 'pissed', 'イライラ', 'ムカつ', 'むかつ', '腹立', '最悪', 'うざ'] },
+  { mood: '슬픔', words: ['슬프', '슬펐', '눈물', '울었', '울컥', '우울', '외로', '외롭', '그리워', '그립', '보고싶', '속상', '서럽', '서운', 'sad', 'cried', 'crying', 'tears', 'lonely', 'miss you', 'missed', 'heartbroken', 'upset', '悲し', 'かなし', '泣い', '涙', '寂し', 'さみし', '落ち込'] },
+  { mood: '지침', words: ['지쳤', '지친', '지침', '피곤', '힘들', '힘든', '녹초', '야근', '번아웃', '졸리', '졸려', 'tired', 'exhausted', 'drained', 'sleepy', 'burnt out', 'burned out', 'worn out', '疲れ', 'つかれ', 'しんど', 'ねむ', '眠い', '残業', 'ヘトヘト'] },
+  { mood: '정신없음', words: ['정신없', '정신 없', '바빴', '바쁜', '바쁘', '뛰어다', '헐레벌떡', '급했', '몰아치', 'busy', 'hectic', 'rushed', 'chaos', 'chaotic', 'non-stop', 'nonstop', 'バタバタ', '忙し', 'いそがし', 'ドタバタ', '慌ただし'] },
+  { mood: '뿌듯함', words: ['뿌듯', '해냈', '해냄', '성공', '완성', '끝냈', '끝냄', '달성', '합격', '칭찬', 'proud', 'did it', 'finished', 'finally done', 'passed', 'nailed', 'achieved', 'won', 'できた', '達成', '合格', '終わった', 'やりきった', '褒められ'] },
+  { mood: '웃김', words: ['ㅋㅋ', 'ㅎㅎ', '웃겨', '웃겼', '웃긴', '웃음', '빵터', '빵 터', '재밌', '재미있', '꿀잼', '드립', '개그', 'lol', 'lmao', 'haha', 'funny', 'hilarious', 'laughed', 'joke', '笑', 'ｗｗ', 'ww', 'ウケ', 'おもしろ', '面白'] },
+  { mood: '감성', words: ['노을', '하늘', '바다', '달빛', '감성', '몽글', '설레', '설렘', '예뻤', '예쁘', '아름다', '벚꽃', '낭만', 'sunset', 'sky', 'ocean', 'moonlight', 'pretty', 'beautiful', 'cherry blossom', 'romantic', 'butterflies', '夕焼け', '空', '海', '月', 'きれい', '綺麗', '桜', 'エモ', 'ときめ'] },
 ];
 
 export function guessMood(records: MyRecord[]): MoodItem {
@@ -334,7 +339,7 @@ export function guessMood(records: MyRecord[]): MoodItem {
 
 export function generateTitle(records: MyRecord[]): string {
   const texts = records.filter(r => r.type === 'text' && !r.content.startsWith('data:'));
-  if (texts.length === 0) return L(`오늘의 ${records.length}개 순간`, `${records.length} ${records.length === 1 ? 'moment' : 'moments'} today`);
+  if (texts.length === 0) return L(`오늘의 ${records.length}개 순간`, `${records.length} ${records.length === 1 ? 'moment' : 'moments'} today`, `今日の${records.length}つの瞬間`);
   const first = texts[0].content.trim();
   return first.length <= 20 ? first : first.slice(0, 18) + '…';
 }
@@ -363,9 +368,20 @@ const CLOSING_BY_MOOD_EN: Record<MoodItem['mood'], string> = {
   지침: 'A tiring day. Making it this far is enough.',
 };
 
+const CLOSING_BY_MOOD_JA: Record<MoodItem['mood'], string> = {
+  잔잔함: '大きな出来事はなかったけど、それがよかった穏やかな一日。',
+  뿌듯함: '小さな「できた」が積み重なって、ちょっと誇らしい一日になった。',
+  감성: 'なんとなく心に残る瞬間がある一日だった。',
+  웃김: 'くすっと笑える瞬間のおかげで、軽やかに締めくくる一日。',
+  정신없음: 'バタバタ過ぎていったけど、ちゃんと乗り切った一日。',
+  슬픔: '心が重い日だったけど、今日の自分をここに残しておく。',
+  짜증: 'イライラすることも多かったけど、今日をなんとか乗り切った。',
+  지침: 'すごく疲れた一日。ここまで来られただけで十分。',
+};
+
 export function generateClosing(records: MyRecord[], mood: string = guessMood(records).mood): string {
   const key = (mood in CLOSING_BY_MOOD ? mood : '잔잔함') as MoodItem['mood'];
-  return L(CLOSING_BY_MOOD[key], CLOSING_BY_MOOD_EN[key]);
+  return L(CLOSING_BY_MOOD[key], CLOSING_BY_MOOD_EN[key], CLOSING_BY_MOOD_JA[key]);
 }
 
 // ─── App data (records + wrap state) ────────────────────────────────────────

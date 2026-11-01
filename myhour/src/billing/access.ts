@@ -60,5 +60,5 @@ export function canMakeVideo(access: VideoAccess): boolean {
 export function formatMonthDay(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);
-  return L(`${date.getMonth() + 1}월 ${date.getDate()}일`, date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  return L(`${date.getMonth() + 1}월 ${date.getDate()}일`, date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), `${date.getMonth() + 1}月${date.getDate()}日`);
 }

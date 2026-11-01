@@ -7,7 +7,7 @@
 
 손글씨 글꼴은 **그리운 코코초이툰**(Copyright © TypeE. Corp. & ChoiYoungJoo, 그리운 X 코코초이)입니다. 배포처: 눈누(https://noonnu.cc/font_page/1745). 라이선스 원문: "모든 사용 범위에서 자유롭게 사용이 가능합니다. 다만, 폰트파일 개작·수정·판매는 금지됩니다." 표기된 이용 범위: 인쇄·웹사이트·영상·포장지·임베딩·BI/CI. 폰트 파일은 수정하지 않고 원본 그대로 포함합니다(`myhour/src/assets/fonts/GriunCocochoitoon.woff2`).
 
-코코초이툰에 없는 드문 글자를 채우는 손글씨 Gaegu(© JIKJI SOFT)는 `@fontsource/gaegu` 패키지와 `myhour/public/fonts/Gaegu-Regular.ttf`로 포함되며 SIL Open Font License 1.1을 따릅니다. 본문은 기기 기본 글꼴을 사용합니다.
+코코초이툰에 없는 드문 글자를 채우는 손글씨 Gaegu(© JIKJI SOFT)는 `@fontsource/gaegu` 패키지와 `myhour/public/fonts/Gaegu-Regular.ttf`로 포함되며 SIL Open Font License 1.1을 따릅니다. 일본어 손글씨 Yomogi(© 2020 The Yomogi Project Authors, https://github.com/satsuyako/YomogiFont)는 `myhour/src/assets/fonts/Yomogi-Regular.woff2`(원본 TTF를 글자를 빼지 않고 WOFF2 형식으로만 바꾼 것)로 포함되며 SIL Open Font License 1.1을 따릅니다. 본문은 기기 기본 글꼴을 사용합니다.
 
 # AI-DLC workflow rules
 

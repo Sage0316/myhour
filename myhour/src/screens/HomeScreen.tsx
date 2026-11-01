@@ -37,7 +37,7 @@ const UNDERLINE = ['rgba(255,214,90,0.8)', 'rgba(132,190,236,0.8)'];
 
 function recordTitle(record: MyRecord): string {
   if (record.caption) return record.caption;
-  return L(`${TYPE_LABELS[record.type]} 기록`, TYPE_LABELS[record.type]);
+  return L(`${TYPE_LABELS[record.type]} 기록`, TYPE_LABELS[record.type], `${TYPE_LABELS[record.type]}の記録`);
 }
 
 /** 사진·영상·음성 — 테이프로 붙인 폴라로이드 */
@@ -184,7 +184,7 @@ function HomeDay({ onRecord, onWrapUp }: { onRecord: () => void; onWrapUp: () =>
             {untilNext && (
               <div style={{ marginLeft: 88, alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '8px 16px', boxSizing: 'border-box', border: '2px dashed #8EA7C9', borderRadius: 12, background: 'rgba(255,255,255,0.7)', fontSize: 15, color: '#3B557A' }}>
                 <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></svg>
-                {L(`다음 기록까지 ${untilNext}`, `Next record in ${untilNext}`)}
+                {L(`다음 기록까지 ${untilNext}`, `Next record in ${untilNext}`, `次の記録まで ${untilNext}`)}
               </div>
             )}
           </div>

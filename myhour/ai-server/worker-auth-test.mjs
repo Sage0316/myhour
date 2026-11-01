@@ -85,6 +85,8 @@ assert.equal(
 );
 assert.ok(buildPrompt({ date: 'Oct 29', records, lang: 'en' }).includes('자연스러운 영어'), '영어판 프롬프트는 영어 출력을 요구한다');
 assert.ok(!buildPrompt({ date: '10월 29일', records }).includes('자연스러운 영어'), '한국어 프롬프트에는 영어 지시가 없다');
+assert.ok(buildPrompt({ date: '10月29日', records, lang: 'ja' }).includes('자연스러운 일본어'), '일본어판 프롬프트는 일본어 출력을 요구한다');
+assert.equal(normalizeResult({ ...directorBase, closing: '' }, records, undefined, 'ja').closing, '最後の一行を書いて、一日を閉じた。', '일본어판의 빈 closing은 일본어 중립 문장');
 console.log('✅ AI AUTH/VALIDATION OK');
 
 // ── 프로바이더 오류 코드 구분 ────────────────────────────────────────────────

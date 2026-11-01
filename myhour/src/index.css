@@ -8,6 +8,18 @@
   size-adjust: 80%;
 }
 
+/* 일본어 손글씨: Yomogi (OFL 1.1, © The Yomogi Project Authors — THIRD_PARTY_NOTICES.md).
+   코코초이툰엔 가나·한자가 없어서 그 글자에만 쓴다. unicode-range 덕분에 일본어 글자가 화면에 나올 때만 내려받는다 */
+@font-face {
+  font-family: 'HandJa';
+  src: url('./assets/fonts/Yomogi-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+3000-30FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+  /* 같은 크기에서 코코초이툰(80%)보다 커 보여서 맞춘다 (scenes.ts와 같은 값) */
+  size-adjust: 85%;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {

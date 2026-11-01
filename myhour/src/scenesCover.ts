@@ -147,7 +147,7 @@ function labelLines(ctx: CanvasRenderingContext2D, o: CoverOpts, cx: number, cy:
   const title = wrapWords(ctx, o.title, half * 2 - 10, 1)[0] ?? o.title;
   centerHand(ctx, title, cx, cy - 18, half * 2, 44, C.ink);
   centerHand(ctx, o.dateStr, cx, cy + 40, half * 2 + 30, 30, C.ink);
-  centerHand(ctx, L(`오늘의 기록 ${o.count}개`, `${o.count} ${o.count === 1 ? 'moment' : 'moments'} today`), cx, cy + 98, half * 2 - 80, 24, 'rgba(43,38,34,0.7)');
+  centerHand(ctx, L(`오늘의 기록 ${o.count}개`, `${o.count} ${o.count === 1 ? 'moment' : 'moments'} today`, `今日の記録 ${o.count}件`), cx, cy + 98, half * 2 - 80, 24, 'rgba(43,38,34,0.7)');
 }
 
 /** 표지 가운데 흰 라벨. 모양은 날짜로 고르고, 안에는 늘 제목·날짜·기록 수가 들어간다 */
@@ -194,7 +194,7 @@ function coverLabel(ctx: CanvasRenderingContext2D, o: CoverOpts, cx: number, cy:
     ctx.font = `44px ${HAND}`;
     const title = wrapWords(ctx, o.title, 360, 1)[0] ?? o.title;
     centerHand(ctx, title, cx, cy + 34, 370, 44, C.ink);
-    centerHand(ctx, L(`${o.dateStr} · 기록 ${o.count}개`, `${o.dateStr} · ${o.count} ${o.count === 1 ? 'moment' : 'moments'}`), cx, cy + 82, 370, 26, 'rgba(43,38,34,0.75)');
+    centerHand(ctx, L(`${o.dateStr} · 기록 ${o.count}개`, `${o.dateStr} · ${o.count} ${o.count === 1 ? 'moment' : 'moments'}`, `${o.dateStr} · 記録 ${o.count}件`), cx, cy + 82, 370, 26, 'rgba(43,38,34,0.75)');
   } else {
     labelLines(ctx, o, cx, cy, ink === C.ink ? C.ink : ink, shape === 'oval' ? 150 : 155);
   }
@@ -354,7 +354,7 @@ function coverBubbleYellow(ctx: CanvasRenderingContext2D, o: CoverOpts, t: numbe
   const e = ease(t);
   ctx.save(); ctx.globalAlpha = e;
   // 영어는 한 글자 더 길어서 조금 작게
-  bubbleWord(ctx, L('hakku', 'myhour'), W / 2 + sw / 2, H * 0.27 + (1 - e) * 10, getLang() === 'en' ? 118 : 140);
+  bubbleWord(ctx, L('hakku', 'myhour'), W / 2 + sw / 2, H * 0.27 + (1 - e) * 10, getLang() !== 'ko' ? 118 : 140);
   ctx.restore();
   coverLabel(ctx, o, W / 2 + sw / 2, H * 0.42, C.ink, t);
 }

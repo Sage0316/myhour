@@ -29,6 +29,12 @@
 - AI 없을 때의 영어: 무드 키워드·내용 이모지 사전에 영어 단어 추가(store MOOD_KEYWORDS, scenes KEYWORD_EMOJI_EN), 영어 마무리 문구(CLOSING_BY_MOOD_EN)·제목
 - iOS: `ios/App/App/{en,ko}.lproj/InfoPlist.strings` — 영어 폰 홈 화면 이름 MyHour + 카메라·마이크·사진 권한 안내 영어. knownRegions에 ko 추가
 
+## 일본어판 (2026-11-01)
+- 일본어 폰(ja)이면 일본어. 화면 이름은 MyHour. `L(ko, en, ja?)` — 고정 문장은 **`src/i18nJa.ts` 사전(한국어 원문 → 일본어)**, 숫자가 섞인 문장만 세 번째 인자. **새 L() 문장을 넣으면 사전에도 추가할 것** — `i18nJa.test.ts`가 빠진 문장과 일본어 안의 한글을 잡는다
+- 무드 일본어 이름(MOOD_LABEL_JA: 穏やか·達成感·エモい·おもしろ·バタバタ·かなしい·イライラ·おつかれ), 기본 마무리 문구·무드 키워드·내용 이모지 사전 일본어, AI 워커 lang 'ja'(일본어 출력 지시·일본어 fallback closing), iOS `ja.lproj/InfoPlist.strings`
+- 일본어 손글씨는 **Yomogi**(OFL, `src/assets/fonts/Yomogi-Regular.woff2`, size-adjust 85%). 코코초이툰엔 가나·한자가 없어서 그 글자에만 쓴다 — CSS는 unicode-range로 일본어가 보일 때만 받고, 영상(캔버스)은 일본어 모드일 때만 미리 load
+- 영상 줄바꿈: 일본어는 띄어쓰기가 없어 글자 단위로 끊기므로 `wrapLines`가 줄 첫머리 금칙 문자(。、」ゃっー 등)를 앞줄 끝에 붙인다
+
 ## 기술 스택
 - Vite 8 + React + TypeScript
 - GitHub Pages 배포 (`base: '/myhour/'`)

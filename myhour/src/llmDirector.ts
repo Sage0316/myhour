@@ -191,7 +191,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 function directorError(code: string | undefined, status: number): Error {
-  if (!code) return new Error(L(`AI 분석 오류 (${status})`, `AI error (${status})`));
+  if (!code) return new Error(L(`AI 분석 오류 (${status})`, `AI error (${status})`, `AIエラー (${status})`));
   return new Error(`${ERROR_MESSAGES[code] ?? L('AI 분석에 실패했어요.', 'AI editing failed.')} (${code})`);
 }
 
@@ -217,7 +217,7 @@ export function directorKeyFor(
     date,
     // 무드도 키에 넣는다. 무드를 고정해서 부른 결과와 고정 없이 부른 결과는 다른 응답이다.
     // 언어도 섞는다 — 한국어로 받은 연출을 영어 화면에 그대로 쓰면 안 된다 (한국어는 예전 키와 같게 둔다)
-    recordsHash: stableHash(JSON.stringify({ r: directorRecordsPayload(records), m: mood ?? '', ...(getLang() === 'en' ? { l: 'en' } : {}) })),
+    recordsHash: stableHash(JSON.stringify({ r: directorRecordsPayload(records), m: mood ?? '', ...(getLang() !== 'ko' ? { l: getLang() } : {}) })),
     intensityLevel,
     promptVersion: PROMPT_VERSION,
   });

@@ -123,7 +123,7 @@ function PushSection() {
             <div style={{ fontSize: 15 }}>{L('기록 시간 알림', 'Record reminders')}</div>
             <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
               {ready
-                ? L(`${settings.startTime}부터 ${intervalLabel(settings.interval)} 간격으로 알려드려요`, `From ${settings.startTime}, every ${intervalLabel(settings.interval)}`)
+                ? L(`${settings.startTime}부터 ${intervalLabel(settings.interval)} 간격으로 알려드려요`, `From ${settings.startTime}, every ${intervalLabel(settings.interval)}`, `${settings.startTime}から${intervalLabel(settings.interval)}ごとにお知らせします`)
                 : PUSH_SERVER_URL === ''
                   ? L('지금은 알림을 쓸 수 없어요', 'Reminders aren\'t available right now')
                   : L('iOS 16.4 이상 + 홈 화면 설치가 필요해요', 'Needs iOS 16.4+ and Add to Home Screen')}
@@ -306,9 +306,9 @@ function SubscriptionSection() {
     ? L('기록은 무료, 하루 영상은 구독으로 만들어요', 'Recording is free; daily films need a plan')
     : [
       subscription.isTrial ? L('무료 체험 중', 'Free trial') : null,
-      access?.kind === 'allowed' && access.remaining !== null ? L(`남은 영상 ${access.remaining}개`, `${access.remaining} films left`) : null,
+      access?.kind === 'allowed' && access.remaining !== null ? L(`남은 영상 ${access.remaining}개`, `${access.remaining} films left`, `残りムービー${access.remaining}本`) : null,
       access?.kind === 'standard_used_up' ? L('이번 달 영상을 다 썼어요', 'No films left this month') : null,
-      subscription.periodEnd ? L(`다음 결제일 ${formatMonthDay(subscription.periodEnd)}`, `Renews ${formatMonthDay(subscription.periodEnd)}`) : null,
+      subscription.periodEnd ? L(`다음 결제일 ${formatMonthDay(subscription.periodEnd)}`, `Renews ${formatMonthDay(subscription.periodEnd)}`, `次回更新日 ${formatMonthDay(subscription.periodEnd)}`) : null,
     ].filter(Boolean).join(' · ');
   const rowButton: React.CSSProperties = { display: 'flex', alignItems: 'center', width: '100%', minHeight: 50, padding: '0 16px', background: 'none', border: 'none', borderTop: `1.5px dashed ${COLOR.dash}`, cursor: 'pointer', fontFamily: FONT_BODY, color: COLOR.ink, fontSize: 15, textAlign: 'left' };
 
@@ -388,7 +388,7 @@ function DataSection() {
           triggerDownload(result.blob, result.filename);
         }
       }
-      setStatus(L(`완료 · 미디어 ${result.mediaCount}개 포함`, `Done · ${result.mediaCount} media files`));
+      setStatus(L(`완료 · 미디어 ${result.mediaCount}개 포함`, `Done · ${result.mediaCount} media files`, `完了 · メディア${result.mediaCount}件を含む`));
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : L('백업을 만들지 못했어요.', 'Couldn\'t create the backup.'));
     } finally {
@@ -406,7 +406,7 @@ function DataSection() {
     setStatus(L('백업 검증 중', 'Verifying backup'));
     try {
       const result = await restoreCompleteBackup(file, progress => setStatus(progressText(progress)));
-      setStatus(L(`복원 완료 · 미디어 ${result.mediaCount}개`, `Restored · ${result.mediaCount} media files`));
+      setStatus(L(`복원 완료 · 미디어 ${result.mediaCount}개`, `Restored · ${result.mediaCount} media files`, `復元完了 · メディア${result.mediaCount}件`));
       setTimeout(() => window.location.reload(), 800);
     } catch (restoreError) {
       setError(restoreError instanceof Error ? restoreError.message : L('백업을 복원하지 못했어요.', 'Couldn\'t restore the backup.'));
@@ -490,6 +490,7 @@ const LANG_LABELS = {
   auto: L('폰 언어 따르기', 'Same as phone'),
   ko: '한국어',
   en: 'English',
+  ja: '日本語',
 } as const;
 
 export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
@@ -649,7 +650,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
         {/* 언어 — 영어로 바뀐 사람도 찾을 수 있게 제목에 두 언어를 같이 쓴다. 바꾸면 앱을 다시 불러온다 */}
         <SettingGroup header="언어 · Language">
           <SettingRow label={L('앱 언어', 'App language')} value={LANG_LABELS[langPref]} last open={openRow === 'lang'} onToggle={() => toggle('lang')}>
-            {(['auto', 'ko', 'en'] as const).map(v => (
+            {(['auto', 'ko', 'en', 'ja'] as const).map(v => (
               <Option key={v} label={LANG_LABELS[v]} selected={langPref === v} onSelect={() => {
                 if (v === langPref) { setOpenRow(null); return; }
                 saveLangPref(v);
@@ -677,7 +678,7 @@ export default function SettingsScreen({ onTabChange }: SettingsScreenProps) {
                 onClick={async () => {
                   if (!confirm(L('오늘 마감을 되돌릴까요?\n\n오늘 기록이 홈 화면으로 돌아오고, 오늘 만든 영상과 아카이브 항목은 지워져요.\n사진·글 같은 기록은 그대로 남아요.', 'Undo today\'s wrap-up?\n\nToday\'s records return to Home, and today\'s film and archive entry are deleted.\nYour photos and notes stay.'))) return;
                   const restored = await undoTodayWrap();
-                  alert(restored > 0 ? L(`기록 ${restored}개를 오늘로 되돌렸어요. 하루 마감을 다시 할 수 있어요.`, `Moved ${restored} records back to today. You can wrap up again.`) : L('되돌릴 아카이브 항목이 없어서 잠금만 풀었어요.', 'No archive entry to undo, so the day was just unlocked.'));
+                  alert(restored > 0 ? L(`기록 ${restored}개를 오늘로 되돌렸어요. 하루 마감을 다시 할 수 있어요.`, `Moved ${restored} records back to today. You can wrap up again.`, `記録${restored}件を今日に戻しました。もう一度今日をしめくくれます。`) : L('되돌릴 아카이브 항목이 없어서 잠금만 풀었어요.', 'No archive entry to undo, so the day was just unlocked.'));
                 }}
                 disabled={!isWrapped}
                 style={{

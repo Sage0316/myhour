@@ -79,7 +79,7 @@ function validRequest(body) {
   // mood는 선택값. 강도만 바꿔 다시 부를 때 무드가 튀지 않도록 화면에 보이는 값을 고정한다
   if (body.mood !== undefined && !MOOD_CHIPS.includes(body.mood)) return false;
   // lang은 선택값. 영어판(MyHour)은 'en'을 보내 제목·마무리·자막을 영어로 받는다. 구버전 앱은 안 보낸다(=한국어)
-  if (body.lang !== undefined && body.lang !== 'ko' && body.lang !== 'en') return false;
+  if (body.lang !== undefined && !['ko', 'en', 'ja'].includes(body.lang)) return false;
   if (!Array.isArray(body.records) || body.records.length < 1 || body.records.length > 96) return false;
   return body.records.every(record =>
     record && typeof record === 'object'
@@ -119,6 +119,15 @@ const CLICHE_CLOSING_PATTERNS = [
 // "하루 요약"이 아니라 메아리라서, 타입별 중립 문장만 쓴다
 function fallbackClosing(records, lang) {
   const last = records.at(-1);
+  if (lang === 'ja') {
+    return {
+      text: '最後の一行を書いて、一日を閉じた。',
+      photo: '最後に一枚、写真を残した。',
+      video: '最後にひとつ、動画を残した。',
+      audio: '最後にひとつ、ボイスを残した。',
+      meme: '最後に一枚、画像を残した。',
+    }[last?.type] ?? '最後の記録で一日を閉じた。';
+  }
   if (lang === 'en') {
     return {
       text: 'Wrote one last line and closed the day.',
@@ -213,13 +222,20 @@ export function buildPrompt(body) {
     ? `\n- **이번 요청은 moodChip을 반드시 "${body.mood}"로 유지하세요.** 사용자가 이미 그 무드로 보고 있습니다`
     : '';
 
-  // 영어판: 규칙은 그대로 두고 사람에게 보이는 글만 영어로 쓰게 한다. moodChip·bgmTrack은 키라서 그대로다.
+  // 영어·일본어판: 규칙은 그대로 두고 사람에게 보이는 글만 그 언어로 쓰게 한다. moodChip·bgmTrack은 키라서 그대로다.
   const english = body.lang === 'en'
     ? `\n\n출력 언어 (가장 중요):
 - 이 사용자는 영어 사용자입니다. title, closing, mood, bgMusic, captions는 **모두 자연스러운 영어**로 쓰세요. 기록이 한국어여도 영어로 씁니다
 - 영어 길이: title 24자 이내, closing 70자 이내, mood 36자 이내, 각 caption 26자 이내
 - 영어 문체도 담백하고 건조하게, 일기처럼. 자막은 짧고 캐주얼하게 (예: "first coffee of the day", "this is why I clock out")
 - 클리셰 금지: "little moments make me who I am", "small joys", "a day well lived", "another day, another blessing" 같은 말 쓰지 말 것
+- moodChip과 bgmTrack은 아래에 적힌 한국어/영문 값 그대로 (번역하지 말 것)`
+    : body.lang === 'ja'
+    ? `\n\n출력 언어 (가장 중요):
+- 이 사용자는 일본어 사용자입니다. title, closing, mood, bgMusic, captions는 **모두 자연스러운 일본어**로 쓰세요. 기록이 한국어·영어여도 일본어로 씁니다
+- 일본어 길이: title 14자 이내, closing 35자 이내, mood 20자 이내, 각 caption 15자 이내
+- 일기처럼 담백한 だ・である체. 자막은 짧고 캐주얼하게 (예: "今日の一杯目", "これのために退勤する")
+- 클리셰 금지: "小さな幸せ", "かけがえのない一日", "今日も自分らしく", "輝く一日" 같은 말 쓰지 말 것
 - moodChip과 bgmTrack은 아래에 적힌 한국어/영문 값 그대로 (번역하지 말 것)`
     : '';
 

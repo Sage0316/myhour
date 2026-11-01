@@ -8,8 +8,13 @@ describe('언어 고르기', () => {
   });
 
   it('falls back to English for phones in other languages', () => {
-    expect(resolveLang('auto', ['ja-JP'])).toBe('en');
+    expect(resolveLang('auto', ['es-ES'])).toBe('en');
     expect(resolveLang('auto', [])).toBe('en');
+  });
+
+  it('uses Japanese on Japanese phones', () => {
+    expect(resolveLang('auto', ['ja-JP', 'en-US'])).toBe('ja');
+    expect(resolveLang('ja', ['ko-KR'])).toBe('ja');
   });
 
   it('lets the setting override the phone', () => {

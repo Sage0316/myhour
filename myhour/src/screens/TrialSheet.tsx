@@ -13,7 +13,7 @@ import { L } from '../i18n';
 // 기록은 무료라 '나중에 할게요'로 언제든 닫을 수 있어야 하고, 체험 뒤 가격은 애플 심사 때문에 꼭 보여야 한다.
 
 const PLANS: { plan: Plan; name: string; summary: string }[] = [
-  { plan: 'standard', name: 'Standard', summary: L(`한 달에 영상 ${STANDARD_VIDEOS_PER_PERIOD}개`, `${STANDARD_VIDEOS_PER_PERIOD} films a month`) },
+  { plan: 'standard', name: 'Standard', summary: L(`한 달에 영상 ${STANDARD_VIDEOS_PER_PERIOD}개`, `${STANDARD_VIDEOS_PER_PERIOD} films a month`, `1か月にムービー${STANDARD_VIDEOS_PER_PERIOD}本`) },
   { plan: 'premium', name: 'Premium', summary: L('매일 영상 1개', 'A film every day') },
 ];
 
@@ -146,6 +146,7 @@ export default function TrialSheet({ onClose, preview = false }: TrialSheetProps
           {L(
             `3일 뒤 ${planName} 월 ${offer?.priceString ?? ''} 자동 결제 · 체험이 끝나기 24시간 전까지 해지하면 결제되지 않아요`,
             `${planName} renews at ${offer?.priceString ?? ''}/month after 3 days · Cancel at least 24 hours before the trial ends and you won't be charged`,
+            `3日後に${planName}の定期購入が月額${offer?.priceString ?? ''}で自動更新 · 体験終了の24時間前までに解約すれば請求されません`,
           )}
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 4, fontSize: 11.5 }}>

@@ -447,6 +447,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                   ? L(
                     `이번 달 영상 15개를 다 만들었어요.${access.resetsAt ? ` ${formatMonthDay(access.resetsAt)}에 다시 채워져요.` : ''}`,
                     `You've made all 15 films this month.${access.resetsAt ? ` More on ${formatMonthDay(access.resetsAt)}.` : ''}`,
+                    `今月のムービー15本をすべて作りました。${access.resetsAt ? `${formatMonthDay(access.resetsAt)}にまた補充されます。` : ''}`,
                   )
                   : L('AI 연출과 하루 영상은 구독으로 만들어요. 3일은 무료예요.', 'AI directing and daily films come with a subscription. First 3 days free.')}
               </span>
@@ -496,7 +497,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
                   key={emoji}
                   onClick={() => setEmojiPick(emoji)}
                   aria-pressed={emoji === activeEmoji}
-                  aria-label={L(`무드 이모지 ${emoji}`, `Mood emoji ${emoji}`)}
+                  aria-label={L(`무드 이모지 ${emoji}`, `Mood emoji ${emoji}`, `ムードの絵文字 ${emoji}`)}
                   style={{
                     flex: 1, height: 38, borderRadius: 11,
                     background: emoji === activeEmoji ? COLOR.yellow : COLOR.white,
@@ -512,7 +513,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: COLOR.inkSub }}>
                 <span>{moodLabel(selectedMood.mood)}</span><span style={MONO}>{intensity}</span>
               </div>
-              <input type="range" min={0} max={100} value={intensity} onChange={e => setIntensityPick(Number(e.target.value))} aria-label={L(`${selectedMood.mood} 정도`, `${moodLabel(selectedMood.mood)} intensity`)} style={{ width: '100%', marginTop: 8, accentColor: COLOR.red }} />
+              <input type="range" min={0} max={100} value={intensity} onChange={e => setIntensityPick(Number(e.target.value))} aria-label={L(`${selectedMood.mood} 정도`, `${moodLabel(selectedMood.mood)} intensity`, `${moodLabel(selectedMood.mood)}の強さ`)} style={{ width: '100%', marginTop: 8, accentColor: COLOR.red }} />
             </div>
             </div>
           </div>
@@ -551,7 +552,7 @@ export default function WrapUpScreen({ onClose, onSave, entry }: WrapUpScreenPro
               <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF6C9' }}>{entry ? L('탭하면 이 날이 영상이 돼요', 'Tap to turn this day into a film') : L('탭하면 오늘이 영상이 돼요', 'Tap to turn today into a film')}</div>
             </button>
             {access?.kind === 'allowed' && access.remaining !== null && !alreadyGenerated && (
-              <div style={{ fontSize: 12, color: COLOR.inkMuted, textAlign: 'center' }}>{L(`이번 달 남은 영상 ${access.remaining}개`, `${access.remaining} films left this month`)}</div>
+              <div style={{ fontSize: 12, color: COLOR.inkMuted, textAlign: 'center' }}>{L(`이번 달 남은 영상 ${access.remaining}개`, `${access.remaining} films left this month`, `今月の残りムービー${access.remaining}本`)}</div>
             )}
             {genError && (
               <div style={{ fontSize: 13, color: COLOR.red, lineHeight: 1.5, padding: '8px 4px', whiteSpace: 'pre-line' }}>{genError}</div>

@@ -3,6 +3,8 @@
 import type { MyRecord } from './store';
 import { TYPE_COLORS } from './store';
 import handFontUrl from './assets/fonts/GriunCocochoitoon.woff2?url';
+import { getLang } from './i18n';
+import jaFontUrl from './assets/fonts/Yomogi-Regular.woff2?url';
 
 export const W = 540;
 export const H = 960;
@@ -12,7 +14,8 @@ export const INK = '#1A1A1A';
 
 // 영상 손글씨: 그리운 코코초이툰(2026-10-28 펌킨 선택). 없는 드문 글자(2,780자 밖)는
 // 예전 손글씨 개구(Gaegu, OFL)로, 그것도 없으면 시스템 글꼴로 채운다.
-export const HAND = "'DiaryHand', 'DiaryHandFallback', system-ui, sans-serif";
+// DiaryHandJa는 일본어(가나·한자)만 맡는다 — 코코초이툰엔 그 글자가 없다
+export const HAND = "'DiaryHand', 'DiaryHandJa', 'DiaryHandFallback', system-ui, sans-serif";
 let handFontLoading: Promise<void> | null = null;
 
 export function ensureDiaryFont(): Promise<void> {
@@ -23,6 +26,8 @@ export function ensureDiaryFont(): Promise<void> {
           // 같은 크기에서 글자가 커서 80%로 줄인다 (index.css와 같은 값)
           new FontFace('DiaryHand', `url(${handFontUrl})`, { sizeAdjust: '80%' } as FontFaceDescriptors),
           new FontFace('DiaryHandFallback', `url(${import.meta.env.BASE_URL}fonts/Gaegu-Regular.ttf)`),
+          // 일본어 손글씨(1.7MB)는 일본어로 쓸 때만 받는다. 캔버스는 그리기 전에 글꼴이 다 받아져 있어야 해서 미리 load한다
+          ...(getLang() === 'ja' ? [new FontFace('DiaryHandJa', `url(${jaFontUrl})`, { sizeAdjust: '85%', unicodeRange: 'U+3000-30FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF' } as FontFaceDescriptors)] : []),
         ];
         await Promise.allSettled(faces.map(async face => { await face.load(); document.fonts.add(face); }));
       } catch { /* 폴백 폰트로 진행 */ }
@@ -46,13 +51,16 @@ export function seededRnd(seedStr: string): () => number {
   return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 2 ** 32; };
 }
 
+// 줄 첫머리에 오면 안 되는 문장부호·작은 글자 (일본어 줄바꿈 규칙). 넘쳐도 앞줄 끝에 붙인다
+const NO_LINE_START = /[、。，．,.!?！？」』）)\]】〕ゃゅょっぁぃぅぇぉャュョッァィゥェォー々…]/;
+
 export function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
   const lines: string[] = [];
   let line = '';
   for (const ch of text) {
     if (ch === '\n') { if (line) lines.push(line); line = ''; continue; }
     const test = line + ch;
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = ch; }
+    if (ctx.measureText(test).width > maxW && line && !NO_LINE_START.test(ch)) { lines.push(line); line = ch; }
     else line = test;
   }
   if (line) lines.push(line);
@@ -179,9 +187,26 @@ const KEYWORD_EMOJI_EN: [RegExp, string][] = [
   [/\b(lunch|dinner|breakfast|ate|meal)\b/i, '🍚'],
 ];
 
+// 일본어판용 같은 사전 (단어 경계 없이 포함 여부로 찾는다)
+const KEYWORD_EMOJI_JA: [RegExp, string][] = [
+  [/ラーメン|らーめん|うどん|そば/, '🍜'], [/唐揚げ|からあげ|チキン/, '🍗'], [/ピザ/, '🍕'], [/寿司|すし|刺身/, '🍣'], [/パスタ/, '🍝'],
+  [/ハンバーガー|バーガー/, '🍔'], [/焼肉|ステーキ|焼き鳥/, '🥩'], [/鍋|スープ|味噌汁/, '🍲'], [/おにぎり/, '🍙'], [/サラダ/, '🥗'],
+  [/コーヒー|カフェ|ラテ/, '☕'], [/ビール|お酒|ワイン|ハイボール/, '🍺'], [/パン|クロワッサン/, '🥐'], [/ケーキ|アイス|スイーツ|デザート/, '🍰'], [/お茶|抹茶/, '🍵'],
+  [/散歩|歩い/, '🚶'], [/ジム|筋トレ|ランニング|ヨガ|運動/, '💪'], [/寝|昼寝|眠/, '😴'], [/掃除|洗濯|家事/, '🧹'],
+  [/勉強|試験|テスト|宿題/, '📚'], [/会議|仕事|出勤|残業/, '💼'], [/退勤|帰宅/, '🚪'],
+  [/映画|ドラマ|ネトフリ|Netflix/, '🎬'], [/音楽|曲|ライブ/, '🎵'], [/本|読書/, '📖'], [/ゲーム/, '🎮'],
+  [/写真|撮っ/, '📷'], [/旅行|飛行機|空港|ホテル/, '✈️'], [/買い物|スーパー/, '🛍️'], [/病院|歯医者/, '🏥'],
+  [/美容院|髪/, '💇'], [/指輪|ネックレス/, '💍'], [/花|植物/, '🌷'], [/電車|バス|通勤/, '🚇'], [/誕生日|パーティー/, '🎉'],
+  [/友達|友だち/, '👯'], [/家族|母|父/, '👨‍👩‍👧'], [/犬|わんこ/, '🐶'], [/猫|ねこ/, '🐱'],
+  [/雨|傘/, '🌧️'], [/雪/, '❄️'], [/暑/, '☀️'], [/寒/, '🥶'],
+  [/嬉し|うれし|楽し|幸せ/, '😊'], [/疲れ|しんど/, '😮‍💨'], [/イライラ|ムカ/, '😤'], [/悲し|泣/, '😢'],
+  [/ご飯|ごはん|ランチ|昼食|夕食|朝食|食べ/, '🍚'],
+];
+
 export function pickContentEmoji(content: string): string | null {
   for (const [re, emoji] of KEYWORD_EMOJI) if (re.test(content)) return emoji;
   for (const [re, emoji] of KEYWORD_EMOJI_EN) if (re.test(content)) return emoji;
+  for (const [re, emoji] of KEYWORD_EMOJI_JA) if (re.test(content)) return emoji;
   return null;
 }
 

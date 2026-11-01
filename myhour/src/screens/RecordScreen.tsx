@@ -323,7 +323,7 @@ function TextRecordMode({ onSave }: { onSave: (c: string) => void }) {
             background: 'linear-gradient(transparent 31px, rgba(142,167,201,0.45) 31px, rgba(142,167,201,0.45) 32px) 0 0 / 100% 32px local',
           }}
         />
-        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: text.length >= TEXT_MAX ? COLOR.red : COLOR.inkMuted }}>{L(`${text.length}/${TEXT_MAX}자`, `${text.length}/${TEXT_MAX}`)}</span>
+        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: text.length >= TEXT_MAX ? COLOR.red : COLOR.inkMuted }}>{L(`${text.length}/${TEXT_MAX}자`, `${text.length}/${TEXT_MAX}`, `${text.length}/${TEXT_MAX}文字`)}</span>
       </label>
 
       {/* 쓸 거리 테이프 + 스티커 (미리보기 자리를 채운다). 입력칸과 저장 버튼 사이 한가운데에 두고,
@@ -556,7 +556,7 @@ function CaptionStep({ content, type, onSave, onRetake }: {
         <div style={{ fontSize: 12, color: COLOR.inkMuted }}>
           {type === 'meme' ? L('이 문구가 하루 요약 영상에 손글씨로 들어가요', 'This line goes in your film, handwritten') : ''}
         </div>
-        <div style={{ fontSize: 12, color: text.length >= CAPTION_MAX ? COLOR.red : COLOR.inkMuted }}>{L(`${text.length}/${CAPTION_MAX}자`, `${text.length}/${CAPTION_MAX}`)}</div>
+        <div style={{ fontSize: 12, color: text.length >= CAPTION_MAX ? COLOR.red : COLOR.inkMuted }}>{L(`${text.length}/${CAPTION_MAX}자`, `${text.length}/${CAPTION_MAX}`, `${text.length}/${CAPTION_MAX}文字`)}</div>
       </div>
 
       {/* 버튼 — 문구는 선택사항: 비워두고 저장하면 문구 없이 저장된다 */}
@@ -760,7 +760,7 @@ export default function RecordScreen({ onClose, onSave }: RecordScreenProps) {
         <button onClick={onClose} aria-label={L('기록 화면 닫기', 'Close record screen')} style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLOR.ink} strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
-        <span style={{ ...TAPE_SKY(-2, 21), justifySelf: 'center', alignSelf: 'center', padding: '2px 14px' }}>{L(`${slot} 기록`, `${slot} record`)}</span>
+        <span style={{ ...TAPE_SKY(-2, 21), justifySelf: 'center', alignSelf: 'center', padding: '2px 14px' }}>{L(`${slot} 기록`, `${slot} record`, `${slot}の記録`)}</span>
         <span />
       </div>
 

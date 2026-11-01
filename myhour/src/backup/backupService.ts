@@ -95,7 +95,7 @@ export async function exportCompleteBackup(
   let completed = 0;
 
   const add = async (path: string, blob: Blob, mediaType = blob.type || 'application/octet-stream') => {
-    if (!safePath(path)) throw new Error(L(`안전하지 않은 백업 경로: ${path}`, `Unsafe backup path: ${path}`));
+    if (!safePath(path)) throw new Error(L(`안전하지 않은 백업 경로: ${path}`, `Unsafe backup path: ${path}`, `安全でないバックアップパスです: ${path}`));
     const sha256 = await hashBlob(blob);
     zip.file(path, new Uint8Array(await blob.arrayBuffer()), {
       binary: true,
@@ -113,7 +113,7 @@ export async function exportCompleteBackup(
 
   for (const key of mediaKeys) {
     const blob = await loadMediaBlob(key);
-    if (!blob) throw new Error(L(`백업할 미디어를 읽지 못했어요: ${key}`, `Couldn't read media to back up: ${key}`));
+    if (!blob) throw new Error(L(`백업할 미디어를 읽지 못했어요: ${key}`, `Couldn't read media to back up: ${key}`, `バックアップするメディアを読み込めませんでした: ${key}`));
     const path = `media/${encodeURIComponent(key)}.bin`;
     mediaIndex.push({ key, path, mediaType: blob.type || 'application/octet-stream' });
     await add(path, blob);
@@ -165,12 +165,12 @@ export async function restoreCompleteBackup(
   for (const expected of manifest.files) {
     if (!safePath(expected.path)) throw new Error(L('안전하지 않은 파일 경로가 있어요.', 'The backup contains an unsafe file path.'));
     const entry = zip.file(expected.path);
-    if (!entry) throw new Error(L(`백업 파일이 누락됐어요: ${expected.path}`, `A backup file is missing: ${expected.path}`));
+    if (!entry) throw new Error(L(`백업 파일이 누락됐어요: ${expected.path}`, `A backup file is missing: ${expected.path}`, `バックアップファイルが見つかりません: ${expected.path}`));
     const bytes = await entry.async('uint8array');
     const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
     const blob = new Blob([buffer], { type: expected.mediaType });
     if (blob.size !== expected.bytes || await hashBlob(blob) !== expected.sha256) {
-      throw new Error(L(`백업 무결성 검증에 실패했어요: ${expected.path}`, `Backup integrity check failed: ${expected.path}`));
+      throw new Error(L(`백업 무결성 검증에 실패했어요: ${expected.path}`, `Backup integrity check failed: ${expected.path}`, `バックアップの整合性チェックに失敗しました: ${expected.path}`));
     }
     verified.set(expected.path, blob);
     completed += 1;
@@ -184,7 +184,7 @@ export async function restoreCompleteBackup(
     'data/media-index.json',
   ] as const;
   for (const path of requiredFiles) {
-    if (!verified.has(path)) throw new Error(L(`필수 백업 파일이 누락됐어요: ${path}`, `A required backup file is missing: ${path}`));
+    if (!verified.has(path)) throw new Error(L(`필수 백업 파일이 누락됐어요: ${path}`, `A required backup file is missing: ${path}`, `必須のバックアップファイルが見つかりません: ${path}`));
   }
 
   const settings = await parseJsonFile(verified.get('data/settings.json') as Blob, settingsSchema);
@@ -213,7 +213,7 @@ export async function restoreCompleteBackup(
   try {
     for (const item of mediaIndex) {
       const blob = verified.get(item.path);
-      if (!blob) throw new Error(L(`미디어 파일이 누락됐어요: ${item.path}`, `A media file is missing: ${item.path}`));
+      if (!blob) throw new Error(L(`미디어 파일이 누락됐어요: ${item.path}`, `A media file is missing: ${item.path}`, `メディアファイルが見つかりません: ${item.path}`));
       await saveMediaBlob(item.key, new Blob([blob], { type: item.mediaType }));
       written.push(item.key);
       completed += 1;
