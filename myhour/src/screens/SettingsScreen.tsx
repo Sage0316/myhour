@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { hasAIConsent, setAIConsent } from '../llmDirector';
 import { L, loadLangPref, saveLangPref } from '../i18n';
 import { disableReminders, enableReminders, getRemindersEnabled, isNativeApp } from '../notifications/localReminders';
 import { topPad, CARD, COLOR, FONT_BODY, PILL_BUTTON, SCREEN, TAPE_GREEN, TITLE, highlight } from '../design';
@@ -341,6 +342,14 @@ function SubscriptionSection() {
 }
 
 function DataSection() {
+  const [aiConsented, setAiConsented] = useState(hasAIConsent);
+
+  function withdrawAIConsent() {
+    if (!confirm(L('AI 감독 동의를 취소할까요?\n이미 만든 영상은 그대로 남아요.', 'Withdraw consent for the AI director?\nFilms you already made stay as they are.'))) return;
+    setAIConsent(false);
+    setAiConsented(false);
+  }
+
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -423,7 +432,7 @@ function DataSection() {
 
         </button>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 60, padding: '12px 16px', cursor: 'pointer', borderBottom: 'none' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 60, padding: '12px 16px', cursor: 'pointer', borderBottom: `1.5px dashed ${COLOR.dash}` }}>
           <input type="file" accept=".zip,.hakku.zip,application/zip" onChange={handleImport} disabled={busy} style={{ display: 'none' }} />
           <IconTile bg="#FFF0B8"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></IconTile>
           <div style={{ flex: 1 }}>
@@ -432,6 +441,24 @@ function DataSection() {
           </div>
 
         </label>
+
+        {/* AI 감독 동의는 첫 하루 마감 때 받는다. 철회할 길은 여기 하나 — 개인정보 처리방침과 애플 심사 요건 (2026-11-01 펌킨 승인) */}
+        <button
+          type="button"
+          onClick={withdrawAIConsent}
+          disabled={!aiConsented}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 60, padding: '12px 16px', background: 'none', border: 'none', cursor: aiConsented ? 'pointer' : 'default', fontFamily: FONT_BODY, color: COLOR.ink, textAlign: 'left' }}
+        >
+          <IconTile bg="#E4DBF5"><path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8z" /><path d="M4 11 3.2 7.6a1 1 0 0 1 .7-1.2L17 3l.9 3.4z" /></IconTile>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, opacity: aiConsented ? 1 : 0.5 }}>{L('AI 감독 동의 취소', 'Withdraw AI director consent')}</div>
+            <div style={{ fontSize: 12, color: COLOR.inkMuted, marginTop: 2 }}>
+              {aiConsented
+                ? L('글·캡션을 더 보내지 않아요. 다음 하루 마감 때 다시 물어봐요', 'Stops sending text and captions. We’ll ask again at your next wrap-up')
+                : L('지금은 동의하지 않은 상태예요. 하루 마감 때 물어봐요', 'Not allowed right now. We’ll ask when you wrap up a day')}
+            </div>
+          </div>
+        </button>
       </div>
 
       {error && (
