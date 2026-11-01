@@ -158,7 +158,7 @@ const KEYWORD_EMOJI_EN: [RegExp, string][] = [
   [/\b(tteokbokki)\b/i, '🍢'], [/\b(ramen|ramyeon|noodles?)\b/i, '🍜'], [/\b(fried chicken|chicken|wings)\b/i, '🍗'], [/\bpizza\b/i, '🍕'],
   [/\b(sushi|sashimi)\b/i, '🍣'], [/\b(pasta|spaghetti)\b/i, '🍝'], [/\b(burgers?|hamburgers?)\b/i, '🍔'],
   [/\b(steak|bbq|barbecue|grill(ed)?)\b/i, '🥩'], [/\b(soup|stew)\b/i, '🍲'], [/\b(salad)\b/i, '🥗'], [/\b(fruit|apples?|strawberr(y|ies)|watermelon)\b/i, '🍓'],
-  [/\b(coffee|cafe|café|latte|americano|espresso)\b/i, '☕'], [/\b(beer|wine|drinks?|cocktails?|soju)\b/i, '🍺'],
+  [/\b(coffees?|cafes?|café|lattes?|americanos?|espressos?)\b/i, '☕'], [/\b(beers?|wine|drinks?|cocktails?|soju)\b/i, '🍺'],
   [/\b(bread|bakery|croissants?|bagels?)\b/i, '🥐'], [/\b(dessert|cake|ice cream|cookies?|donuts?)\b/i, '🍰'], [/\b(tea|matcha)\b/i, '🍵'],
   [/\b(walk(ed|ing)?|stroll)\b/i, '🚶'], [/\b(gym|workout|work(ed)? out|run(ning)?|ran|yoga|pilates|swim(ming)?)\b/i, '💪'],
   [/\b(nap|slept|sleep(ing|y)?)\b/i, '😴'], [/\b(clean(ed|ing)?|laundry|chores|dishes)\b/i, '🧹'],
