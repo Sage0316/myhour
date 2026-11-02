@@ -713,3 +713,11 @@ git pull --ff-only"
 **Context**: 사용자 요청 반영
 
 ---
+
+## 일본어 스토어 자료
+**Timestamp**: 2026-11-02T00:01:02Z
+**User Input**: (일본어판 작업의 연장)
+**AI Response**: "design/app-store/ja-1~5.jpg(일본어 앱 화면·장면 + Yomogi 헤드라인)와 listing.md 일본어 섹션(App名·サブタイトル·キーワード 글자 수 확인, 설명·구독 고지·새 기능) 추가."
+**Context**: 출시 준비
+
+---
