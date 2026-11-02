@@ -12,6 +12,7 @@
 `manifest.json`(name/short_name — 홈 화면 아이콘 이름), `App.tsx`(데스크톱 미리보기 프레임 라벨),
 `push.ts`/`SettingsScreen.tsx`(에러 문구), `scenes.ts`(영상 인트로 카드 "하 꾸" 워터마크 + 마무리 카드 자막),
 `push-server/worker.js`/`public/sw.js`(푸시 알림 제목). 새 코드 작성 시 사용자 노출 문자열에 "MYHOUR" 쓰지 말 것 — "하꾸"로.
+**단, 2026-10-29부터 영어·일본어판의 표시 이름은 "MyHour"다** (iOS en/ja InfoPlist.strings, `L('하꾸', 'MyHour')`). 한국어 문장엔 하꾸, 영어·일본어 문장엔 MyHour — 리뷰에서 이걸 규칙 위반으로 보지 말 것.
 
 **localStorage 키는 예외다.** 원래 결정은 `myhour_*` 유지였지만, 2026-07 하드닝에서 Zod 스키마 v2와
 함께 `hakku_*`로 바뀌었다(구버전 `myhour_v1`·`myhour_archive_v1`·`myhour_settings_v1`·`myhour_videos_v1`은
