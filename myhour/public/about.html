@@ -37,7 +37,7 @@
 </head>
 <body>
 <main>
-  <div class="lang"><button type="button" id="btn-ko">한국어</button><button type="button" id="btn-en">English</button></div>
+  <div class="lang"><button type="button" id="btn-ko">한국어</button><button type="button" id="btn-en">English</button><button type="button" id="btn-ja">日本語</button></div>
 
   <div data-lang="ko">
     <section class="hero">
@@ -88,6 +88,31 @@
       <div>© 2026 MyHour</div>
     </section>
   </div>
+
+  <div data-lang="ja" hidden>
+    <section class="hero">
+      <img src="icon-512.png" alt="MyHour アプリアイコン">
+      <span class="tape" style="background:var(--green)">AI動画日記</span>
+      <h1>1時間にひとつの瞬間、<br>一日はひとつのムービーに</h1>
+      <p class="lead">通知が来たら写真1枚、ひとことでOK。夜になるとAIディレクターが今日を手帳みたいなかわいいムービーにまとめてくれます。リール・Threads・Xにそのままシェア。</p>
+      <span class="soon">App Storeで近日公開</span>
+    </section>
+    <div class="shots" aria-label="アプリ画面">
+      <img src="about/ja-1.jpg" alt="1時間に、ひとつの瞬間 — ホーム画面">
+      <img src="about/ja-3.jpg" alt="一日が、ひとつのムービーに — カバーと絵日記">
+      <img src="about/ja-5.jpg" alt="今日をそのままシェア — エンディング">
+    </div>
+    <section class="features">
+      <div class="feature"><span class="tape" style="background:var(--yellow)">記録</span><h2>好きな方法で残そう</h2><p>写真・5秒動画・ボイス・テキストから選べます。書くことに迷ったらテープをタップ。</p></div>
+      <div class="feature"><span class="tape" style="background:var(--pink)">ムービー</span><h2>AIディレクターが演出</h2><p>今日の記録に合わせてタイトル・字幕・音楽を選びます。カバー7種とエンディング6種が日替わり。</p></div>
+      <div class="feature"><span class="tape" style="background:var(--sky)">安心</span><h2>記録はスマホの中だけ</h2><p>写真・動画・ボイスはスマホの外に出ません。AIに送るのは同意後のテキストとキャプションだけ。</p></div>
+    </section>
+    <section class="contact">
+      <div><b>お問い合わせ</b> ・ [お問い合わせメール]</div>
+      <div><a href="privacy.html#ja">プライバシーポリシー</a> ・ <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">利用規約</a></div>
+      <div>© 2026 MyHour</div>
+    </section>
+  </div>
 </main>
 <script>
   // 방문자 언어로 고르고, 버튼으로 바꿀 수 있다. #en / #ko 주소로 바로 열 수도 있다
@@ -96,12 +121,15 @@
     document.documentElement.lang = lang;
     document.getElementById('btn-ko').setAttribute('aria-pressed', String(lang === 'ko'));
     document.getElementById('btn-en').setAttribute('aria-pressed', String(lang === 'en'));
-    document.title = lang === 'ko' ? '하꾸 — AI 하루 영상 일기' : 'MyHour — AI Video Diary';
+    document.getElementById('btn-ja').setAttribute('aria-pressed', String(lang === 'ja'));
+    document.title = lang === 'ko' ? '하꾸 — AI 하루 영상 일기' : lang === 'ja' ? 'MyHour — AI動画日記' : 'MyHour — AI Video Diary';
   };
-  const fromHash = location.hash === '#en' ? 'en' : location.hash === '#ko' ? 'ko' : null;
-  pick(fromHash ?? ((navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en'));
+  const fromHash = ['#ko', '#en', '#ja'].includes(location.hash) ? location.hash.slice(1) : null;
+  const device = (navigator.language || '').toLowerCase();
+  pick(fromHash ?? (device.startsWith('ko') ? 'ko' : device.startsWith('ja') ? 'ja' : 'en'));
   document.getElementById('btn-ko').onclick = () => pick('ko');
   document.getElementById('btn-en').onclick = () => pick('en');
+  document.getElementById('btn-ja').onclick = () => pick('ja');
 </script>
 </body>
 </html>
