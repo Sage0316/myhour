@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BGM_CATALOG, BGM_FILES, DEFAULT_MEDIA_BASE_URL, bgmAssetUrl, trackForMood, intensityForTrack, directorKeyFor, MOOD_TRACKS } from './llmDirector';
 import { MOOD_LIST } from './store';
+import bgmSources from '../media-server/bgm-sources.json';
 import type { MyRecord } from './store';
 
 // hakku-media 워커가 받아주는 키 형태 (media-server/worker.js의 KEY_PATTERN과 같아야 한다)
@@ -18,6 +19,13 @@ describe('BGM static asset catalog', () => {
   it('names every track so the media Worker will serve it', () => {
     const rejected = BGM_CATALOG.filter(item => !MEDIA_KEY_PATTERN.test(item.file));
     expect(rejected.map(item => item.file)).toEqual([]);
+  });
+
+  // 출시 심사용 권리 증빙: 앱이 쓰는 곡은 전부 출처 커밋·sha256이 고정된 매니페스트에 있어야 한다
+  it('pins the source and sha256 of every catalog track', () => {
+    const pinned = new Set(bgmSources.files.map(entry => entry.key));
+    expect(BGM_CATALOG.filter(item => !pinned.has(item.file)).map(item => item.file)).toEqual([]);
+    expect(bgmSources.files.every(entry => /^[0-9a-f]{64}$/.test(entry.sha256) && entry.source.length > 0)).toBe(true);
   });
 
   it('always builds a media Worker URL for catalog files', () => {

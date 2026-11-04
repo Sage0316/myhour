@@ -729,3 +729,11 @@ git pull --ff-only"
 **Context**: 출시 준비 마무리
 
 ---
+
+## BGM 권리 증빙 35곡 완성
+**Timestamp**: 2026-11-04T00:00:00Z
+**User Input**: (코덱스 점검 결과 전달) "BGM 권리 근거 정리 — 35곡 중 고정 커밋·SHA-256 증빙은 24곡"
+**AI Response**: "빠진 11곡을 0lhi/freepd 고정 커밋 cf011c7에서 찾아 원본 sha256을 구하고, hakku-media가 R2에서 실제로 내보내는 파일과 11곡 모두 바이트 단위로 같음을 확인해 bgm-sources.json에 추가. 카탈로그 전곡이 매니페스트에 있는지 llmDirector.test.ts가 검사한다."
+**Context**: 출시 전 필수 게이트(BGM 라이선스 근거)
+
+---

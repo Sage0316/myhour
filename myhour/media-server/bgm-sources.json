@@ -1,5 +1,5 @@
 {
-  "_comment": "R2(myhour-media)에 올릴 BGM. 출처는 0lhi/freepd(FreePD 미러, 전곡 CC0)의 아래 커밋에 고정하고, 받은 파일을 sha256으로 확인한 뒤에만 올린다. upload-bgm.yml이 읽는다",
+  "_comment": "R2(myhour-media)에 올린 BGM 전곡(앱 카탈로그 35곡)의 출처·라이선스 증빙. 출처는 0lhi/freepd(FreePD 미러, 전곡 CC0)의 아래 커밋에 고정하고, 받은 파일을 sha256으로 확인한 뒤에만 올린다. upload-bgm.yml이 읽는다. llmDirector.test.ts가 카탈로그의 모든 곡이 여기 있는지 검사한다",
   "repo": "0lhi/freepd",
   "commit": "cf011c7016595833b550a88ff127f089188b25f8",
   "files": [
@@ -122,6 +122,61 @@
       "key": "connecting-rainbows.mp3",
       "source": "World/Connecting Rainbows.mp3",
       "sha256": "85f77462ba2ff846ed5bfa911a267f8a8ea0b2c579b58278a2bcef1e26efb81a"
+    },
+    {
+      "key": "city-sunshine.mp3",
+      "source": "Upbeat/City Sunshine.mp3",
+      "sha256": "e05c1bd683174cff77d492b7ac77262ff4617f99f69d82564b66831cf48352d6"
+    },
+    {
+      "key": "funshine.mp3",
+      "source": "Upbeat/Funshine.mp3",
+      "sha256": "b98b226927367a977377fe4f75d1cf59e4366ca2f444c2c7d23d13e7f506f532"
+    },
+    {
+      "key": "cold-journey.mp3",
+      "source": "Miscellaneous/Cold Journey.mp3",
+      "sha256": "8726ef75248655ebb2d2cde7967d083814d5cf127804569b3ca3cf7254aa9109"
+    },
+    {
+      "key": "isolation-waltz.mp3",
+      "source": "Romance/Isolation Waltz.mp3",
+      "sha256": "4fb04327dfa8d98c142c4427a05516b525d38740a815f9230d07e9daf8211369"
+    },
+    {
+      "key": "landras-dream.mp3",
+      "source": "Romance/Landra's Dream.mp3",
+      "sha256": "fc55b6cbadaef9c2bff8645c43bf04882cc5f41fe0f1af257d11ff15c1d9aba9"
+    },
+    {
+      "key": "nostalgic.mp3",
+      "source": "Romance/Nostalgic Piano.mp3",
+      "sha256": "5d932737a07dc1f0fadc713d188a059964bc156371e1569f5a6267dc39547865"
+    },
+    {
+      "key": "piano-magic.mp3",
+      "source": "Romance/Piano Magic Motive.mp3",
+      "sha256": "2ccf89173ff9a8bd057d200c5b9e81728556dbb06ac5f64546c262f0e438698b"
+    },
+    {
+      "key": "piano.mp3",
+      "source": "Romance/Lovely Piano Song.mp3",
+      "sha256": "4c8e8fbda8f2e6cbfa22db6689faa4eb0fd1bb7f3163ade72aff37fdd0fb9388"
+    },
+    {
+      "key": "tournesol.mp3",
+      "source": "Romance/Champ de tournesol.mp3",
+      "sha256": "999bd6b98ffd4a74d6ad1ea1c068886c7e37f76210c202ab79ed52ce2d768fc8"
+    },
+    {
+      "key": "travelers-notebook.mp3",
+      "source": "Scoring/Travelers Notebook.mp3",
+      "sha256": "1435dc65a285242e5012ae9e853a9db2a5e303bfdec243cfe67340e67284b7b1"
+    },
+    {
+      "key": "winter.mp3",
+      "source": "Romance/Winter.mp3",
+      "sha256": "a87a5d491be8007a4a9913b05422a2e7d1ba28badf38fc4ab472a884b522ecec"
     }
   ]
 }
