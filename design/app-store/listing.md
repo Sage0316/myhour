@@ -168,4 +168,5 @@ MyHourが登場！1時間にひとつの瞬間を残して、夜は一日をひ�
   - 추적(Tracking): 없음. 광고 없음
 - **구독 그룹**: Standard / Premium 같은 그룹, 각 3일 무료 체험 Introductory Offer
 - **리뷰 메모**: 기록은 무료이고 영상 만들기만 구독이 필요함, 테스트용 샌드박스 계정 안내, AI는 첫 마감 때 동의 카드로 묻는다는 설명
-- **지원 URL**: 소개 페이지(3번 작업)에서 만든 주소
+- **지원 URL**: https://sage0316.github.io/myhour/about.html
+- **연락처 이메일(App Review 정보)**: pumpkin.studio101@gmail.com

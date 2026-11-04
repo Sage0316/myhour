@@ -4,4 +4,4 @@
 
 요약: 기록·영상·설정은 기기에만 저장된다. AI 감독은 첫 마감 때 동의를 받은 뒤 그날 기록의 시간·종류·글·캡션만 AI Worker(Cloudflare)와 OpenAI(`store: false`)로 보내고 내용은 저장하지 않는다(사용 횟수만 최대 40일). 구독은 Apple 결제 + RevenueCat(무작위 설치 ID). 웹 푸시를 켜면 구독 endpoint·시간대·일정이 Push Worker에 저장되고 끄면 삭제된다. iOS 알림은 기기 예약 알림이라 전송이 없다. 광고·추적·분석 SDK 없음.
 
-**아직 채울 것**: 문의 메일 — `privacy.html`과 `about.html`의 `[문의 메일]` / `[contact email]` 네 곳. 책임자 표기는 "하꾸 운영자"(펌킨 결정).
+**문의 메일**: pumpkin.studio101@gmail.com (2026-11-04, 펌킨 스튜디오 공용 — 앞으로 낼 앱들도 같이 쓴다). `privacy.html`·`about.html` 한/영/일에 들어가 있다. 책임자 표기는 "하꾸 운영자"(펌킨 결정).

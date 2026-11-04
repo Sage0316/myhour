@@ -737,3 +737,11 @@ git pull --ff-only"
 **Context**: 출시 전 필수 게이트(BGM 라이선스 근거)
 
 ---
+
+## 문의 메일 확정
+**Timestamp**: 2026-11-04T00:30:00Z
+**User Input**: "폰으로 만들었다 pumpkin.studio101@gmail.com 호박스튜디오는 이미 있더라구" (앞서 "내가 앱 여러개 출시할거라")
+**AI Response**: "privacy.html·about.html 한/영/일 여섯 자리의 문의 메일 자리를 mailto 링크로 채우고, PRIVACY.md·myhour/CLAUDE.md·listing.md(지원 URL·App Review 연락처)에 반영."
+**Context**: 출시 전 필수 게이트(문의 이메일)
+
+---
